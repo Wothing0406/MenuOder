@@ -19,7 +19,7 @@
 1. [Giới Thiệu Đề Tài](#-giới-thiệu-đề-tài)
 2. [Sự Cần Thiết Của Đề Tài](#-sự-cần-thiết-của-đề-tài)
 3. [Mục Tiêu Của Đề Tài](#-mục-tiêu-của-đề-tài)
-4. [Kiến Thức Liên Môn](#-kiến-thức-liên-môn-được-áp-dụng)
+4. [Kiến Thức Chuyên Môn](#-kiến-thức-liên-môn-được-áp-dụng)
 5. [Tính Năng Chính](#-tính-năng-chính)
 6. [Mô Hình Hệ Thống](#-mô-hình-hệ-thống)
 7. [Quy Trình Thực Hiện](#-quy-trình-thực-hiện-đề-tài)
