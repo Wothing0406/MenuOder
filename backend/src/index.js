@@ -12,9 +12,22 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// Middleware - CORS configuration
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  : ['http://localhost:3000'];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -56,16 +69,40 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // Sync database
-    await sequelize.sync({ alter: false });
-    console.log('Database synchronized successfully');
+    // Test database connection first
+    console.log('🔌 Testing database connection...');
+    await sequelize.authenticate();
+    console.log('✅ Database connection established');
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV}`);
+    // Sync database (create tables if not exist, but don't alter existing)
+    // Use { alter: false } to avoid modifying existing tables
+    // Use { force: false } to avoid dropping tables
+    console.log('🔄 Syncing database models...');
+    await sequelize.sync({ 
+      alter: false,
+      force: false 
+    });
+    console.log('✅ Database synchronized successfully');
+
+    // Start server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📡 API URL: http://0.0.0.0:${PORT}/api`);
+      if (process.env.FRONTEND_URL) {
+        console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+      }
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    
+    // More detailed error logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Full error:', error);
+    }
+    
     process.exit(1);
   }
 };
