@@ -483,12 +483,21 @@ export default function Dashboard() {
                   <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 shadow-lg">
                     {(logoPreview || (store?.storeLogo ? (
                       <img 
-                        src={store.storeLogo.startsWith('http') 
-                          ? store.storeLogo 
-                          : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${store.storeLogo}`} 
+                        src={(() => {
+                          // Nếu đã là full URL
+                          if (store.storeLogo.startsWith('http')) {
+                            return store.storeLogo;
+                          }
+                          // Nếu là relative path, tạo full URL
+                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                          // Đảm bảo không có double slash
+                          const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
+                          return apiBase + logoPath;
+                        })()}
                         alt="Store Logo"
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          console.error('Logo load error:', e.target.src);
                           e.target.src = '/logo.jpg';
                         }}
                       />

@@ -154,12 +154,21 @@ export default function StorePage() {
             <div className="relative">
               {store.storeLogo ? (
                 <img 
-                  src={store.storeLogo.startsWith('http') 
-                    ? store.storeLogo 
-                    : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${store.storeLogo}`} 
+                  src={(() => {
+                    // Nếu đã là full URL
+                    if (store.storeLogo.startsWith('http')) {
+                      return store.storeLogo;
+                    }
+                    // Nếu là relative path, tạo full URL
+                    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                    // Đảm bảo không có double slash
+                    const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
+                    return apiBase + logoPath;
+                  })()}
                   alt={store.storeName}
                   className="w-24 h-24 rounded-full object-cover shadow-2xl ring-4 ring-white ring-offset-4 ring-offset-purple-500"
                   onError={(e) => {
+                    console.error('Logo load error:', e.target.src);
                     e.target.src = '/logo.jpg';
                   }}
                 />

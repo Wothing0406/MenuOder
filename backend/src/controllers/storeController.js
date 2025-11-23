@@ -213,14 +213,34 @@ exports.uploadLogo = async (req, res) => {
 
     // Cập nhật logo mới
     const logoPath = '/uploads/' + req.file.filename;
+    
+    // Tạo full URL cho logo (bao gồm backend URL)
+    // Trên Render, cần dùng external URL
+    const getLogoUrl = (path) => {
+      if (!path) return null;
+      if (path.startsWith('http')) return path; // Đã là full URL
+      
+      // Trong production (Render), tạo full URL
+      if (process.env.NODE_ENV === 'production') {
+        const backendUrl = process.env.BACKEND_URL || req.protocol + '://' + req.get('host');
+        return backendUrl + path;
+      }
+      
+      // Development: giữ relative path
+      return path;
+    };
+    
     await store.update({ storeLogo: logoPath });
     await store.reload();
+
+    const logoUrl = getLogoUrl(store.storeLogo);
 
     res.json({
       success: true,
       message: 'Logo uploaded successfully',
       data: {
-        storeLogo: store.storeLogo
+        storeLogo: logoUrl || store.storeLogo,
+        storeLogoPath: store.storeLogo // Giữ path gốc
       }
     });
   } catch (error) {
