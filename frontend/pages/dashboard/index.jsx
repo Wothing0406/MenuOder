@@ -508,11 +508,21 @@ export default function Dashboard() {
                 {/* Logo Preview */}
                 <div className="flex-shrink-0">
                   <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 shadow-lg">
-                    {(logoPreview || (storeData?.storeLogo || store?.storeLogo ? (
+                    {logoPreview ? (
+                      <img 
+                        src={logoPreview}
+                        alt="Store Logo Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Logo preview load error:', e.target.src);
+                          e.target.src = '/logo.jpg';
+                        }}
+                      />
+                    ) : (storeData?.storeLogo || store?.storeLogo) ? (
                       <img 
                         src={(() => {
-                          const logo = logoPreview || storeData?.storeLogo || store?.storeLogo;
-                          if (!logo) return '';
+                          const logo = storeData?.storeLogo || store?.storeLogo;
+                          if (!logo) return '/logo.jpg';
                           // Nếu đã là full URL
                           if (logo.startsWith('http')) {
                             return logo;
@@ -530,27 +540,7 @@ export default function Dashboard() {
                           e.target.src = '/logo.jpg';
                         }}
                       />
-                    ) : null)) || (
-                      <img 
-                        src={(() => {
-                          // Nếu đã là full URL
-                          if (store.storeLogo.startsWith('http')) {
-                            return store.storeLogo;
-                          }
-                          // Nếu là relative path, tạo full URL
-                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-                          // Đảm bảo không có double slash
-                          const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
-                          return apiBase + logoPath;
-                        })()}
-                        alt="Store Logo"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.error('Logo load error:', e.target.src);
-                          e.target.src = '/logo.jpg';
-                        }}
-                      />
-                    ) : null)) || (
+                    ) : (
                       <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white text-4xl font-bold">
                         {(storeData?.storeName || store?.storeName)?.[0]?.toUpperCase() || 'S'}
                       </div>
