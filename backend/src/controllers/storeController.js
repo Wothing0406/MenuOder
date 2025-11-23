@@ -45,10 +45,36 @@ exports.getStoreBySlug = async (req, res) => {
       }
     });
 
+    // Helper function để tạo full URL cho logo
+    const getLogoUrl = (logoPath) => {
+      if (!logoPath) return null;
+      if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+        return logoPath; // Đã là full URL
+      }
+      
+      // Trong production, tạo full URL
+      if (process.env.NODE_ENV === 'production') {
+        let backendUrl = process.env.BACKEND_URL;
+        if (!backendUrl) {
+          const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+          backendUrl = `${protocol}://${req.get('host')}`;
+        }
+        backendUrl = backendUrl.replace(/\/$/, '');
+        const cleanPath = logoPath.startsWith('/') ? logoPath : '/' + logoPath;
+        return backendUrl + cleanPath;
+      }
+      return logoPath;
+    };
+
+    const storeData = store.toJSON();
+    if (storeData.storeLogo) {
+      storeData.storeLogo = getLogoUrl(storeData.storeLogo);
+    }
+
     res.json({
       success: true,
       data: {
-        store,
+        store: storeData,
         categories
       }
     });
@@ -98,9 +124,32 @@ exports.getMyStore = async (req, res) => {
       });
     }
 
+    // Tạo full URL cho logo nếu có
+    const getLogoUrl = (path) => {
+      if (!path) return null;
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      
+      if (process.env.NODE_ENV === 'production') {
+        let backendUrl = process.env.BACKEND_URL;
+        if (!backendUrl) {
+          const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+          backendUrl = `${protocol}://${req.get('host')}`;
+        }
+        backendUrl = backendUrl.replace(/\/$/, '');
+        const cleanPath = path.startsWith('/') ? path : '/' + path;
+        return backendUrl + cleanPath;
+      }
+      return path;
+    };
+
+    const storeData = store.toJSON();
+    if (storeData.storeLogo) {
+      storeData.storeLogo = getLogoUrl(storeData.storeLogo);
+    }
+
     res.json({
       success: true,
-      data: store
+      data: storeData
     });
   } catch (error) {
     console.error('Get my store error:', error);
@@ -147,21 +196,50 @@ exports.updateStore = async (req, res) => {
       logoPath = '/uploads/' + logoFile.filename;
     }
 
-    await store.update({
+    // Cập nhật thông tin store
+    const updateData = {
       storeName: storeName || store.storeName,
       storePhone: storePhone || store.storePhone,
       storeAddress: storeAddress || store.storeAddress,
-      storeDescription: storeDescription || store.storeDescription,
-      storeLogo: logoPath || store.storeLogo
-    });
-
-    // Reload để lấy dữ liệu mới nhất
+      storeDescription: storeDescription || store.storeDescription
+    };
+    
+    // Nếu có logo mới, cập nhật
+    if (logoPath) {
+      updateData.storeLogo = logoPath;
+    }
+    
+    await store.update(updateData);
     await store.reload();
+
+    // Tạo full URL cho logo
+    const getLogoUrl = (logoPath) => {
+      if (!logoPath) return null;
+      if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+        return logoPath;
+      }
+      if (process.env.NODE_ENV === 'production') {
+        let backendUrl = process.env.BACKEND_URL;
+        if (!backendUrl) {
+          const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+          backendUrl = `${protocol}://${req.get('host')}`;
+        }
+        backendUrl = backendUrl.replace(/\/$/, '');
+        const cleanPath = logoPath.startsWith('/') ? logoPath : '/' + logoPath;
+        return backendUrl + cleanPath;
+      }
+      return logoPath;
+    };
+
+    const storeData = store.toJSON();
+    if (storeData.storeLogo) {
+      storeData.storeLogo = getLogoUrl(storeData.storeLogo);
+    }
 
     res.json({
       success: true,
       message: logoFile ? 'Store and logo updated successfully' : 'Store updated successfully',
-      data: store
+      data: storeData
     });
   } catch (error) {
     console.error('Update store error:', error);
@@ -214,24 +292,44 @@ exports.uploadLogo = async (req, res) => {
     // Cập nhật logo mới
     const logoPath = '/uploads/' + req.file.filename;
     
+    await store.update({ storeLogo: logoPath });
+    await store.reload();
+
     // Tạo full URL cho logo (bao gồm backend URL)
-    // Trên Render, cần dùng external URL
+    // Trên Render, luôn dùng https
     const getLogoUrl = (path) => {
       if (!path) return null;
-      if (path.startsWith('http')) return path; // Đã là full URL
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path; // Đã là full URL
+      }
       
-      // Trong production (Render), tạo full URL
+      // Trong production (Render), tạo full URL với https
       if (process.env.NODE_ENV === 'production') {
-        const backendUrl = process.env.BACKEND_URL || req.protocol + '://' + req.get('host');
-        return backendUrl + path;
+        let backendUrl = process.env.BACKEND_URL;
+        
+        // Nếu không có BACKEND_URL, lấy từ request
+        if (!backendUrl) {
+          // Render luôn dùng https
+          const protocol = 'https';
+          const host = req.get('host');
+          backendUrl = `${protocol}://${host}`;
+          console.log('Generated backend URL from request:', backendUrl); // Debug
+        }
+        
+        // Đảm bảo backendUrl không có trailing slash
+        backendUrl = backendUrl.replace(/\/$/, '');
+        
+        // Đảm bảo path bắt đầu bằng /
+        const cleanPath = path.startsWith('/') ? path : '/' + path;
+        
+        const fullUrl = backendUrl + cleanPath;
+        console.log('Generated logo URL:', fullUrl); // Debug
+        return fullUrl;
       }
       
       // Development: giữ relative path
       return path;
     };
-    
-    await store.update({ storeLogo: logoPath });
-    await store.reload();
 
     const logoUrl = getLogoUrl(store.storeLogo);
 
@@ -239,8 +337,8 @@ exports.uploadLogo = async (req, res) => {
       success: true,
       message: 'Logo uploaded successfully',
       data: {
-        storeLogo: logoUrl || store.storeLogo,
-        storeLogoPath: store.storeLogo // Giữ path gốc
+        storeLogo: logoUrl, // Full URL với https://
+        storeLogoPath: store.storeLogo // Giữ path gốc trong DB
       }
     });
   } catch (error) {
