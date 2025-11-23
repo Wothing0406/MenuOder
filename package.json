@@ -1,0 +1,12 @@
+{
+    "private": true,
+    "workspaces": ["backend", "frontend"],
+    "scripts": {
+      "host:backend": "npm --prefix backend run dev",
+      "host:frontend": "npm --prefix frontend run dev",
+      "host": "concurrently \"npm run host:backend\" \"npm run host:frontend\""
+    },
+    "devDependencies": {
+      "concurrently": "^8.2.1"
+    }
+  }
