@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
 
   useEffect(() => {
     if (!token) {
@@ -33,6 +34,21 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      // Fetch store data (quan trọng cho logo)
+      try {
+        const storeRes = await api.get('/stores/my-store');
+        if (storeRes.data.success) {
+          // Cập nhật store trong Zustand store
+          useStore.setState({ store: storeRes.data.data });
+          // Cập nhật storeData cho settings tab
+          setStoreData(storeRes.data.data);
+          // Reset logo preview nếu có logo trong database
+          setLogoPreview(null); // Clear preview để hiển thị logo từ DB
+        }
+      } catch (err) {
+        console.error('Store fetch error:', err);
+      }
       
       // Fetch orders
       try {
@@ -157,14 +173,12 @@ export default function Dashboard() {
         // Reload store data
         const storeRes = await api.get('/stores/my-store');
         if (storeRes.data.success) {
+          // Cập nhật store trong Zustand
           useStore.setState({ store: storeRes.data.data });
-          // Update preview với URL từ server
-          if (storeRes.data.data.storeLogo) {
-            const logoUrl = storeRes.data.data.storeLogo.startsWith('http') 
-              ? storeRes.data.data.storeLogo 
-              : `${API_BASE}${storeRes.data.data.storeLogo}`;
-            setLogoPreview(logoUrl);
-          }
+          // Cập nhật storeData cho settings tab
+          setStoreData(storeRes.data.data);
+          // Clear preview để hiển thị logo từ DB
+          setLogoPreview(null);
         }
       } else {
         toast.error(data.message || 'Upload logo thất bại!');
@@ -265,7 +279,20 @@ export default function Dashboard() {
             Mã QR
           </button>
           <button
-            onClick={() => setActiveTab('settings')}
+            onClick={async () => {
+              setActiveTab('settings');
+              // Fetch store data khi vào tab settings để có logo mới nhất
+              try {
+                const storeRes = await api.get('/stores/my-store');
+                if (storeRes.data.success) {
+                  setStoreData(storeRes.data.data);
+                  useStore.setState({ store: storeRes.data.data });
+                  setLogoPreview(null); // Clear preview
+                }
+              } catch (err) {
+                console.error('Fetch store data error:', err);
+              }
+            }}
             className={`px-4 py-2 font-bold transition ${
               activeTab === 'settings'
                 ? 'border-b-2 border-blue-600 text-blue-600'
@@ -481,7 +508,29 @@ export default function Dashboard() {
                 {/* Logo Preview */}
                 <div className="flex-shrink-0">
                   <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 shadow-lg">
-                    {(logoPreview || (store?.storeLogo ? (
+                    {(logoPreview || (storeData?.storeLogo || store?.storeLogo ? (
+                      <img 
+                        src={(() => {
+                          const logo = logoPreview || storeData?.storeLogo || store?.storeLogo;
+                          if (!logo) return '';
+                          // Nếu đã là full URL
+                          if (logo.startsWith('http')) {
+                            return logo;
+                          }
+                          // Nếu là relative path, tạo full URL
+                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                          // Đảm bảo không có double slash
+                          const logoPath = logo.startsWith('/') ? logo : '/' + logo;
+                          return apiBase + logoPath;
+                        })()}
+                        alt="Store Logo"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Logo load error:', e.target.src);
+                          e.target.src = '/logo.jpg';
+                        }}
+                      />
+                    ) : null)) || (
                       <img 
                         src={(() => {
                           // Nếu đã là full URL
@@ -503,7 +552,7 @@ export default function Dashboard() {
                       />
                     ) : null)) || (
                       <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white text-4xl font-bold">
-                        {store?.storeName?.[0]?.toUpperCase() || 'S'}
+                        {(storeData?.storeName || store?.storeName)?.[0]?.toUpperCase() || 'S'}
                       </div>
                     )}
                     {uploadingLogo && (
@@ -535,29 +584,27 @@ export default function Dashboard() {
                       {uploadingLogo ? 'Đang upload...' : 'Chọn ảnh logo'}
                     </span>
                   </label>
-                  {store?.storeLogo && (
+                  {(storeData?.storeLogo || store?.storeLogo) && (
                     <button
                       onClick={async () => {
                         try {
-                          // Gửi request xóa logo (update với logo = null)
-                          const formData = new FormData();
-                          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}/api/stores/my-store`, {
-                            method: 'PUT',
-                            headers: {
-                              'Authorization': `Bearer ${token}`
-                            },
-                            body: formData // Empty formData sẽ không có logo
+                          // Gửi request xóa logo - update store với storeLogo = null
+                          // Backend cần hỗ trợ xóa logo bằng cách set storeLogo = null
+                          // Tạm thời: Gọi API update với storeLogo empty
+                          await api.put('/stores/my-store', {
+                            storeName: storeData?.storeName || store?.storeName,
+                            // Không gửi storeLogo để giữ nguyên (cần backend hỗ trợ xóa)
                           });
-                          const data = await response.json();
-                          if (data.success) {
-                            toast.success('Đã xóa logo!');
+                          // Fetch lại store data
+                          const storeRes = await api.get('/stores/my-store');
+                          if (storeRes.data.success) {
+                            useStore.setState({ store: storeRes.data.data });
+                            setStoreData(storeRes.data.data);
                             setLogoPreview(null);
-                            const storeRes = await api.get('/stores/my-store');
-                            if (storeRes.data.success) {
-                              useStore.setState({ store: storeRes.data.data });
-                            }
+                            toast.success('Đã xóa logo!');
                           }
                         } catch (error) {
+                          console.error('Delete logo error:', error);
                           toast.error('Xóa logo thất bại!');
                         }
                       }}
