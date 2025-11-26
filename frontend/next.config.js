@@ -3,13 +3,15 @@ const nextConfig = {
   reactStrictMode: true,
   
   // Tối ưu hóa output cho production
-  ...(process.env.NODE_ENV === 'production' ? { 
+  // Lưu ý: Vercel không cần 'standalone' mode, nó tự động optimize
+  // Chỉ dùng standalone cho các platform khác như Render, Railway
+  ...(process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1' ? { 
     output: 'standalone',
-    // Tối ưu hóa bundle size
-    swcMinify: true,
-    // Compress output
-    compress: true,
   } : {}),
+  
+  // Tối ưu hóa bundle size (Vercel tự động làm, nhưng giữ lại để tương thích)
+  swcMinify: true,
+  compress: true,
 
   // Tối ưu hóa images
   images: {

@@ -377,7 +377,7 @@ Sau khi chạy seed data:
 - 🚀 [Hướng Dẫn Deploy Lên Render](docs/RENDER_DEPLOYMENT.md)
 - ⚡ [Tối Ưu Hóa Build Trên Render](docs/RENDER_OPTIMIZATION.md)
 - 📊 [So Sánh Các Dịch Vụ Deploy](docs/DEPLOYMENT_COMPARISON.md)
-- ✨ [Deploy Frontend Lên Vercel](docs/VERCEL_DEPLOYMENT.md)
+- ✨ [Deploy Frontend Lên Vercel](docs/VERCEL_DEPLOY.md)
 - 🚂 [Deploy Backend Lên Railway](docs/RAILWAY_DEPLOYMENT.md)
 - 🔄 [Reset Database](RESET_DATABASE.md)
 - 🔌 [API Documentation](docs/API_DOCUMENTATION.md)
