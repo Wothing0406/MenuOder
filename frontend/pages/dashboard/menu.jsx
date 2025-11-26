@@ -122,7 +122,7 @@ export default function MenuManagement() {
         fetchItems(selectedCategory.id);
       }
     } catch (error) {
-      toast.error('Không thể xóa món');
+      toast.error(error.response?.data?.message || 'Không thể xóa món');
     }
   };
 
@@ -135,7 +135,7 @@ export default function MenuManagement() {
         fetchData();
       }
     } catch (error) {
-      toast.error('Không thể xóa danh mục');
+      toast.error(error.response?.data?.message || 'Không thể xóa danh mục');
     }
   }
 

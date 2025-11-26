@@ -28,6 +28,13 @@ exports.createItem = async (req, res) => {
       where: { userId: req.user.id }
     });
 
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
+
     if (category.storeId !== store.id) {
       return res.status(403).json({
         success: false,
@@ -139,6 +146,13 @@ exports.updateItem = async (req, res) => {
       where: { userId: req.user.id }
     });
 
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
+
     if (item.storeId !== store.id) {
       return res.status(403).json({
         success: false,
@@ -187,6 +201,13 @@ exports.deleteItem = async (req, res) => {
     const store = await Store.findOne({
       where: { userId: req.user.id }
     });
+
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
 
     if (item.storeId !== store.id) {
       return res.status(403).json({

@@ -26,6 +26,12 @@ exports.createAccompaniment = async (req, res) => {
     }
 
     const store = await Store.findOne({ where: { userId: req.user.id } });
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
     if (item.storeId !== store.id) {
       return res.status(403).json({
         success: false,
@@ -96,6 +102,12 @@ exports.updateAccompaniment = async (req, res) => {
     // Verify ownership
     const item = await Item.findByPk(accompaniment.itemId);
     const store = await Store.findOne({ where: { userId: req.user.id } });
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
     if (item.storeId !== store.id) {
       return res.status(403).json({
         success: false,
@@ -140,6 +152,12 @@ exports.deleteAccompaniment = async (req, res) => {
     // Verify ownership
     const item = await Item.findByPk(accompaniment.itemId);
     const store = await Store.findOne({ where: { userId: req.user.id } });
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
     if (item.storeId !== store.id) {
       return res.status(403).json({
         success: false,

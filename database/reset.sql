@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   orderId INT NOT NULL,
-  itemId INT NOT NULL,
+  itemId INT NULL COMMENT 'Can be NULL if item is deleted, but order history is preserved',
   itemName VARCHAR(255) NOT NULL,
   itemPrice DECIMAL(10, 2) NOT NULL,
   quantity INT NOT NULL DEFAULT 1,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE,
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE RESTRICT,
+  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE SET NULL,
   INDEX idx_orderId (orderId),
   INDEX idx_itemId (itemId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

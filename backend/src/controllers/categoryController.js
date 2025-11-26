@@ -169,6 +169,13 @@ exports.deleteCategory = async (req, res) => {
       where: { userId: req.user.id }
     });
 
+    if (!store) {
+      return res.status(403).json({
+        success: false,
+        message: 'Store not found. Please create a store first.'
+      });
+    }
+
     if (category.storeId !== store.id) {
       return res.status(403).json({
         success: false,

@@ -378,8 +378,11 @@ Sau khi chạy seed data:
 - ⚡ [Tối Ưu Hóa Build Trên Render](docs/RENDER_OPTIMIZATION.md)
 - 📊 [So Sánh Các Dịch Vụ Deploy](docs/DEPLOYMENT_COMPARISON.md)
 - ✨ [Deploy Frontend Lên Vercel](docs/VERCEL_DEPLOY.md)
+- 🔄 [Reset & Redeploy Trên Vercel](docs/VERCEL_REDEPLOY.md)
+- 🔧 [Sửa Lỗi CORS Vercel](docs/VERCEL_FIX_CORS.md)
 - 🚂 [Deploy Backend Lên Railway](docs/RAILWAY_DEPLOYMENT.md)
 - 🔄 [Reset Database](RESET_DATABASE.md)
+- 🗄️ [Reset & Cập Nhật Database Trên Render](docs/RENDER_DATABASE_RESET.md)
 - 🔌 [API Documentation](docs/API_DOCUMENTATION.md)
 - 🗄️ [Database Schema](database/schema.sql)
 
