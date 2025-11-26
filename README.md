@@ -120,10 +120,12 @@ Xây dựng **website** cho phép khách hàng **quét QR** để xem menu và �
 | 🍜 **CRUD món ăn** | Thêm, sửa, xóa món với hình ảnh, mô tả, giá cả |
 | ⚙️ **Tùy chọn món** | Tạo options (size, topping, note) và món ăn kèm |
 | 📝 **Ghi chú món** | Khách hàng có thể thêm ghi chú cho từng món |
-| 📊 **Dashboard** | Xem tất cả đơn hàng, thay đổi trạng thái |
-| 💰 **Theo dõi doanh thu** | Tổng doanh thu, doanh thu tháng, doanh thu năm |
+| 📊 **Dashboard** | Xem tất cả đơn hàng, thay đổi trạng thái (bao gồm trạng thái "Hoàn tất") |
+| 💰 **Theo dõi doanh thu** | Tổng doanh thu, doanh thu tháng, doanh thu năm (tự động tính từ đơn "Hoàn tất") |
 | 📱 **Tạo QR code** | Tự động tạo và tải QR code cho cửa hàng |
 | 🔍 **Chi tiết đơn hàng** | Xem đầy đủ: bàn, món, ghi chú, thời gian đặt |
+| 📸 **Upload hình ảnh** | Upload logo và hình ảnh cửa hàng qua Cloudinary |
+| 📍 **Địa chỉ chi tiết** | Tùy chỉnh địa chỉ hiển thị chi tiết cho khách hàng |
 
 ### 🍜 Dành Cho Khách Hàng
 
@@ -137,7 +139,7 @@ Xây dựng **website** cho phép khách hàng **quét QR** để xem menu và �
 | 🪑 **Chọn số bàn** | Chọn số bàn khi đặt hàng |
 | 💳 **Thêm vào giỏ hàng** | Tự động tính tổng tiền |
 | 📋 **Đặt món** | Đặt hàng không cần tài khoản |
-| ⏱️ **Theo dõi trạng thái** | Xem trạng thái đơn hàng theo thời gian thực |
+| ⏱️ **Theo dõi trạng thái** | Xem trạng thái đơn hàng theo thời gian thực (bao gồm "Hoàn tất") |
 
 ---
 
@@ -145,7 +147,7 @@ Xây dựng **website** cho phép khách hàng **quét QR** để xem menu và �
 
 ### Cơ Sở Dữ Liệu
 
-Hệ thống sử dụng **MySQL** với các bảng chính:
+Hệ thống hỗ trợ cả **MySQL** và **PostgreSQL** với các bảng chính:
 
 ```
 users
@@ -191,11 +193,12 @@ users
 |-----------|----------|
 | **Node.js** | Runtime environment |
 | **Express.js** | Web framework |
-| **MySQL** | Database |
+| **MySQL / PostgreSQL** | Database |
 | **Sequelize ORM** | Object-Relational Mapping |
 | **JWT Authentication** | Xác thực người dùng |
 | **bcryptjs** | Mã hóa mật khẩu |
 | **QRCode generator** | Tạo QR code |
+| **Cloudinary** | Cloud image storage & optimization |
 
 ### **Frontend**
 
@@ -228,8 +231,11 @@ users
 - 🌟 **Sử dụng công nghệ web hiện đại** (Next.js 14, Zustand)
 - 🌟 **Hệ thống giỏ hàng + tùy chọn món linh hoạt**
 - 🌟 **Giao diện tối ưu cho thiết bị di động**
-- 🌟 **Thống kê doanh thu chi tiết** (tổng, tháng, năm)
+- 🌟 **Thống kê doanh thu chi tiết** (tổng, tháng, năm) - tự động tính từ đơn "Hoàn tất"
 - 🌟 **Ghi chú cho từng món** - tính năng độc đáo
+- 🌟 **Trạng thái "Hoàn tất"** - đánh dấu đơn đã thanh toán
+- 🌟 **Upload hình ảnh qua Cloudinary** - tối ưu hiệu suất
+- 🌟 **Địa chỉ chi tiết tùy chỉnh** - hiển thị địa chỉ đầy đủ cho khách hàng
 
 ---
 
@@ -260,7 +266,9 @@ users
 
 ## 🚀 Hướng Phát Triển Tương Lai
 
-- [ ] Upload ảnh món trực tiếp
+- [x] Upload ảnh món trực tiếp (Cloudinary integration)
+- [x] Trạng thái đơn hàng "Hoàn tất" (Completed status)
+- [x] Địa chỉ chi tiết tùy chỉnh cho cửa hàng
 - [ ] Tích hợp thanh toán online (Momo, VNPay)
 - [ ] Thông báo email / SMS
 - [ ] Thống kê nâng cao bằng biểu đồ
@@ -277,8 +285,9 @@ users
 
 - **Node.js** 14+ 
 - **npm** hoặc **yarn**
-- **MySQL** 5.7+
+- **MySQL** 5.7+ hoặc **PostgreSQL** 12+
 - **Git** (Optional)
+- **Cloudinary Account** (Optional - cho upload hình ảnh)
 
 ### 🚀 Cài Đặt Nhanh
 
@@ -317,6 +326,11 @@ JWT_EXPIRE=24h
 
 FRONTEND_URL=http://localhost:3000
 UPLOAD_PATH=./uploads
+
+# Cloudinary (Optional - cho upload hình ảnh)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 #### 3. Setup Database
@@ -373,17 +387,13 @@ Sau khi chạy seed data:
 
 ### 📚 Tài Liệu Tham Khảo
 
-- 📖 [Hướng Dẫn Cài Đặt Chi Tiết](docs/SETUP.md)
-- 🚀 [Hướng Dẫn Deploy Lên Render](docs/RENDER_DEPLOYMENT.md)
-- ⚡ [Tối Ưu Hóa Build Trên Render](docs/RENDER_OPTIMIZATION.md)
-- 📊 [So Sánh Các Dịch Vụ Deploy](docs/DEPLOYMENT_COMPARISON.md)
+- 🖼️ [Hướng Dẫn Setup Cloudinary](docs/CLOUDINARY_SETUP.md)
+- 🖼️ [Cloudinary Changes & Migration](docs/CLOUDINARY_CHANGES.md)
+- 🔄 [Reset & Cập Nhật Database Trên Render](docs/RENDER_DATABASE_RESET.md)
+- 🔧 [Sửa Lỗi Cache & Dữ Liệu Cũ](docs/DEBUG_CACHE_ISSUES.md)
 - ✨ [Deploy Frontend Lên Vercel](docs/VERCEL_DEPLOY.md)
 - 🔄 [Reset & Redeploy Trên Vercel](docs/VERCEL_REDEPLOY.md)
 - 🔧 [Sửa Lỗi CORS Vercel](docs/VERCEL_FIX_CORS.md)
-- 🚂 [Deploy Backend Lên Railway](docs/RAILWAY_DEPLOYMENT.md)
-- 🔄 [Reset Database](RESET_DATABASE.md)
-- 🗄️ [Reset & Cập Nhật Database Trên Render](docs/RENDER_DATABASE_RESET.md)
-- 🔌 [API Documentation](docs/API_DOCUMENTATION.md)
 - 🗄️ [Database Schema](database/schema.sql)
 
 ---
@@ -408,4 +418,3 @@ Mã nguồn mở – sử dụng cho mục đích **học tập và nghiên cứ
 Made with ❤️ by Nguyễn Duy Quang
 
 </div>
-# MenuOder
