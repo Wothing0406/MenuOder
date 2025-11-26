@@ -264,7 +264,7 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('storeImage', file);
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
       const response = await fetch(`${API_BASE}/api/stores/my-store/image`, {
         method: 'POST',
         headers: {
@@ -328,7 +328,7 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('logo', file);
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
       const response = await fetch(`${API_BASE}/api/stores/my-store/logo`, {
         method: 'POST',
         headers: {

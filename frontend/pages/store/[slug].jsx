@@ -157,7 +157,7 @@ export default function StorePage() {
                 if (store.storeImage.startsWith('http')) {
                   return store.storeImage;
                 }
-                const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+                const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
                 const imagePath = store.storeImage.startsWith('/') ? store.storeImage : '/' + store.storeImage;
                 return apiBase + imagePath;
               })()}
@@ -191,7 +191,7 @@ export default function StorePage() {
                       if (store.storeLogo.startsWith('http')) {
                         return store.storeLogo;
                       }
-                      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+                      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
                       const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
                       return apiBase + logoPath;
                     })()}

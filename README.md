@@ -374,6 +374,7 @@ Sau khi chạy seed data:
 ### 📚 Tài Liệu Tham Khảo
 
 - 📖 [Hướng Dẫn Cài Đặt Chi Tiết](docs/SETUP.md)
+- 🚀 [Hướng Dẫn Deploy Lên Render](docs/RENDER_DEPLOYMENT.md)
 - 🔄 [Reset Database](RESET_DATABASE.md)
 - 🔌 [API Documentation](docs/API_DOCUMENTATION.md)
 - 🗄️ [Database Schema](database/schema.sql)

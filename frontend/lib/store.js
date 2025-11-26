@@ -33,20 +33,19 @@ export const useCart = create((set, get) => ({
       JSON.stringify(i.selectedAccompaniments) === JSON.stringify(item.selectedAccompaniments)
     );
 
+    let newItems;
     if (existingItem) {
-      const updatedItems = items.map((i) =>
+      newItems = items.map((i) =>
         i.id === existingItem.id 
           ? { ...i, quantity: i.quantity + item.quantity, subtotal: i.basePrice * (i.quantity + item.quantity) }
           : i
       );
-      set({ items: updatedItems });
     } else {
-      set({ items: [...items, item] });
+      newItems = [...items, item];
     }
 
-    const newItems = get().items;
     const newTotal = newItems.reduce((acc, item) => acc + item.subtotal, 0);
-    set({ total: parseFloat(newTotal.toFixed(2)) });
+    set({ items: newItems, total: parseFloat(newTotal.toFixed(2)) });
   },
 
   removeItem: (itemId) => {
