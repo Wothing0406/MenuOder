@@ -213,7 +213,7 @@ export default function StorePage() {
               
               {/* Store Info - Left Aligned */}
               <div className="flex-1 text-white pb-1 min-w-0">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1.5 md:mb-2 drop-shadow-lg truncate">{store.storeName}</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 md:mb-2 drop-shadow-lg leading-tight break-words line-clamp-2">{store.storeName}</h1>
                 {(store.storeDetailedAddress || store.storeAddress) && (
                   <div className="flex items-start gap-1.5 mb-1.5">
                     <span className="text-base md:text-lg flex-shrink-0 mt-0.5">📍</span> 
@@ -380,11 +380,11 @@ export default function StorePage() {
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-2xl flex-shrink-0">🛒</span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-sm text-gray-800">
+                  <p className="font-bold text-sm text-gray-800 leading-tight">
                     {cartItems.length} món
                   </p>
-                  <p className="text-xs text-gray-600">
-                    Tổng: <span className="font-bold text-purple-600 text-base">
+                  <p className="text-xs text-gray-600 leading-tight">
+                    Tổng: <span className="font-bold text-purple-600 text-sm sm:text-base leading-none inline-block">
                       {formatVND(cartItems.reduce((acc, item) => acc + item.subtotal, 0))}
                     </span>
                   </p>
@@ -392,7 +392,7 @@ export default function StorePage() {
               </div>
               <button
                 onClick={() => router.push(`/checkout?store=${slug}`)}
-                className="btn btn-primary px-5 py-3 text-sm font-bold flex-shrink-0"
+                className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0"
               >
                 Thanh toán
               </button>

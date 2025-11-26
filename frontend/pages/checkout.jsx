@@ -407,7 +407,7 @@ export default function Checkout() {
                 <>
                   <div>
                     <label className="block mb-1.5 font-semibold text-sm">
-                      Số bàn <span className="text-red-600">*</span>
+                      Nhập số bàn đang ngồi <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="number"
@@ -492,7 +492,7 @@ export default function Checkout() {
                       onBlur={handleDeliveryAddressBlur}
                       className={`input-field w-full text-sm py-2.5 ${addressConfirmed ? 'border-green-500 bg-green-50' : validatedAddress ? 'border-yellow-500 bg-yellow-50' : ''}`}
                       rows="3"
-                      placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố"
+                      placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố( Vui lòng nhập rõ chính xác địa chỉ để tính phí ship và giao hàng)"
                       required
                       disabled={addressConfirmed}
                     />

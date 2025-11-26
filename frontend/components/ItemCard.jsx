@@ -40,9 +40,9 @@ export default function ItemCard({ item, onAddToCart }) {
             </span>
           )}
         </div>
-        <div className="flex items-center justify-between gap-1.5 mt-auto pt-1 border-t border-gray-100">
+        <div className="flex items-end justify-between gap-1.5 mt-auto pt-1 border-t border-gray-100">
           <span 
-            className="text-xs md:text-sm font-bold text-purple-600 break-words min-w-0"
+            className="text-[10px] sm:text-xs md:text-sm font-bold text-purple-600 leading-none min-w-0 flex-1"
             title={formatVND(item.itemPrice)}
           >
             {formatVND(item.itemPrice)}
@@ -50,6 +50,7 @@ export default function ItemCard({ item, onAddToCart }) {
           <button
             onClick={() => onAddToCart(item)}
             className="btn btn-primary text-[10px] md:text-xs px-2 py-1 rounded-lg font-semibold hover:bg-purple-700 transition shadow-sm hover:shadow-md whitespace-nowrap flex-shrink-0"
+            style={{ minHeight: '28px', paddingTop: '4px', paddingBottom: '4px' }}
           >
             ➕
           </button>

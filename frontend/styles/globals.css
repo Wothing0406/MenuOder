@@ -247,4 +247,42 @@ html {
   body {
     overflow-x: hidden;
   }
+  
+  /* Better price display alignment */
+  .price-text {
+    line-height: 1.2;
+    word-break: break-all;
+    white-space: normal;
+  }
+  
+  /* Fix text alignment for prices */
+  .price-container {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+  }
+}
+
+/* Utility class for price display */
+.price-display {
+  line-height: 1.2;
+  word-break: keep-all;
+  white-space: nowrap;
+}
+
+/* Better line clamping */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
