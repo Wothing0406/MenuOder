@@ -172,7 +172,7 @@ export default function Dashboard() {
     setOrderDetail(null);
   };
 
-  // Fetch orders by date (only delivered orders for revenue calculation)
+  // Fetch orders by date (only completed orders for revenue calculation)
   const fetchOrdersByDate = async (date) => {
     try {
       setLoadingDateOrders(true);
@@ -181,9 +181,9 @@ export default function Dashboard() {
       if (res.data.success) {
         const orders = res.data.data.orders || [];
         setDateOrders(orders);
-        // Calculate total revenue for the date - ONLY delivered orders
+        // Calculate total revenue for the date - ONLY completed orders (paid)
         const revenue = orders
-          .filter(order => order.status === 'delivered')
+          .filter(order => order.status === 'completed')
           .reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0);
         setDateRevenue(revenue);
       }
@@ -650,10 +650,14 @@ export default function Dashboard() {
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : order.status === 'confirmed'
                                 ? 'bg-blue-100 text-blue-800'
+                                : order.status === 'preparing'
+                                ? 'bg-orange-100 text-orange-800'
                                 : order.status === 'ready'
                                 ? 'bg-green-100 text-green-800'
                                 : order.status === 'delivered'
                                 ? 'bg-purple-100 text-purple-800'
+                                : order.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-red-100 text-red-800'
                             }`}
                           >
@@ -662,6 +666,7 @@ export default function Dashboard() {
                              order.status === 'preparing' ? 'Đang chuẩn bị' :
                              order.status === 'ready' ? 'Sẵn sàng' :
                              order.status === 'delivered' ? 'Đã giao' :
+                             order.status === 'completed' ? 'Hoàn tất' :
                              order.status === 'cancelled' ? 'Đã hủy' : order.status}
                           </span>
                         </td>
@@ -676,6 +681,7 @@ export default function Dashboard() {
                             <option value="preparing">Đang chuẩn bị</option>
                             <option value="ready">Sẵn sàng</option>
                             <option value="delivered">Đã giao</option>
+                            <option value="completed">Hoàn tất</option>
                             <option value="cancelled">Đã hủy</option>
                           </select>
                         </td>
@@ -1120,10 +1126,14 @@ export default function Dashboard() {
                             ? 'bg-yellow-100 text-yellow-800'
                             : orderDetail.status === 'confirmed'
                             ? 'bg-blue-100 text-blue-800'
+                            : orderDetail.status === 'preparing'
+                            ? 'bg-orange-100 text-orange-800'
                             : orderDetail.status === 'ready'
                             ? 'bg-green-100 text-green-800'
                             : orderDetail.status === 'delivered'
                             ? 'bg-purple-100 text-purple-800'
+                            : orderDetail.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
@@ -1132,6 +1142,7 @@ export default function Dashboard() {
                          orderDetail.status === 'preparing' ? 'Đang chuẩn bị' :
                          orderDetail.status === 'ready' ? 'Sẵn sàng' :
                          orderDetail.status === 'delivered' ? 'Đã giao' :
+                         orderDetail.status === 'completed' ? 'Hoàn tất' :
                          orderDetail.status === 'cancelled' ? 'Đã hủy' : orderDetail.status}
                       </span>
                     </div>
@@ -1248,16 +1259,16 @@ export default function Dashboard() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-2">
                     <div>
-                      <p className="text-sm text-gray-600">Doanh thu (đã giao):</p>
+                      <p className="text-sm text-gray-600">Doanh thu (hoàn tất):</p>
                       <p className="font-bold text-lg text-purple-600">{formatVND(dateRevenue)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Tổng số đơn:</p>
                       <p className="font-bold text-lg text-gray-800">
                         {dateOrders.length} đơn
-                        {dateOrders.filter(o => o.status === 'delivered').length > 0 && (
+                        {dateOrders.filter(o => o.status === 'completed').length > 0 && (
                           <span className="text-sm text-green-600 ml-2">
-                            ({dateOrders.filter(o => o.status === 'delivered').length} đã giao)
+                            ({dateOrders.filter(o => o.status === 'completed').length} hoàn tất)
                           </span>
                         )}
                       </p>
@@ -1283,20 +1294,20 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div>
-                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Lưu ý:</strong> Doanh thu chỉ tính từ các đơn hàng có trạng thái "Đã giao". 
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> Doanh thu chỉ tính từ các đơn hàng có trạng thái "Hoàn tất" (đã thanh toán). 
                       Các đơn hàng đang xử lý sẽ không được tính vào doanh thu.
                     </p>
                   </div>
                   <div className="space-y-4">
                     {dateOrders.map((order) => {
-                      const isDelivered = order.status === 'delivered';
+                      const isCompleted = order.status === 'completed';
                       return (
                         <div 
                           key={order.id} 
                           className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            isDelivered ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                            isCompleted ? 'border-green-300 bg-green-50' : 'border-gray-200'
                           }`}
                           onClick={() => {
                             setSelectedOrder(order.id);
@@ -1320,10 +1331,14 @@ export default function Dashboard() {
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : order.status === 'confirmed'
                                     ? 'bg-blue-100 text-blue-800'
+                                    : order.status === 'preparing'
+                                    ? 'bg-orange-100 text-orange-800'
                                     : order.status === 'ready'
                                     ? 'bg-green-100 text-green-800'
                                     : order.status === 'delivered'
                                     ? 'bg-purple-100 text-purple-800'
+                                    : order.status === 'completed'
+                                    ? 'bg-emerald-100 text-emerald-800'
                                     : 'bg-red-100 text-red-800'
                                 }`}>
                                   {order.status === 'pending' ? 'Chờ xử lý' :
@@ -1331,18 +1346,9 @@ export default function Dashboard() {
                                    order.status === 'preparing' ? 'Đang chuẩn bị' :
                                    order.status === 'ready' ? 'Sẵn sàng' :
                                    order.status === 'delivered' ? 'Đã giao' :
+                                   order.status === 'completed' ? 'Hoàn tất' :
                                    order.status === 'cancelled' ? 'Đã hủy' : order.status}
                                 </span>
-                                {isDelivered && (
-                                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-200 text-green-800">
-                                    ✓ Tính vào doanh thu
-                                  </span>
-                                )}
-                                {!isDelivered && (
-                                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">
-                                    ⏳ Đã Huỷ
-                                  </span>
-                                )}
                               </div>
                               <p className="text-sm text-gray-600">
                                 {order.orderType === 'delivery' 
@@ -1354,12 +1360,9 @@ export default function Dashboard() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className={`font-bold text-lg ${isDelivered ? 'text-purple-600' : 'text-gray-400'}`}>
+                              <p className={`font-bold text-lg ${isCompleted ? 'text-purple-600' : 'text-gray-400'}`}>
                                 {formatVND(order.totalAmount)}
                               </p>
-                              {!isDelivered && (
-                                <p className="text-xs text-gray-500 mt-1">Chưa tính</p>
-                              )}
                             </div>
                           </div>
                         </div>

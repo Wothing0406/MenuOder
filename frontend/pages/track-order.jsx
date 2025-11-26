@@ -10,9 +10,10 @@ const getStatusLabel = (status) => {
   const statusMap = {
     pending: { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
     confirmed: { label: 'Đã xác nhận', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-    preparing: { label: 'Đang chuẩn bị', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+    preparing: { label: 'Đang chuẩn bị', color: 'bg-orange-100 text-orange-800 border-orange-300' },
     ready: { label: 'Sẵn sàng', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-    delivered: { label: 'Đã giao hàng', color: 'bg-green-100 text-green-800 border-green-300' },
+    delivered: { label: 'Đã giao hàng', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+    completed: { label: 'Hoàn tất', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
     cancelled: { label: 'Đã hủy', color: 'bg-red-100 text-red-800 border-red-300' }
   };
   return statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800 border-gray-300' };

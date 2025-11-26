@@ -497,7 +497,7 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -555,27 +555,27 @@ exports.getOrderStats = async (req, res) => {
       where: { storeId: store.id, status: 'pending' }
     });
     
-    // Get completed orders
+    // Get completed orders (delivered status)
     const completedOrders = await Order.count({
       where: { storeId: store.id, status: 'delivered' }
     });
 
-    // Calculate total revenue (all delivered orders)
+    // Calculate total revenue (all completed orders - paid)
     const totalRevenueResult = await Order.findAll({
       attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
       where: { 
         storeId: store.id, 
-        status: 'delivered' 
+        status: 'completed' 
       },
       raw: true
     });
 
-    // Calculate today's revenue (delivered orders today only)
+    // Calculate today's revenue (completed orders today only)
     const todayRevenueResult = await Order.findAll({
       attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
       where: { 
         storeId: store.id, 
-        status: 'delivered',
+        status: 'completed',
         createdAt: {
           [Op.between]: [startOfToday, endOfToday]
         }
@@ -583,12 +583,12 @@ exports.getOrderStats = async (req, res) => {
       raw: true
     });
 
-    // Calculate monthly revenue (delivered orders this month)
+    // Calculate monthly revenue (completed orders this month)
     const monthlyRevenueResult = await Order.findAll({
       attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
       where: { 
         storeId: store.id, 
-        status: 'delivered',
+        status: 'completed',
         createdAt: {
           [Op.gte]: startOfMonth
         }
@@ -596,12 +596,12 @@ exports.getOrderStats = async (req, res) => {
       raw: true
     });
 
-    // Calculate yearly revenue (delivered orders this year)
+    // Calculate yearly revenue (completed orders this year)
     const yearlyRevenueResult = await Order.findAll({
       attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
       where: { 
         storeId: store.id, 
-        status: 'delivered',
+        status: 'completed',
         createdAt: {
           [Op.gte]: startOfYear
         }

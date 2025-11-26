@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customerNote TEXT,
   tableNumber INT,
   totalAmount DECIMAL(10, 2) NOT NULL,
-  status ENUM('pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled') DEFAULT 'pending',
+  status ENUM('pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed', 'cancelled') DEFAULT 'pending',
   paymentMethod ENUM('cash', 'bank_transfer', 'credit_card') DEFAULT 'cash',
   isPaid BOOLEAN DEFAULT false,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

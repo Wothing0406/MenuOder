@@ -69,6 +69,27 @@ async function applyMigration() {
       }
     }
     
+    // Apply migration to add 'completed' status
+    try {
+      const completedStatusMigrationPath = path.join(__dirname, '../../database/migration_add_completed_status.sql');
+      if (fs.existsSync(completedStatusMigrationPath)) {
+        // Read and parse migration file (skip PostgreSQL part for MySQL)
+        let migrationSql = fs.readFileSync(completedStatusMigrationPath, 'utf8');
+        // Remove PostgreSQL comments and keep only MySQL part
+        migrationSql = migrationSql.split('-- For PostgreSQL')[0];
+        migrationSql = migrationSql.replace(/^--.*$/gm, '').trim();
+        
+        await connection.query(migrationSql);
+        console.log('✅ Migration thêm trạng thái "completed" đã được apply!');
+      }
+    } catch (error) {
+      if (error.code === 'ER_PARSE_ERROR' || error.message.includes('Duplicate column')) {
+        console.log('⚠️  Trạng thái "completed" có thể đã tồn tại. Bỏ qua...');
+      } else {
+        throw error;
+      }
+    }
+    
     console.log('\n✅ Tất cả migration đã được apply thành công!');
     console.log('\n📊 Các thay đổi:');
     console.log('   - stores.storeGoogleMapLink');
@@ -79,7 +100,8 @@ async function applyMigration() {
     console.log('   - orders.shippingFee');
     console.log('   - orders.customerName (cho phép NULL)');
     console.log('   - orders.customerPhone (cho phép NULL)');
-    console.log('\n✨ Hoàn tất! Bạn có thể đặt hàng tại bàn ngay bây giờ.');
+    console.log('   - orders.status (thêm trạng thái "completed" - hoàn tất)');
+    console.log('\n✨ Hoàn tất! Bạn có thể đặt hàng tại bàn và sử dụng trạng thái "Hoàn tất" ngay bây giờ.');
     
   } catch (error) {
     console.error('❌ Lỗi:', error.message);
