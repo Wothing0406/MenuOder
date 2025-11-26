@@ -4,6 +4,12 @@ const Item = require('../models/Item');
 const ItemOption = require('../models/ItemOption');
 const path = require('path');
 const fs = require('fs');
+const { 
+  deleteFromCloudinary, 
+  extractPublicIdFromUrl,
+  isCloudinaryConfigured 
+} = require('../utils/cloudinary');
+const { useCloudinary } = require('../middleware/upload');
 
 // Get store by slug
 exports.getStoreBySlug = async (req, res) => {
@@ -48,11 +54,12 @@ exports.getStoreBySlug = async (req, res) => {
     // Helper function để tạo full URL cho logo
     const getLogoUrl = (logoPath) => {
       if (!logoPath) return null;
+      // Nếu đã là full URL (Cloudinary hoặc external URL), trả về luôn
       if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
-        return logoPath; // Đã là full URL
+        return logoPath;
       }
       
-      // Trong production, tạo full URL
+      // Nếu là local path, tạo full URL
       if (process.env.NODE_ENV === 'production') {
         let backendUrl = process.env.BACKEND_URL;
         if (!backendUrl) {
@@ -130,8 +137,10 @@ exports.getMyStore = async (req, res) => {
     // Tạo full URL cho logo nếu có
     const getLogoUrl = (path) => {
       if (!path) return null;
+      // Nếu đã là full URL (Cloudinary hoặc external URL), trả về luôn
       if (path.startsWith('http://') || path.startsWith('https://')) return path;
       
+      // Nếu là local path, tạo full URL
       if (process.env.NODE_ENV === 'production') {
         let backendUrl = process.env.BACKEND_URL;
         if (!backendUrl) {
@@ -170,7 +179,7 @@ exports.getMyStore = async (req, res) => {
 // Update store
 exports.updateStore = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, storeDescription } = req.body;
+    const { storeName, storePhone, storeAddress, storeDetailedAddress, storeDescription } = req.body;
     const logoFile = req.file; // File từ multer
 
     const store = await Store.findOne({
@@ -189,17 +198,28 @@ exports.updateStore = async (req, res) => {
     if (logoFile) {
       // Xóa logo cũ nếu có
       if (store.storeLogo) {
-        const oldLogoPath = path.join(__dirname, '../../', store.storeLogo);
-        if (fs.existsSync(oldLogoPath)) {
-          try {
-            fs.unlinkSync(oldLogoPath);
-          } catch (err) {
-            console.error('Error deleting old logo:', err);
+        if (useCloudinary && store.storeLogo.includes('cloudinary.com')) {
+          // Xóa từ Cloudinary
+          const publicId = extractPublicIdFromUrl(store.storeLogo);
+          if (publicId) {
+            await deleteFromCloudinary(publicId);
+          }
+        } else {
+          // Xóa file local
+          const oldLogoPath = path.join(__dirname, '../../', store.storeLogo);
+          if (fs.existsSync(oldLogoPath)) {
+            try {
+              fs.unlinkSync(oldLogoPath);
+            } catch (err) {
+              console.error('Error deleting old logo:', err);
+            }
           }
         }
       }
       // Lưu đường dẫn logo mới
-      logoPath = '/uploads/' + logoFile.filename;
+      // Nếu dùng Cloudinary, logoFile.path sẽ là Cloudinary URL
+      // Nếu không, sẽ là đường dẫn local
+      logoPath = logoFile.cloudinary ? logoFile.cloudinary.url : ('/uploads/' + logoFile.filename);
     }
 
     // Cập nhật thông tin store
@@ -207,6 +227,7 @@ exports.updateStore = async (req, res) => {
       storeName: storeName || store.storeName,
       storePhone: storePhone || store.storePhone,
       storeAddress: storeAddress || store.storeAddress,
+      storeDetailedAddress: storeDetailedAddress !== undefined ? storeDetailedAddress : store.storeDetailedAddress,
       storeDescription: storeDescription || store.storeDescription
     };
     
@@ -220,12 +241,21 @@ exports.updateStore = async (req, res) => {
       // Nếu là empty string, xóa ảnh cũ
       if (req.body.storeImage === '') {
         if (store.storeImage) {
-          const oldImagePath = path.join(__dirname, '../../', store.storeImage);
-          if (fs.existsSync(oldImagePath)) {
-            try {
-              fs.unlinkSync(oldImagePath);
-            } catch (err) {
-              console.error('Error deleting old store image:', err);
+          if (useCloudinary && store.storeImage.includes('cloudinary.com')) {
+            // Xóa từ Cloudinary
+            const publicId = extractPublicIdFromUrl(store.storeImage);
+            if (publicId) {
+              await deleteFromCloudinary(publicId);
+            }
+          } else {
+            // Xóa file local
+            const oldImagePath = path.join(__dirname, '../../', store.storeImage);
+            if (fs.existsSync(oldImagePath)) {
+              try {
+                fs.unlinkSync(oldImagePath);
+              } catch (err) {
+                console.error('Error deleting old store image:', err);
+              }
             }
           }
         }
@@ -308,18 +338,29 @@ exports.uploadStoreImage = async (req, res) => {
 
     // Xóa ảnh cũ nếu có
     if (store.storeImage) {
-      const oldImagePath = path.join(__dirname, '../../', store.storeImage);
-      if (fs.existsSync(oldImagePath)) {
-        try {
-          fs.unlinkSync(oldImagePath);
-        } catch (err) {
-          console.error('Error deleting old store image:', err);
+      if (useCloudinary && store.storeImage.includes('cloudinary.com')) {
+        // Xóa từ Cloudinary
+        const publicId = extractPublicIdFromUrl(store.storeImage);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+        }
+      } else {
+        // Xóa file local
+        const oldImagePath = path.join(__dirname, '../../', store.storeImage);
+        if (fs.existsSync(oldImagePath)) {
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (err) {
+            console.error('Error deleting old store image:', err);
+          }
         }
       }
     }
 
     // Cập nhật ảnh mới
-    const imagePath = '/uploads/' + req.file.filename;
+    // Nếu dùng Cloudinary, req.file.path sẽ là Cloudinary URL
+    // Nếu không, sẽ là đường dẫn local
+    const imagePath = req.file.cloudinary ? req.file.cloudinary.url : ('/uploads/' + req.file.filename);
     
     await store.update({ storeImage: imagePath });
     await store.reload();
@@ -381,9 +422,15 @@ exports.uploadLogo = async (req, res) => {
 
     if (!store) {
       // Xóa file vừa upload nếu store không tồn tại
-      const filePath = path.join(__dirname, '../../', req.file.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (useCloudinary && req.file.cloudinary) {
+        // Xóa từ Cloudinary
+        await deleteFromCloudinary(req.file.cloudinary.publicId);
+      } else {
+        // Xóa file local
+        const filePath = path.join(__dirname, '../../', req.file.path);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
       return res.status(404).json({
         success: false,
@@ -393,18 +440,29 @@ exports.uploadLogo = async (req, res) => {
 
     // Xóa logo cũ nếu có
     if (store.storeLogo) {
-      const oldLogoPath = path.join(__dirname, '../../', store.storeLogo);
-      if (fs.existsSync(oldLogoPath)) {
-        try {
-          fs.unlinkSync(oldLogoPath);
-        } catch (err) {
-          console.error('Error deleting old logo:', err);
+      if (useCloudinary && store.storeLogo.includes('cloudinary.com')) {
+        // Xóa từ Cloudinary
+        const publicId = extractPublicIdFromUrl(store.storeLogo);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+        }
+      } else {
+        // Xóa file local
+        const oldLogoPath = path.join(__dirname, '../../', store.storeLogo);
+        if (fs.existsSync(oldLogoPath)) {
+          try {
+            fs.unlinkSync(oldLogoPath);
+          } catch (err) {
+            console.error('Error deleting old logo:', err);
+          }
         }
       }
     }
 
     // Cập nhật logo mới
-    const logoPath = '/uploads/' + req.file.filename;
+    // Nếu dùng Cloudinary, req.file.path sẽ là Cloudinary URL
+    // Nếu không, sẽ là đường dẫn local
+    const logoPath = req.file.cloudinary ? req.file.cloudinary.url : ('/uploads/' + req.file.filename);
     
     await store.update({ storeLogo: logoPath });
     await store.reload();

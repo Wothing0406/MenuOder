@@ -53,9 +53,26 @@ async function applyMigration() {
       }
     }
     
+    // Apply migration to add detailed address
+    try {
+      const detailedAddressMigrationPath = path.join(__dirname, '../../database/migration_add_detailed_address.sql');
+      if (fs.existsSync(detailedAddressMigrationPath)) {
+        const detailedAddressMigrationSql = fs.readFileSync(detailedAddressMigrationPath, 'utf8');
+        await connection.query(detailedAddressMigrationSql);
+        console.log('✅ Migration thêm địa chỉ chi tiết đã được apply!');
+      }
+    } catch (error) {
+      if (error.code === 'ER_DUP_FIELDNAME' || error.message.includes('Duplicate column name')) {
+        console.log('⚠️  Cột storeDetailedAddress đã tồn tại. Bỏ qua...');
+      } else {
+        throw error;
+      }
+    }
+    
     console.log('\n✅ Tất cả migration đã được apply thành công!');
     console.log('\n📊 Các thay đổi:');
     console.log('   - stores.storeGoogleMapLink');
+    console.log('   - stores.storeDetailedAddress (địa chỉ chi tiết)');
     console.log('   - orders.orderType');
     console.log('   - orders.deliveryAddress');
     console.log('   - orders.deliveryDistance');

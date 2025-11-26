@@ -4,9 +4,10 @@ import { useRouter } from 'next/router';
 import { useStore } from '../../lib/store';
 import Navbar from '../../components/Navbar';
 import Layout from '../../components/Layout';
+import ImageCrop from '../../components/ImageCrop';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
-import { formatVND } from '../../lib/utils';
+import { formatVND, getImageUrl } from '../../lib/utils';
 
 export default function MenuManagement() {
   const router = useRouter();
@@ -19,12 +20,18 @@ export default function MenuManagement() {
   const [activeTab, setActiveTab] = useState('categories');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('category');
+  const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     categoryName: '',
     itemName: '',
     itemPrice: '',
     itemDescription: '',
   });
+  const [itemImage, setItemImage] = useState(null);
+  const [itemImagePreview, setItemImagePreview] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -95,21 +102,172 @@ export default function MenuManagement() {
 
   const handleAddItem = async (e) => {
     e.preventDefault();
+    
+    if (!selectedCategory) {
+      toast.error('Vui lòng chọn danh mục');
+      return;
+    }
+
     try {
-      const res = await api.post('/items', {
-        itemName: formData.itemName,
-        itemPrice: formData.itemPrice,
-        itemDescription: formData.itemDescription,
-        categoryId: selectedCategory.id,
+      setUploading(true);
+      const formDataToSend = new FormData();
+      formDataToSend.append('categoryId', selectedCategory.id);
+      formDataToSend.append('itemName', formData.itemName.trim());
+      formDataToSend.append('itemPrice', formData.itemPrice);
+      formDataToSend.append('itemDescription', formData.itemDescription?.trim() || '');
+      
+      if (itemImage) {
+        formDataToSend.append('itemImage', itemImage);
+      }
+
+      const res = await api.post('/items', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+      
       if (res.data.success) {
-        toast.success('Đã tạo món thành công');
-        setFormData({ ...formData, itemName: '', itemPrice: '', itemDescription: '' });
+        toast.success('🎉 Đã tạo món thành công!');
+        setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
+        setItemImage(null);
+        setItemImagePreview(null);
         setShowModal(false);
         fetchItems(selectedCategory.id);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Không thể tạo món');
+      console.error('Error creating item:', error);
+      toast.error(error.response?.data?.message || 'Không thể tạo món. Vui lòng thử lại.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpdateItem = async (e) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    
+    try {
+      setUploading(true);
+      let res;
+      
+      // Nếu có ảnh mới, dùng FormData, nếu không dùng JSON
+      if (itemImage) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('itemName', formData.itemName.trim());
+        formDataToSend.append('itemPrice', formData.itemPrice);
+        formDataToSend.append('itemDescription', formData.itemDescription?.trim() || '');
+        formDataToSend.append('itemImage', itemImage);
+
+        res = await api.put(`/items/${editingItem.id}`, formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        // Nếu không có ảnh mới, dùng JSON
+        res = await api.put(`/items/${editingItem.id}`, {
+          itemName: formData.itemName.trim(),
+          itemPrice: formData.itemPrice,
+          itemDescription: formData.itemDescription?.trim() || '',
+        });
+      }
+      
+      if (res.data.success) {
+        toast.success('🎉 Đã cập nhật món thành công!');
+        setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
+        setItemImage(null);
+        setItemImagePreview(null);
+        setEditingItem(null);
+        setShowModal(false);
+        fetchItems(selectedCategory.id);
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast.error(error.response?.data?.message || 'Không thể cập nhật món. Vui lòng thử lại.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setFormData({
+      itemName: item.itemName,
+      itemPrice: item.itemPrice,
+      itemDescription: item.itemDescription || '',
+    });
+    setItemImage(null); // Reset file mới
+    // Set preview với ảnh hiện tại (có thể là URL từ server)
+    if (item.itemImage) {
+      setItemImagePreview(getImageUrl(item.itemImage));
+    } else {
+      setItemImagePreview(null);
+    }
+    setModalMode('edit-item');
+    setShowModal(true);
+  };
+
+  const handleDeleteItemImage = async (itemId) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa ảnh món này không?')) return;
+    try {
+      const res = await api.delete(`/items/${itemId}/image`);
+      if (res.data.success) {
+        toast.success('Đã xóa ảnh thành công');
+        fetchItems(selectedCategory.id);
+        if (editingItem && editingItem.id === itemId) {
+          setItemImagePreview(null);
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể xóa ảnh');
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Vui lòng chọn file ảnh');
+        return;
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Kích thước ảnh không được vượt quá 5MB');
+        return;
+      }
+      
+      // Show crop modal
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageToCrop(reader.result);
+        setShowCropModal(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async (croppedImageDataUrl) => {
+    try {
+      // Convert data URL to blob/file
+      const response = await fetch(croppedImageDataUrl);
+      const blob = await response.blob();
+      
+      // Create file with proper name
+      const fileName = `item-image-${Date.now()}.jpg`;
+      const file = new File([blob], fileName, { 
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      });
+      
+      // Update state
+      setItemImage(file);
+      setItemImagePreview(croppedImageDataUrl);
+      
+      toast.success('✅ Đã điều chỉnh ảnh thành công! Bạn có thể xem preview ở trên.');
+    } catch (error) {
+      console.error('Error converting cropped image:', error);
+      toast.error('❌ Không thể xử lý ảnh đã crop. Vui lòng thử lại.');
     }
   };
 
@@ -136,6 +294,34 @@ export default function MenuManagement() {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể xóa danh mục');
+    }
+  }
+
+  const handleMoveCategory = async (categoryId, direction) => {
+    const currentIndex = categories.findIndex(c => c.id === categoryId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= categories.length) return;
+
+    try {
+      // Create new order array
+      const newCategories = [...categories];
+      [newCategories[currentIndex], newCategories[newIndex]] = [newCategories[newIndex], newCategories[currentIndex]];
+
+      // Build categoryOrders array with new displayOrder values
+      const categoryOrders = newCategories.map((cat, idx) => ({
+        categoryId: cat.id,
+        displayOrder: idx
+      }));
+
+      const res = await api.post('/categories/reorder', { categoryOrders });
+      if (res.data.success) {
+        toast.success('✅ Đã sắp xếp lại danh mục!');
+        fetchData(); // Refresh to get updated order
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể sắp xếp danh mục');
     }
   }
 
@@ -216,22 +402,65 @@ export default function MenuManagement() {
                 setFormData({ categoryName: '' });
                 setShowModal(true);
               }}
-              className="btn btn-primary mb-6"
+              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl"
             >
-              Thêm danh mục
+              ➕ Thêm danh mục mới
             </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {categories.map((category) => (
-                <div key={category.id} className="card">
-                  <h3 className="text-lg font-bold mb-2">{category.categoryName}</h3>
-                  <p className="text-gray-600 mb-4 text-sm">{category.categoryDescription}</p>
-                  <button
-                    onClick={() => handleDeleteCategory(category.id)}
-                    className="btn btn-danger w-full text-sm"
-                  >
-                    Xóa
-                  </button>
+            <div className="space-y-3">
+              {categories.map((category, index) => (
+                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300">
+                  <div className="flex items-center gap-3">
+                    {/* Order Controls */}
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => handleMoveCategory(category.id, 'up')}
+                        disabled={index === 0}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition ${
+                          index === 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                        }`}
+                        title="Di chuyển lên"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => handleMoveCategory(category.id, 'down')}
+                        disabled={index === categories.length - 1}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition ${
+                          index === categories.length - 1
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                        }`}
+                        title="Di chuyển xuống"
+                      >
+                        ↓
+                      </button>
+                    </div>
+
+                    {/* Category Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">{category.categoryName}</h3>
+                      </div>
+                      {category.categoryDescription && (
+                        <p className="text-gray-600 mb-3 text-sm line-clamp-2">{category.categoryDescription}</p>
+                      )}
+                    </div>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="btn btn-danger text-sm hover:bg-red-600 transition px-4 py-2"
+                      title="Xóa danh mục"
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -273,27 +502,61 @@ export default function MenuManagement() {
                       onClick={() => {
                         setModalMode('item');
                         setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
+                        setItemImage(null);
+                        setItemImagePreview(null);
                         setShowModal(true);
                       }}
-                      className="btn btn-primary mb-4"
+                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl"
                     >
-                      Thêm món
+                      ➕ Thêm món mới
                     </button>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                       {items.map(item => (
-                        <div key={item.id} className="card">
-                          <h3 className="text-lg font-bold mb-2">{item.itemName}</h3>
-                          <p className="text-gray-600 mb-2 text-sm">{item.itemDescription}</p>
-                          <p className="text-blue-600 font-bold mb-3 text-lg">
-                            {formatVND(item.itemPrice)}
-                          </p>
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="btn btn-danger w-full text-sm"
-                          >
-                            Xóa
-                          </button>
+                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col">
+                          {/* Image Square */}
+                          {item.itemImage ? (
+                            <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
+                              <img
+                                src={getImageUrl(item.itemImage)}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
+                              <span className="text-2xl md:text-3xl">🍽️</span>
+                            </div>
+                          )}
+                          
+                          {/* Content - Compact */}
+                          <div className="p-2 flex flex-col flex-1">
+                            <h3 className="text-xs md:text-sm font-bold mb-1 text-gray-800 line-clamp-2 min-h-[2rem] leading-tight">
+                              {item.itemName}
+                            </h3>
+                            <p className="text-xs font-bold text-purple-600 mb-2">
+                              {formatVND(item.itemPrice)}
+                            </p>
+                            <div className="flex gap-1 mt-auto">
+                              <button
+                                onClick={() => handleEditItem(item)}
+                                className="flex-1 px-2 py-1.5 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-600 hover:text-white transition font-medium"
+                                title="Sửa"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="flex-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-600 hover:text-white transition font-medium"
+                                title="Xóa"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -310,31 +573,44 @@ export default function MenuManagement() {
 
         {/* Modal - Add Category */}
         {showModal && modalMode === 'category' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Thêm danh mục</h2>
-              <form onSubmit={handleAddCategory} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Tên danh mục"
-                  value={formData.categoryName}
-                  onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
-                  className="input-field"
-                  required
-                />
-                <div className="flex gap-2">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">📂 Thêm danh mục mới</h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <form onSubmit={handleAddCategory} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📋 Tên danh mục <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Đồ uống, Món chính, Tráng miệng..."
+                    value={formData.categoryName}
+                    onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
+                    className="input-field w-full"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="btn btn-secondary flex-1"
+                    className="btn btn-secondary flex-1 hover:bg-gray-400 transition"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary flex-1"
+                    className="btn btn-primary flex-1 hover:bg-purple-700 transition"
                   >
-                    Tạo
+                    ✅ Tạo danh mục
                   </button>
                 </div>
               </form>
@@ -344,53 +620,325 @@ export default function MenuManagement() {
 
         {/* Modal - Add Item */}
         {showModal && modalMode === 'item' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Thêm món vào {selectedCategory?.categoryName}</h2>
-              <form onSubmit={handleAddItem} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Tên món"
-                  value={formData.itemName}
-                  onChange={e => setFormData({ ...formData, itemName: e.target.value })}
-                  className="input-field"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Giá món (₫)"
-                  value={formData.itemPrice}
-                  onChange={e => setFormData({ ...formData, itemPrice: e.target.value })}
-                  className="input-field"
-                  required
-                  step="0.01"
-                />
-                <textarea
-                  placeholder="Mô tả món"
-                  value={formData.itemDescription}
-                  onChange={e => setFormData({ ...formData, itemDescription: e.target.value })}
-                  className="input-field"
-                  required
-                  rows="3"
-                />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">➕ Thêm món mới</h2>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setItemImage(null);
+                    setItemImagePreview(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mb-4 px-3 py-2 bg-purple-100 rounded-lg">
+                <p className="text-sm text-purple-800">
+                  📂 Danh mục: <span className="font-bold">{selectedCategory?.categoryName}</span>
+                </p>
+              </div>
+              <form onSubmit={handleAddItem} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    🍽️ Tên món <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Cà phê sữa đá"
+                    value={formData.itemName}
+                    onChange={e => setFormData({ ...formData, itemName: e.target.value })}
+                    className="input-field w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    💰 Giá món (₫) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ví dụ: 25000"
+                    value={formData.itemPrice}
+                    onChange={e => setFormData({ ...formData, itemPrice: e.target.value })}
+                    className="input-field w-full"
+                    required
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📝 Mô tả món
+                  </label>
+                  <textarea
+                    placeholder="Mô tả về món ăn (không bắt buộc)"
+                    value={formData.itemDescription}
+                    onChange={e => setFormData({ ...formData, itemDescription: e.target.value })}
+                    className="input-field w-full"
+                    rows="3"
+                  />
+                </div>
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    📷 Ảnh món (tùy chọn)
+                  </label>
+                  {itemImagePreview && (
+                    <div className="relative mb-3 group">
+                      <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
+                        <img
+                          src={itemImagePreview}
+                          alt="Preview ảnh đã crop"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          ✅ Ảnh đã sẵn sàng
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fileInput = document.createElement('input');
+                            fileInput.type = 'file';
+                            fileInput.accept = 'image/*';
+                            fileInput.onchange = handleImageChange;
+                            fileInput.click();
+                          }}
+                          className="bg-blue-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-xs hover:bg-blue-600 transition shadow-lg hover:scale-110"
+                          title="Thay đổi ảnh"
+                        >
+                          🔄
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setItemImage(null);
+                            setItemImagePreview(null);
+                            toast.success('Đã xóa ảnh');
+                          }}
+                          className="bg-red-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm hover:bg-red-600 transition shadow-lg hover:scale-110"
+                          title="Xóa ảnh"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!itemImagePreview && (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition cursor-pointer"
+                      onClick={() => document.getElementById('item-image-input').click()}>
+                      <div className="text-4xl mb-2">📷</div>
+                      <p className="text-sm text-gray-600 mb-1">Nhấn để chọn ảnh</p>
+                      <p className="text-xs text-gray-500">JPG, PNG, GIF • Tối đa 5MB</p>
+                    </div>
+                  )}
+                  <input
+                    id="item-image-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setItemImage(null);
+                      setItemImagePreview(null);
+                    }}
                     className="btn btn-secondary flex-1"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary flex-1"
+                    disabled={uploading}
+                    className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Tạo
+                    {uploading ? '⏳ Đang tạo...' : '✅ Tạo món'}
                   </button>
                 </div>
               </form>
             </div>
           </div>
+        )}
+
+        {/* Modal - Edit Item */}
+        {showModal && modalMode === 'edit-item' && editingItem && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">✏️ Chỉnh sửa món</h2>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingItem(null);
+                    setItemImage(null);
+                    setItemImagePreview(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <form onSubmit={handleUpdateItem} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    🍽️ Tên món <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Cà phê sữa đá"
+                    value={formData.itemName}
+                    onChange={e => setFormData({ ...formData, itemName: e.target.value })}
+                    className="input-field w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    💰 Giá món (₫) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ví dụ: 25000"
+                    value={formData.itemPrice}
+                    onChange={e => setFormData({ ...formData, itemPrice: e.target.value })}
+                    className="input-field w-full"
+                    required
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📝 Mô tả món
+                  </label>
+                  <textarea
+                    placeholder="Mô tả về món ăn (không bắt buộc)"
+                    value={formData.itemDescription}
+                    onChange={e => setFormData({ ...formData, itemDescription: e.target.value })}
+                    className="input-field w-full"
+                    rows="3"
+                  />
+                </div>
+                {/* Image Upload/Edit */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    📷 Ảnh món (tùy chọn)
+                  </label>
+                  {itemImagePreview && (
+                    <div className="relative mb-3 group">
+                      <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
+                        <img
+                          src={itemImagePreview}
+                          alt="Preview ảnh"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          {itemImage ? '✅ Ảnh mới đã sẵn sàng' : '📷 Ảnh hiện tại'}
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fileInput = document.createElement('input');
+                            fileInput.type = 'file';
+                            fileInput.accept = 'image/*';
+                            fileInput.onchange = handleImageChange;
+                            fileInput.click();
+                          }}
+                          className="bg-blue-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-xs hover:bg-blue-600 transition shadow-lg hover:scale-110"
+                          title="Thay đổi ảnh"
+                        >
+                          🔄
+                        </button>
+                        {editingItem?.itemImage && !itemImage && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteItemImage(editingItem.id)}
+                            className="bg-red-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm hover:bg-red-600 transition shadow-lg hover:scale-110"
+                            title="Xóa ảnh từ server"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                        {itemImage && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setItemImage(null);
+                              setItemImagePreview(editingItem?.itemImage || null);
+                              toast.success('Đã hủy ảnh mới');
+                            }}
+                            className="bg-orange-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm hover:bg-orange-600 transition shadow-lg hover:scale-110"
+                            title="Hủy ảnh mới"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {!itemImagePreview && (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition cursor-pointer"
+                      onClick={() => document.getElementById('edit-item-image-input').click()}>
+                      <div className="text-4xl mb-2">📷</div>
+                      <p className="text-sm text-gray-600 mb-1">Nhấn để chọn ảnh</p>
+                      <p className="text-xs text-gray-500">JPG, PNG, GIF • Tối đa 5MB</p>
+                    </div>
+                  )}
+                  <input
+                    id="edit-item-image-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setEditingItem(null);
+                      setItemImage(null);
+                      setItemImagePreview(null);
+                    }}
+                    className="btn btn-secondary flex-1"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploading ? '⏳ Đang cập nhật...' : '✅ Cập nhật món'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Image Crop Modal */}
+        {showCropModal && imageToCrop && (
+          <ImageCrop
+            imageSrc={imageToCrop}
+            onClose={() => {
+              setShowCropModal(false);
+              setImageToCrop(null);
+            }}
+            onCropComplete={handleCropComplete}
+          />
         )}
       </div>
     </Layout>

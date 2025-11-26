@@ -25,10 +25,20 @@ exports.createCategory = async (req, res) => {
       });
     }
 
+    // Get current max displayOrder to assign new category at the end
+    const maxOrderResult = await Category.findOne({
+      where: { storeId: store.id },
+      attributes: [[Category.sequelize.fn('MAX', Category.sequelize.col('displayOrder')), 'maxOrder']],
+      raw: true
+    });
+    const maxOrder = maxOrderResult?.maxOrder ?? -1;
+    const newDisplayOrder = maxOrder + 1;
+
     const category = await Category.create({
       storeId: store.id,
       categoryName,
-      categoryDescription
+      categoryDescription,
+      displayOrder: newDisplayOrder
     });
 
     res.status(201).json({
@@ -222,6 +232,78 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete category',
+      error: error.message
+    });
+  }
+};
+
+// Reorder categories - batch update displayOrder
+exports.reorderCategories = async (req, res) => {
+  try {
+    const { categoryOrders } = req.body; // Array of { categoryId, displayOrder }
+
+    if (!Array.isArray(categoryOrders) || categoryOrders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'categoryOrders must be a non-empty array'
+      });
+    }
+
+    const store = await Store.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    // Validate all categories belong to this store
+    const categoryIds = categoryOrders.map(co => co.categoryId);
+    const categories = await Category.findAll({
+      where: {
+        id: categoryIds,
+        storeId: store.id
+      }
+    });
+
+    if (categories.length !== categoryIds.length) {
+      return res.status(403).json({
+        success: false,
+        message: 'Some categories not found or unauthorized'
+      });
+    }
+
+    // Update all categories in a transaction
+    const { sequelize } = require('../config/database');
+    await sequelize.transaction(async (t) => {
+      const updatePromises = categoryOrders.map(({ categoryId, displayOrder }) =>
+        Category.update(
+          { displayOrder },
+          { where: { id: categoryId, storeId: store.id }, transaction: t }
+        )
+      );
+      await Promise.all(updatePromises);
+    });
+
+    // Return updated categories
+    const updatedCategories = await Category.findAll({
+      where: { storeId: store.id },
+      order: [['displayOrder', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      message: 'Categories reordered successfully',
+      data: updatedCategories
+    });
+  } catch (error) {
+    console.error('Reorder categories error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reorder categories',
       error: error.message
     });
   }

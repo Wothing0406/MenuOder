@@ -31,6 +31,11 @@ const Store = sequelize.define('Store', {
     type: Sequelize.STRING,
     allowNull: true
   },
+  storeDetailedAddress: {
+    type: Sequelize.TEXT,
+    allowNull: true,
+    comment: 'Detailed address for display (does not affect distance calculation)'
+  },
   storeGoogleMapLink: {
     type: Sequelize.STRING(500),
     allowNull: true,

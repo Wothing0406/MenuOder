@@ -21,6 +21,10 @@ const nextConfig = {
         hostname: '**.onrender.com',
       },
       {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
       },
@@ -54,17 +58,8 @@ const nextConfig = {
   },
 
   // Tối ưu hóa webpack
-  webpack: (config, { isServer }) => {
-    // Giảm kích thước bundle
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-        sideEffects: false,
-      };
-    }
-    return config;
-  },
+  // Lưu ý: Next.js 14 đã tự động optimize tốt, không cần cấu hình thêm
+  // Bỏ phần webpack config vì gây xung đột với Next.js 14
 
   // Tắt source maps trong production để giảm kích thước
   productionBrowserSourceMaps: false,

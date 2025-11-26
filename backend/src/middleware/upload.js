@@ -1,14 +1,25 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { isCloudinaryConfigured } = require('../utils/cloudinary');
 
-// Đảm bảo thư mục uploads tồn tại
+// Kiểm tra xem có sử dụng Cloudinary không
+const useCloudinary = isCloudinaryConfigured();
+
+if (useCloudinary) {
+  console.log('📦 Using Cloudinary for file storage');
+} else {
+  console.log('💾 Using local file storage');
+}
+
+// Đảm bảo thư mục uploads tồn tại (cho local storage)
 const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Cấu hình storage
+// Cấu hình storage - luôn dùng local storage cho multer
+// Cloudinary upload sẽ được xử lý riêng trong routes
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -42,7 +53,10 @@ const upload = multer({
   }
 });
 
-module.exports = upload;
+module.exports = {
+  upload,
+  useCloudinary
+};
 
 
 

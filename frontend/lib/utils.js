@@ -33,3 +33,24 @@ export function formatVNDNumber(amount) {
   return new Intl.NumberFormat('vi-VN').format(numAmount);
 }
 
+/**
+ * Convert relative image path to full URL
+ * @param {string} imagePath - Relative path (e.g., '/uploads/image.jpg') or full URL
+ * @returns {string} - Full URL or original path if already full URL
+ */
+export function getImageUrl(imagePath) {
+  if (!imagePath) return null;
+  
+  // Nếu đã là full URL (http/https), trả về luôn
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // Nếu là relative path, chuyển thành full URL
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const cleanBase = apiBase.replace(/\/$/, ''); // Remove trailing slash
+  const cleanPath = imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+  
+  return cleanBase + cleanPath;
+}
+

@@ -1,35 +1,57 @@
-import { formatVND } from '../lib/utils';
+import { formatVND, getImageUrl } from '../lib/utils';
 
 export default function ItemCard({ item, onAddToCart }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden group cursor-pointer flex flex-col shadow-sm hover:shadow-md transition-shadow">
-      {item.itemImage && (
-        <div className="w-full h-20 bg-gray-100 overflow-hidden relative">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden group cursor-pointer flex flex-col shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
+      {item.itemImage ? (
+        <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
           <img
-            src={item.itemImage}
+            src={getImageUrl(item.itemImage)}
             alt={item.itemName}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </div>
+      ) : (
+        <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
+          <span className="text-2xl md:text-3xl">🍽️</span>
         </div>
       )}
-      <div className="p-2.5 flex flex-col flex-1">
-        <h3 className="text-sm font-bold mb-1.5 text-gray-800 line-clamp-2">
-          {item.itemName}
+      <div className="p-2 flex flex-col flex-1 min-h-0">
+        <div 
+          className="mb-1.5 line-clamp-3 leading-tight"
+          title={item.itemDescription ? `${item.itemName} (${item.itemDescription})` : item.itemName}
+          style={{ 
+            WebkitLineClamp: 3,
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}
+        >
+          <span className="text-xs md:text-sm font-bold text-gray-800">
+            {item.itemName}
+          </span>
           {item.itemDescription && (
-            <span className="text-xs font-normal text-gray-500 ml-1">
+            <span className="text-[9px] md:text-[10px] text-gray-500 ml-1">
               ({item.itemDescription})
             </span>
           )}
-        </h3>
-        <div className="flex items-center justify-between gap-2 mt-auto">
-          <span className="text-base font-bold text-purple-600">
+        </div>
+        <div className="flex items-center justify-between gap-1.5 mt-auto pt-1 border-t border-gray-100">
+          <span 
+            className="text-xs md:text-sm font-bold text-purple-600 break-words min-w-0"
+            title={formatVND(item.itemPrice)}
+          >
             {formatVND(item.itemPrice)}
           </span>
           <button
             onClick={() => onAddToCart(item)}
-            className="btn btn-primary text-xs px-3 py-1.5 rounded-md font-medium whitespace-nowrap"
+            className="btn btn-primary text-[10px] md:text-xs px-2 py-1 rounded-lg font-semibold hover:bg-purple-700 transition shadow-sm hover:shadow-md whitespace-nowrap flex-shrink-0"
           >
-            Thêm vào giỏ
+            ➕
           </button>
         </div>
       </div>

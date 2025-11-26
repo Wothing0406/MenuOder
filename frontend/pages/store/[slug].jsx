@@ -214,10 +214,12 @@ export default function StorePage() {
               {/* Store Info - Left Aligned */}
               <div className="flex-1 text-white pb-1 min-w-0">
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1.5 md:mb-2 drop-shadow-lg truncate">{store.storeName}</h1>
-                {store.storeAddress && (
+                {(store.storeDetailedAddress || store.storeAddress) && (
                   <div className="flex items-start gap-1.5 mb-1.5">
                     <span className="text-base md:text-lg flex-shrink-0 mt-0.5">📍</span> 
-                    <span className="text-xs md:text-sm text-white/95 drop-shadow-md leading-tight line-clamp-2">{store.storeAddress}</span>
+                    <span className="text-xs md:text-sm text-white/95 drop-shadow-md leading-tight line-clamp-2">
+                      {store.storeDetailedAddress || store.storeAddress}
+                    </span>
                   </div>
                 )}
                 {store.storePhone && (
@@ -356,7 +358,7 @@ export default function StorePage() {
             {itemsInCategory.length === 0 ? (
               <p className="text-gray-600 text-center py-8 text-sm">Không có món nào trong danh mục này</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-3">
                 {itemsInCategory.map((item) => (
                   <ItemCard
                     key={item.id}

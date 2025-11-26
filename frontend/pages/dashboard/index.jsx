@@ -30,6 +30,14 @@ export default function Dashboard() {
   const [showDateOrdersModal, setShowDateOrdersModal] = useState(false);
   const [loadingDateOrders, setLoadingDateOrders] = useState(false);
   const [dateRevenue, setDateRevenue] = useState(0); // Revenue for selected date
+  const [storeFormData, setStoreFormData] = useState({
+    storeName: '',
+    storePhone: '',
+    storeAddress: '',
+    storeDetailedAddress: '',
+    storeDescription: ''
+  });
+  const [savingStoreInfo, setSavingStoreInfo] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -52,6 +60,14 @@ export default function Dashboard() {
           useStore.setState({ store: storeRes.data.data });
           // Cập nhật storeData cho settings tab
           setStoreData(storeRes.data.data);
+          // Cập nhật form data
+          setStoreFormData({
+            storeName: storeRes.data.data.storeName || '',
+            storePhone: storeRes.data.data.storePhone || '',
+            storeAddress: storeRes.data.data.storeAddress || '',
+            storeDetailedAddress: storeRes.data.data.storeDetailedAddress || '',
+            storeDescription: storeRes.data.data.storeDescription || ''
+          });
           // Reset previews nếu có trong database
           setLogoPreview(null); // Clear preview để hiển thị logo từ DB
           setStoreImagePreview(null); // Clear preview để hiển thị storeImage từ DB
@@ -460,6 +476,13 @@ export default function Dashboard() {
                 if (storeRes.data.success) {
                   setStoreData(storeRes.data.data);
                   useStore.setState({ store: storeRes.data.data });
+                  setStoreFormData({
+                    storeName: storeRes.data.data.storeName || '',
+                    storePhone: storeRes.data.data.storePhone || '',
+                    storeAddress: storeRes.data.data.storeAddress || '',
+                    storeDetailedAddress: storeRes.data.data.storeDetailedAddress || '',
+                    storeDescription: storeRes.data.data.storeDescription || ''
+                  });
                   setLogoPreview(null); // Clear preview
                 }
               } catch (err) {
@@ -819,6 +842,102 @@ export default function Dashboard() {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Store Information Section */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold mb-4">Thông tin cửa hàng</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Tên cửa hàng</label>
+                  <input
+                    type="text"
+                    value={storeFormData.storeName}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, storeName: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Nhập tên cửa hàng"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Số điện thoại</label>
+                  <input
+                    type="text"
+                    value={storeFormData.storePhone}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, storePhone: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Nhập số điện thoại"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Địa chỉ (dùng để tính khoảng cách) <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={storeFormData.storeAddress}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, storeAddress: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Ví dụ: Nguyễn Công Trứ, Hội An, Quảng Nam"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Địa chỉ này được dùng để tính khoảng cách và phí ship. Vui lòng nhập địa chỉ đầy đủ.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Địa chỉ chi tiết (hiển thị cho khách hàng)
+                  </label>
+                  <textarea
+                    value={storeFormData.storeDetailedAddress}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, storeDetailedAddress: e.target.value })}
+                    className="input-field w-full"
+                    rows="3"
+                    placeholder="Ví dụ: Số 123, Đường Nguyễn Công Trứ, Phường Minh An, Hội An, Quảng Nam (Gần chợ Hội An)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Địa chỉ chi tiết này sẽ hiển thị cho khách hàng trên trang menu. Bạn có thể thêm số nhà, hướng dẫn đường đi, v.v. 
+                    <span className="font-semibold text-blue-600"> Địa chỉ này không ảnh hưởng đến tính toán khoảng cách.</span>
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Mô tả cửa hàng</label>
+                  <textarea
+                    value={storeFormData.storeDescription}
+                    onChange={(e) => setStoreFormData({ ...storeFormData, storeDescription: e.target.value })}
+                    className="input-field w-full"
+                    rows="3"
+                    placeholder="Nhập mô tả về cửa hàng của bạn"
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      setSavingStoreInfo(true);
+                      const res = await api.put('/stores/my-store', storeFormData);
+                      if (res.data.success) {
+                        toast.success('Cập nhật thông tin cửa hàng thành công!');
+                        // Reload store data
+                        const storeRes = await api.get('/stores/my-store');
+                        if (storeRes.data.success) {
+                          useStore.setState({ store: storeRes.data.data });
+                          setStoreData(storeRes.data.data);
+                        }
+                      }
+                    } catch (error) {
+                      toast.error('Cập nhật thông tin thất bại!');
+                      if (process.env.NODE_ENV === 'development') {
+                        console.error('Update store info error:', error);
+                      }
+                    } finally {
+                      setSavingStoreInfo(false);
+                    }
+                  }}
+                  disabled={savingStoreInfo}
+                  className={`btn btn-primary ${savingStoreInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {savingStoreInfo ? 'Đang lưu...' : 'Lưu thông tin'}
+                </button>
               </div>
             </div>
 
