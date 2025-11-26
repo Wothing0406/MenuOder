@@ -423,7 +423,7 @@ export default function Checkout() {
                   
                   <div>
                     <label className="block mb-1.5 font-semibold text-sm">
-                      Số điện thoại <span className="text-gray-500 text-xs">(Tùy chọn - để theo dõi đơn hàng)</span>
+                      Số điện thoại <span className="text-gray-500 text-xs">(Không bắt buộc)</span>
                     </label>
                     <input
                       type="tel"
@@ -431,7 +431,7 @@ export default function Checkout() {
                       value={formData.customerPhone}
                       onChange={handleChange}
                       className="input-field w-full text-sm py-2.5"
-                      placeholder="Nhập số điện thoại để theo dõi đơn hàng"
+                      placeholder="Nên nhập số điện thoại để theo dõi đơn hàng"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       💡 Nhập số điện thoại để có thể theo dõi đơn hàng của bạn sau này
