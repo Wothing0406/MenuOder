@@ -1,5 +1,6 @@
 const Category = require('../models/Category');
 const Store = require('../models/Store');
+const Item = require('../models/Item');
 
 // Create category
 exports.createCategory = async (req, res) => {
@@ -155,7 +156,12 @@ exports.deleteCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
 
-    const category = await Category.findByPk(categoryId);
+    const category = await Category.findByPk(categoryId, {
+      include: [{
+        model: Item,
+        as: 'items'
+      }]
+    });
 
     if (!category) {
       return res.status(404).json({
@@ -183,12 +189,34 @@ exports.deleteCategory = async (req, res) => {
       });
     }
 
-    await category.destroy();
-
-    res.json({
-      success: true,
-      message: 'Category deleted successfully'
-    });
+    // Delete category (items will be deleted automatically due to CASCADE)
+    // But if items have orders and database hasn't been migrated, we need to handle that
+    try {
+      await category.destroy();
+      
+      res.json({
+        success: true,
+        message: 'Category deleted successfully'
+      });
+    } catch (destroyError) {
+      // If deletion fails due to foreign key constraint, provide helpful message
+      const errorMessage = destroyError.message || '';
+      const errorName = destroyError.name || '';
+      
+      if (errorName === 'SequelizeForeignKeyConstraintError' || 
+          errorMessage.includes('foreign key') ||
+          errorMessage.includes('cannot delete') ||
+          errorMessage.includes('violates foreign key constraint') ||
+          errorMessage.includes('DELETE RESTRICT')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không thể xóa danh mục vì có món đã được đặt hàng. Vui lòng chạy migration database hoặc xóa các món trước.',
+          error: 'Foreign key constraint violation',
+          details: 'Category contains items that have been ordered. Please run database migration to allow deletion.'
+        });
+      }
+      throw destroyError;
+    }
   } catch (error) {
     console.error('Delete category error:', error);
     res.status(500).json({
