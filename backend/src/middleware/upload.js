@@ -17,7 +17,9 @@ const storage = multer.diskStorage({
     // Tạo tên file unique với timestamp
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, 'logo-' + uniqueSuffix + ext);
+    // Kiểm tra field name để đặt tên file phù hợp
+    const prefix = file.fieldname === 'storeImage' ? 'store-image-' : 'logo-';
+    cb(null, prefix + uniqueSuffix + ext);
   }
 });
 

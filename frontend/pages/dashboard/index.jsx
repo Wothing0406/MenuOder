@@ -21,7 +21,15 @@ export default function Dashboard() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [uploadingStoreImage, setUploadingStoreImage] = useState(false);
+  const [storeImagePreview, setStoreImagePreview] = useState(null);
   const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
+  const [selectedDate, setSelectedDate] = useState(null); // Date for revenue cards
+  const [selectedDateType, setSelectedDateType] = useState(null); // 'today', 'month', 'year'
+  const [dateOrders, setDateOrders] = useState([]); // Orders for selected date
+  const [showDateOrdersModal, setShowDateOrdersModal] = useState(false);
+  const [loadingDateOrders, setLoadingDateOrders] = useState(false);
+  const [dateRevenue, setDateRevenue] = useState(0); // Revenue for selected date
 
   useEffect(() => {
     if (!token) {
@@ -29,6 +37,7 @@ export default function Dashboard() {
       return;
     }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchData = async () => {
@@ -43,11 +52,14 @@ export default function Dashboard() {
           useStore.setState({ store: storeRes.data.data });
           // Cập nhật storeData cho settings tab
           setStoreData(storeRes.data.data);
-          // Reset logo preview nếu có logo trong database
+          // Reset previews nếu có trong database
           setLogoPreview(null); // Clear preview để hiển thị logo từ DB
+          setStoreImagePreview(null); // Clear preview để hiển thị storeImage từ DB
         }
       } catch (err) {
-        console.error('Store fetch error:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Store fetch error:', err);
+        }
       }
       
       // Fetch orders
@@ -57,7 +69,9 @@ export default function Dashboard() {
           setOrders(ordersRes.data.data.orders);
         }
       } catch (err) {
-        console.error('Orders fetch error:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Orders fetch error:', err);
+        }
       }
 
       // Fetch stats
@@ -67,9 +81,19 @@ export default function Dashboard() {
           setStats(statsRes.data.data);
         }
       } catch (err) {
-        console.error('Stats fetch error:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Stats fetch error:', err);
+        }
         // Set default stats if fetch fails
-        setStats({ totalOrders: 0, pendingOrders: 0, completedOrders: 0, totalRevenue: 0 });
+        setStats({ 
+          totalOrders: 0, 
+          pendingOrders: 0, 
+          completedOrders: 0, 
+          totalRevenue: 0,
+          todayRevenue: 0,
+          monthlyRevenue: 0,
+          yearlyRevenue: 0
+        });
       }
 
       // Fetch QR code
@@ -79,10 +103,14 @@ export default function Dashboard() {
           setQrCode(qrRes.data.data.qrCode);
         }
       } catch (err) {
-        console.error('QR code fetch error:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('QR code fetch error:', err);
+        }
       }
     } catch (error) {
-      console.error('Dashboard data error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Dashboard data error:', error);
+      }
       toast.error('Không thể tải một số dữ liệu bảng điều khiển');
     } finally {
       setLoading(false);
@@ -112,7 +140,7 @@ export default function Dashboard() {
         setOrderDetail(res.data.data);
       }
     } catch (error) {
-      toast.error('Failed to load order details');
+      toast.error('Không thể tải chi tiết đơn hàng');
     } finally {
       setLoadingDetail(false);
     }
@@ -126,6 +154,149 @@ export default function Dashboard() {
   const closeOrderDetail = () => {
     setSelectedOrder(null);
     setOrderDetail(null);
+  };
+
+  // Fetch orders by date (only delivered orders for revenue calculation)
+  const fetchOrdersByDate = async (date) => {
+    try {
+      setLoadingDateOrders(true);
+      const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
+      const res = await api.get(`/orders/my-store/list?date=${dateStr}&limit=1000`);
+      if (res.data.success) {
+        const orders = res.data.data.orders || [];
+        setDateOrders(orders);
+        // Calculate total revenue for the date - ONLY delivered orders
+        const revenue = orders
+          .filter(order => order.status === 'delivered')
+          .reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0);
+        setDateRevenue(revenue);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching orders by date:', error);
+      }
+      toast.error('Không thể tải đơn hàng theo ngày');
+    } finally {
+      setLoadingDateOrders(false);
+    }
+  };
+
+  // Handle click on revenue card
+  const handleRevenueCardClick = async (type) => {
+    let dateToShow;
+    if (type === 'today') {
+      dateToShow = new Date();
+      setSelectedDate(dateToShow);
+      setSelectedDateType('today');
+      await fetchOrdersByDate(dateToShow);
+      setShowDateOrdersModal(true);
+    } else if (type === 'month') {
+      // Show date picker for month - limit to current month
+      const today = new Date();
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.min = firstDayOfMonth.toISOString().split('T')[0];
+      input.max = lastDayOfMonth.toISOString().split('T')[0];
+      input.onchange = async (e) => {
+        if (e.target.value) {
+          dateToShow = new Date(e.target.value);
+          setSelectedDate(dateToShow);
+          setSelectedDateType('month');
+          await fetchOrdersByDate(dateToShow);
+          setShowDateOrdersModal(true);
+        }
+      };
+      input.click();
+      return;
+    } else if (type === 'year') {
+      // Show date picker for year - limit to current year
+      const today = new Date();
+      const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+      const lastDayOfYear = new Date(today.getFullYear(), 11, 31);
+      
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.min = firstDayOfYear.toISOString().split('T')[0];
+      input.max = lastDayOfYear.toISOString().split('T')[0];
+      input.onchange = async (e) => {
+        if (e.target.value) {
+          dateToShow = new Date(e.target.value);
+          setSelectedDate(dateToShow);
+          setSelectedDateType('year');
+          await fetchOrdersByDate(dateToShow);
+          setShowDateOrdersModal(true);
+        }
+      };
+      input.click();
+      return;
+    }
+  };
+
+  const handleStoreImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh!');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước file không được vượt quá 5MB!');
+      return;
+    }
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setStoreImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload
+    setUploadingStoreImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('storeImage', file);
+
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+      const response = await fetch(`${API_BASE}/api/stores/my-store/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Upload hình ảnh quán thành công!');
+        // Reload store data
+        const storeRes = await api.get('/stores/my-store');
+        if (storeRes.data.success) {
+          useStore.setState({ store: storeRes.data.data });
+          setStoreData(storeRes.data.data);
+          setStoreImagePreview(null);
+        }
+      } else {
+        toast.error(data.message || 'Upload hình ảnh thất bại!');
+        setStoreImagePreview(null);
+      }
+    } catch (error) {
+      console.error('Upload store image error:', error);
+      toast.error('Upload hình ảnh thất bại!');
+      setStoreImagePreview(null);
+    } finally {
+      setUploadingStoreImage(false);
+      // Reset input
+      e.target.value = '';
+    }
   };
 
   const handleLogoUpload = async (e) => {
@@ -157,7 +328,7 @@ export default function Dashboard() {
       const formData = new FormData();
       formData.append('logo', file);
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
       const response = await fetch(`${API_BASE}/api/stores/my-store/logo`, {
         method: 'POST',
         headers: {
@@ -185,7 +356,9 @@ export default function Dashboard() {
         setLogoPreview(null);
       }
     } catch (error) {
-      console.error('Upload logo error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Upload logo error:', error);
+      }
       toast.error('Upload logo thất bại!');
       setLogoPreview(null);
     } finally {
@@ -210,7 +383,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <Head>
-        <title>Dashboard - MenuOrder</title>
+        <title>Bảng điều khiển - MenuOrder</title>
       </Head>
       <Navbar />
 
@@ -290,7 +463,9 @@ export default function Dashboard() {
                   setLogoPreview(null); // Clear preview
                 }
               } catch (err) {
-                console.error('Fetch store data error:', err);
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Fetch store data error:', err);
+                }
               }
             }}
             className={`px-4 py-2 font-bold transition ${
@@ -337,23 +512,30 @@ export default function Dashboard() {
                   <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">{stats.completedOrders}</p>
                 </div>
               </div>
-              <div className="card group relative overflow-hidden">
+              <div 
+                className="card group relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleRevenueCardClick('today')}
+              >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-gray-600 font-semibold">Tổng doanh thu</h3>
+                    <h3 className="text-gray-600 font-semibold">Doanh thu hôm nay</h3>
                     <span className="text-3xl transform group-hover:scale-110 transition-transform">💰</span>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
-                    {formatVND(stats.totalRevenue || 0)}
+                    {formatVND(stats.todayRevenue || 0)}
                   </p>
+                  <p className="text-xs text-gray-500 mt-1">Nhấn để xem chi tiết</p>
                 </div>
               </div>
             </div>
 
             {/* Revenue Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="card relative overflow-hidden bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 border-2 border-green-100">
+              <div 
+                className="card relative overflow-hidden bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 border-2 border-green-100 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleRevenueCardClick('month')}
+              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full blur-3xl opacity-30"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
@@ -368,7 +550,10 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <div className="card relative overflow-hidden bg-gradient-to-br from-blue-50 via-blue-50 to-cyan-50 border-2 border-blue-100">
+              <div 
+                className="card relative overflow-hidden bg-gradient-to-br from-blue-50 via-blue-50 to-cyan-50 border-2 border-blue-100 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleRevenueCardClick('year')}
+              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
@@ -399,6 +584,7 @@ export default function Dashboard() {
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="px-4 py-2 text-left">Mã đơn</th>
+                      <th className="px-4 py-2 text-left">Loại đơn</th>
                       <th className="px-4 py-2 text-left">Khách hàng</th>
                       <th className="px-4 py-2 text-left">Tổng tiền</th>
                       <th className="px-4 py-2 text-left">Trạng thái</th>
@@ -413,7 +599,24 @@ export default function Dashboard() {
                         onClick={() => handleOrderClick(order)}
                       >
                         <td className="px-4 py-2 font-bold">{order.orderCode}</td>
-                        <td className="px-4 py-2">{order.customerName}</td>
+                        <td className="px-4 py-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            order.orderType === 'delivery'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {order.orderType === 'delivery' ? '🚚 Giao hàng' : '🍽️ Tại bàn'}
+                          </span>
+                          {order.orderType === 'dine_in' && order.tableNumber && (
+                            <span className="ml-2 text-xs text-gray-600">(Bàn {order.tableNumber})</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {order.orderType === 'delivery' 
+                            ? (order.customerName || 'N/A')
+                            : `Bàn ${order.tableNumber || 'N/A'}`
+                          }
+                        </td>
                         <td className="px-4 py-2 font-bold">
                           {formatVND(order.totalAmount)}
                         </td>
@@ -431,7 +634,12 @@ export default function Dashboard() {
                                 : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {order.status}
+                            {order.status === 'pending' ? 'Chờ xử lý' :
+                             order.status === 'confirmed' ? 'Đã xác nhận' :
+                             order.status === 'preparing' ? 'Đang chuẩn bị' :
+                             order.status === 'ready' ? 'Sẵn sàng' :
+                             order.status === 'delivered' ? 'Đã giao' :
+                             order.status === 'cancelled' ? 'Đã hủy' : order.status}
                           </span>
                         </td>
                         <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
@@ -445,6 +653,7 @@ export default function Dashboard() {
                             <option value="preparing">Đang chuẩn bị</option>
                             <option value="ready">Sẵn sàng</option>
                             <option value="delivered">Đã giao</option>
+                            <option value="cancelled">Đã hủy</option>
                           </select>
                         </td>
                       </tr>
@@ -514,7 +723,9 @@ export default function Dashboard() {
                         alt="Store Logo Preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          console.error('Logo preview load error:', e.target.src);
+                          if (process.env.NODE_ENV === 'development') {
+                            console.error('Logo preview load error:', e.target.src);
+                          }
                           e.target.src = '/logo.jpg';
                         }}
                       />
@@ -528,7 +739,7 @@ export default function Dashboard() {
                             return logo;
                           }
                           // Nếu là relative path, tạo full URL
-                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
                           // Đảm bảo không có double slash
                           const logoPath = logo.startsWith('/') ? logo : '/' + logo;
                           return apiBase + logoPath;
@@ -536,7 +747,9 @@ export default function Dashboard() {
                         alt="Store Logo"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          console.error('Logo load error:', e.target.src);
+                          if (process.env.NODE_ENV === 'development') {
+                            console.error('Logo load error:', e.target.src);
+                          }
                           e.target.src = '/logo.jpg';
                         }}
                       />
@@ -594,13 +807,112 @@ export default function Dashboard() {
                             toast.success('Đã xóa logo!');
                           }
                         } catch (error) {
-                          console.error('Delete logo error:', error);
+                          if (process.env.NODE_ENV === 'development') {
+                            console.error('Delete logo error:', error);
+                          }
                           toast.error('Xóa logo thất bại!');
                         }
                       }}
                       className="btn btn-secondary ml-3"
                     >
                       Xóa logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Store Image (Banner) Upload Section */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold mb-4">Hình ảnh quán (Banner)</h3>
+              <div className="flex flex-col gap-6">
+                {/* Image Preview */}
+                <div className="w-full">
+                  <div className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg bg-gray-100">
+                    {storeImagePreview ? (
+                      <img 
+                        src={storeImagePreview}
+                        alt="Store Image Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (storeData?.storeImage || store?.storeImage) ? (
+                      <img 
+                        src={(() => {
+                          const image = storeData?.storeImage || store?.storeImage;
+                          if (!image) return null;
+                          if (image.startsWith('http')) {
+                            return image;
+                          }
+                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+                          const imagePath = image.startsWith('/') ? image : '/' + image;
+                          return apiBase + imagePath;
+                        })()}
+                        alt="Store Banner"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🖼️</div>
+                          <p className="text-sm">Chưa có hình ảnh quán</p>
+                        </div>
+                      </div>
+                    )}
+                    {uploadingStoreImage && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Upload Button */}
+                <div>
+                  <p className="text-gray-600 mb-3">
+                    Hình ảnh này sẽ hiển thị ở đầu trang menu của cửa hàng bạn, giúp khách hàng dễ nhận biết.
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Định dạng: JPG, PNG, GIF (Tối đa 5MB). Khuyến nghị: 1200x400px hoặc tỷ lệ tương tự.
+                  </p>
+                  <label className="inline-block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleStoreImageUpload}
+                      disabled={uploadingStoreImage}
+                      className="hidden"
+                      id="store-image-upload"
+                    />
+                    <span className={`btn ${uploadingStoreImage ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'} cursor-pointer inline-block`}>
+                      {uploadingStoreImage ? 'Đang upload...' : 'Chọn hình ảnh quán'}
+                    </span>
+                  </label>
+                  {(storeData?.storeImage || store?.storeImage) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.put('/stores/my-store', {
+                            storeName: storeData?.storeName || store?.storeName,
+                            storeImage: '', // Gửi empty string để xóa
+                          });
+                          const storeRes = await api.get('/stores/my-store');
+                          if (storeRes.data.success) {
+                            useStore.setState({ store: storeRes.data.data });
+                            setStoreData(storeRes.data.data);
+                            setStoreImagePreview(null);
+                            toast.success('Đã xóa hình ảnh quán!');
+                          }
+                        } catch (error) {
+                          console.error('Delete store image error:', error);
+                          toast.error('Xóa hình ảnh thất bại!');
+                        }
+                      }}
+                      className="btn btn-secondary ml-3"
+                    >
+                      Xóa hình ảnh
                     </button>
                   )}
                 </div>
@@ -621,7 +933,16 @@ export default function Dashboard() {
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h2 className="text-2xl font-bold mb-2">Chi tiết đơn hàng</h2>
-                    <p className="text-gray-600">Mã đơn: {orderDetail.orderCode}</p>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-gray-600">Mã đơn: {orderDetail.orderCode}</p>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                        orderDetail.orderType === 'delivery'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {orderDetail.orderType === 'delivery' ? '🚚 Giao hàng' : '🍽️ Tại bàn'}
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={closeOrderDetail}
@@ -633,18 +954,39 @@ export default function Dashboard() {
 
                 <div className="space-y-4 mb-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600 text-sm">Khách hàng</p>
-                      <p className="font-bold">{orderDetail.customerName}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Số điện thoại</p>
-                      <p className="font-bold">{orderDetail.customerPhone}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Số bàn</p>
-                      <p className="font-bold">{orderDetail.tableNumber || 'N/A'}</p>
-                    </div>
+                    {orderDetail.orderType === 'delivery' ? (
+                      <>
+                        <div>
+                          <p className="text-gray-600 text-sm">Tên khách hàng</p>
+                          <p className="font-bold">{orderDetail.customerName || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 text-sm">Số điện thoại</p>
+                          <p className="font-bold">{orderDetail.customerPhone || 'N/A'}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-gray-600 text-sm">Địa chỉ giao hàng</p>
+                          <p className="font-bold">{orderDetail.deliveryAddress || 'N/A'}</p>
+                        </div>
+                        {orderDetail.deliveryDistance && (
+                          <div>
+                            <p className="text-gray-600 text-sm">Khoảng cách</p>
+                            <p className="font-bold">{orderDetail.deliveryDistance} km</p>
+                          </div>
+                        )}
+                        {orderDetail.shippingFee > 0 && (
+                          <div>
+                            <p className="text-gray-600 text-sm">Phí ship</p>
+                            <p className="font-bold">{formatVND(orderDetail.shippingFee)}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div>
+                        <p className="text-gray-600 text-sm">Số bàn</p>
+                        <p className="font-bold">{orderDetail.tableNumber || 'N/A'}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-gray-600 text-sm">Thời gian đặt</p>
                       <p className="font-bold">
@@ -666,7 +1008,12 @@ export default function Dashboard() {
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {orderDetail.status}
+                        {orderDetail.status === 'pending' ? 'Chờ xử lý' :
+                         orderDetail.status === 'confirmed' ? 'Đã xác nhận' :
+                         orderDetail.status === 'preparing' ? 'Đang chuẩn bị' :
+                         orderDetail.status === 'ready' ? 'Sẵn sàng' :
+                         orderDetail.status === 'delivered' ? 'Đã giao' :
+                         orderDetail.status === 'cancelled' ? 'Đã hủy' : orderDetail.status}
                       </span>
                     </div>
                     <div>
@@ -751,6 +1098,158 @@ export default function Dashboard() {
             ) : (
               <div className="p-8 text-center">Không tìm thấy chi tiết đơn hàng</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Date Orders Modal */}
+      {showDateOrdersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowDateOrdersModal(false)}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-2xl font-bold">
+                      Đơn hàng ngày {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : ''}
+                    </h2>
+                    <input
+                      type="date"
+                      value={selectedDate ? new Date(selectedDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const newDate = new Date(e.target.value);
+                          setSelectedDate(newDate);
+                          fetchOrdersByDate(newDate);
+                        }
+                      }}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="border rounded px-3 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-2">
+                    <div>
+                      <p className="text-sm text-gray-600">Doanh thu (đã giao):</p>
+                      <p className="font-bold text-lg text-purple-600">{formatVND(dateRevenue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Tổng số đơn:</p>
+                      <p className="font-bold text-lg text-gray-800">
+                        {dateOrders.length} đơn
+                        {dateOrders.filter(o => o.status === 'delivered').length > 0 && (
+                          <span className="text-sm text-green-600 ml-2">
+                            ({dateOrders.filter(o => o.status === 'delivered').length} đã giao)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDateOrdersModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl ml-4"
+                >
+                  ×
+                </button>
+              </div>
+
+              {loadingDateOrders ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Đang tải đơn hàng...</p>
+                </div>
+              ) : dateOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Không có đơn hàng nào trong ngày này</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Lưu ý:</strong> Doanh thu chỉ tính từ các đơn hàng có trạng thái "Đã giao". 
+                      Các đơn hàng đang xử lý sẽ không được tính vào doanh thu.
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    {dateOrders.map((order) => {
+                      const isDelivered = order.status === 'delivered';
+                      return (
+                        <div 
+                          key={order.id} 
+                          className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                            isDelivered ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                          }`}
+                          onClick={() => {
+                            setSelectedOrder(order.id);
+                            fetchOrderDetail(order.id);
+                            setShowDateOrdersModal(false);
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <p className="font-bold text-lg">{order.orderCode}</p>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  order.orderType === 'delivery'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {order.orderType === 'delivery' ? '🚚 Giao hàng' : '🍽️ Tại bàn'}
+                                </span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  order.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : order.status === 'confirmed'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : order.status === 'ready'
+                                    ? 'bg-green-100 text-green-800'
+                                    : order.status === 'delivered'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {order.status === 'pending' ? 'Chờ xử lý' :
+                                   order.status === 'confirmed' ? 'Đã xác nhận' :
+                                   order.status === 'preparing' ? 'Đang chuẩn bị' :
+                                   order.status === 'ready' ? 'Sẵn sàng' :
+                                   order.status === 'delivered' ? 'Đã giao' :
+                                   order.status === 'cancelled' ? 'Đã hủy' : order.status}
+                                </span>
+                                {isDelivered && (
+                                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-200 text-green-800">
+                                    ✓ Tính vào doanh thu
+                                  </span>
+                                )}
+                                {!isDelivered && (
+                                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">
+                                    ⏳ Đã Huỷ
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {order.orderType === 'delivery' 
+                                  ? (order.customerName || 'N/A')
+                                  : `Bàn ${order.tableNumber || 'N/A'}`}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(order.createdAt).toLocaleString('vi-VN')}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`font-bold text-lg ${isDelivered ? 'text-purple-600' : 'text-gray-400'}`}>
+                                {formatVND(order.totalAmount)}
+                              </p>
+                              {!isDelivered && (
+                                <p className="text-xs text-gray-500 mt-1">Chưa tính</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

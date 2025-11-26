@@ -15,20 +15,30 @@ const app = express();
 // Middleware - CORS configuration
 const allowedOrigins = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-  : ['http://localhost:3000'];
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // In development, allow all localhost origins
+    if (process.env.NODE_ENV === 'development') {
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -45,6 +55,7 @@ app.use('/api/items', require('./routes/accompanimentRoutes'));
 app.use('/api/item-options', require('./routes/itemOptionRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));
+app.use('/api/utils', require('./routes/utilsRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -85,18 +96,43 @@ const startServer = async () => {
     console.log('✅ Database synchronized successfully');
 
     // Start server
-    app.listen(PORT, '0.0.0.0', () => {
+    // Use '0.0.0.0' to listen on all network interfaces (IPv4 and IPv6)
+    // This ensures compatibility with both localhost and network access
+    const HOST = process.env.HOST || '0.0.0.0';
+    const server = app.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📡 API URL: http://0.0.0.0:${PORT}/api`);
+      console.log(`📡 API URL: http://localhost:${PORT}/api`);
+      console.log(`📡 Network API URL: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api`);
       if (process.env.FRONTEND_URL) {
         console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+      } else {
+        console.log(`🔗 Frontend URL: http://localhost:3000`);
+      }
+    });
+    
+    // Handle server errors
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+        console.error('   Please stop the process using this port or change PORT in .env');
+      } else {
+        console.error('❌ Server error:', error);
       }
     });
   } catch (error) {
     console.error('❌ Failed to start server:');
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
+    
+    // Check for port conflict errors
+    if (error.code === 'EACCES' || error.code === 'EADDRINUSE') {
+      console.error(`\n⚠️  Port ${PORT} is already in use or requires elevated permissions.`);
+      console.error('   Solutions:');
+      console.error(`   1. Change PORT in your .env file to a different port (e.g., 5000, 5002, 3001)`);
+      console.error(`   2. Stop the process using port ${PORT}`);
+      console.error(`   3. On Windows, try running as administrator if needed`);
+    }
     
     // More detailed error logging in development
     if (process.env.NODE_ENV === 'development') {

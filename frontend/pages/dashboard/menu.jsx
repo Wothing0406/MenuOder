@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
+import { formatVND } from '../../lib/utils';
 
 export default function MenuManagement() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function MenuManagement() {
     }
     fetchData();
     fetchQR();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchData = async () => {
@@ -46,7 +48,7 @@ export default function MenuManagement() {
         }
       }
     } catch (error) {
-      toast.error('Failed to load menu data');
+      toast.error('Không thể tải dữ liệu menu');
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export default function MenuManagement() {
         setItems(itemsRes.data.data);
       }
     } catch (error) {
-      toast.error('Failed to load items');
+      toast.error('Không thể tải danh sách món');
     }
   };
 
@@ -81,13 +83,13 @@ export default function MenuManagement() {
         categoryName: formData.categoryName,
       });
       if (res.data.success) {
-        toast.success('Category created');
+        toast.success('Đã tạo danh mục thành công');
         setFormData({ ...formData, categoryName: '' });
         setShowModal(false);
         fetchData();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create category');
+      toast.error(error.response?.data?.message || 'Không thể tạo danh mục');
     }
   };
 
@@ -101,39 +103,39 @@ export default function MenuManagement() {
         categoryId: selectedCategory.id,
       });
       if (res.data.success) {
-        toast.success('Item created');
+        toast.success('Đã tạo món thành công');
         setFormData({ ...formData, itemName: '', itemPrice: '', itemDescription: '' });
         setShowModal(false);
         fetchItems(selectedCategory.id);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create item');
+      toast.error(error.response?.data?.message || 'Không thể tạo món');
     }
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (!confirm('Are you sure?')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa món này không?')) return;
     try {
       const res = await api.delete(`/items/${itemId}`);
       if (res.data.success) {
-        toast.success('Item deleted');
+        toast.success('Đã xóa món thành công');
         fetchItems(selectedCategory.id);
       }
     } catch (error) {
-      toast.error('Failed to delete item');
+      toast.error('Không thể xóa món');
     }
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!confirm('Are you sure?')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa danh mục này không?')) return;
     try {
       const res = await api.delete(`/categories/${categoryId}`);
       if (res.data.success) {
-        toast.success('Category deleted');
+        toast.success('Đã xóa danh mục thành công');
         fetchData();
       }
     } catch (error) {
-      toast.error('Failed to delete category');
+      toast.error('Không thể xóa danh mục');
     }
   }
 
@@ -143,7 +145,7 @@ export default function MenuManagement() {
       <Layout>
         <Navbar />
         <div className="container-custom py-8 text-center">
-          <p>Loading...</p>
+          <p>Đang tải...</p>
         </div>
       </Layout>
     );
@@ -152,18 +154,18 @@ export default function MenuManagement() {
   return (
     <Layout>
       <Head>
-        <title>Menu Management - MenuOrder</title>
+        <title>Quản lý Menu - MenuOrder</title>
       </Head>
       <Navbar />
 
       <div className="container-custom py-8">
-        <h1 className="text-3xl font-bold mb-8">Menu Management</h1>
+        <h1 className="text-3xl font-bold mb-8">Quản lý Menu</h1>
 
         {/* QR Code and Store Link */}
         {qrData && (
           <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg flex flex-col items-center">
-            <h2 className="text-xl font-bold mb-4">QR Code for Customer Ordering</h2>
-            <img src={qrData.qrCode} alt="Store QR Code" className="mb-4" style={{ width: 200, border: '2px solid #ddd', padding: '8px' }} />
+            <h2 className="text-xl font-bold mb-4">Mã QR cho khách hàng đặt hàng</h2>
+            <img src={qrData.qrCode} alt="Mã QR cửa hàng" className="mb-4" style={{ width: 200, border: '2px solid #ddd', padding: '8px' }} />
             <a href={qrData.storeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline mb-4 text-center">
               {qrData.storeUrl}
             </a>
@@ -176,7 +178,7 @@ export default function MenuManagement() {
               }}
               className="btn btn-primary"
             >
-              Download QR Code
+              Tải xuống Mã QR
             </button>
           </div>
         )}
@@ -191,7 +193,7 @@ export default function MenuManagement() {
                 : 'text-gray-600'
             }`}
           >
-            Categories
+            Danh mục
           </button>
           <button
             onClick={() => setActiveTab('items')}
@@ -201,7 +203,7 @@ export default function MenuManagement() {
                 : 'text-gray-600'
             }`}
           >
-            Items
+            Món ăn
           </button>
         </div>
 
@@ -216,7 +218,7 @@ export default function MenuManagement() {
               }}
               className="btn btn-primary mb-6"
             >
-              Add Category
+              Thêm danh mục
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -228,14 +230,14 @@ export default function MenuManagement() {
                     onClick={() => handleDeleteCategory(category.id)}
                     className="btn btn-danger w-full text-sm"
                   >
-                    Delete
+                    Xóa
                   </button>
                 </div>
               ))}
             </div>
 
             {categories.length === 0 && (
-              <p className="text-gray-600">No categories yet</p>
+              <p className="text-gray-600">Chưa có danh mục nào</p>
             )}
           </div>
         )}
@@ -244,11 +246,11 @@ export default function MenuManagement() {
         {activeTab === 'items' && (
           <div>
             {categories.length === 0 ? (
-              <p className="text-gray-600">Please create a category first before adding items.</p>
+              <p className="text-gray-600">Vui lòng tạo danh mục trước khi thêm món.</p>
             ) : (
               <>
                 <div className="mb-4">
-                  <label className="font-bold mr-2">Select Category:</label>
+                  <label className="font-bold mr-2">Chọn danh mục:</label>
                   <select
                     value={selectedCategory?.id || ''}
                     onChange={e => {
@@ -258,7 +260,7 @@ export default function MenuManagement() {
                     }}
                     className="input-field"
                   >
-                    <option value="">-- Select --</option>
+                    <option value="">-- Chọn --</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
                     ))}
@@ -275,7 +277,7 @@ export default function MenuManagement() {
                       }}
                       className="btn btn-primary mb-4"
                     >
-                      Add Item
+                      Thêm món
                     </button>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -284,20 +286,20 @@ export default function MenuManagement() {
                           <h3 className="text-lg font-bold mb-2">{item.itemName}</h3>
                           <p className="text-gray-600 mb-2 text-sm">{item.itemDescription}</p>
                           <p className="text-blue-600 font-bold mb-3 text-lg">
-                            {parseFloat(item.itemPrice).toFixed(0)}₫
+                            {formatVND(item.itemPrice)}
                           </p>
                           <button
                             onClick={() => handleDeleteItem(item.id)}
                             className="btn btn-danger w-full text-sm"
                           >
-                            Delete
+                            Xóa
                           </button>
                         </div>
                       ))}
                     </div>
 
                     {items.length === 0 && (
-                      <p className="text-gray-600">No items in {selectedCategory.categoryName} yet</p>
+                      <p className="text-gray-600">Chưa có món nào trong danh mục {selectedCategory.categoryName}</p>
                     )}
                   </>
                 )}
@@ -310,11 +312,11 @@ export default function MenuManagement() {
         {showModal && modalMode === 'category' && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Add Category</h2>
+              <h2 className="text-2xl font-bold mb-4">Thêm danh mục</h2>
               <form onSubmit={handleAddCategory} className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Category Name"
+                  placeholder="Tên danh mục"
                   value={formData.categoryName}
                   onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
                   className="input-field"
@@ -326,13 +328,13 @@ export default function MenuManagement() {
                     onClick={() => setShowModal(false)}
                     className="btn btn-secondary flex-1"
                   >
-                    Cancel
+                    Hủy
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary flex-1"
                   >
-                    Create
+                    Tạo
                   </button>
                 </div>
               </form>
@@ -344,11 +346,11 @@ export default function MenuManagement() {
         {showModal && modalMode === 'item' && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Add Item to {selectedCategory?.categoryName}</h2>
+              <h2 className="text-2xl font-bold mb-4">Thêm món vào {selectedCategory?.categoryName}</h2>
               <form onSubmit={handleAddItem} className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Item Name"
+                  placeholder="Tên món"
                   value={formData.itemName}
                   onChange={e => setFormData({ ...formData, itemName: e.target.value })}
                   className="input-field"
@@ -356,7 +358,7 @@ export default function MenuManagement() {
                 />
                 <input
                   type="number"
-                  placeholder="Item Price (₫)"
+                  placeholder="Giá món (₫)"
                   value={formData.itemPrice}
                   onChange={e => setFormData({ ...formData, itemPrice: e.target.value })}
                   className="input-field"
@@ -364,7 +366,7 @@ export default function MenuManagement() {
                   step="0.01"
                 />
                 <textarea
-                  placeholder="Item Description"
+                  placeholder="Mô tả món"
                   value={formData.itemDescription}
                   onChange={e => setFormData({ ...formData, itemDescription: e.target.value })}
                   className="input-field"
@@ -377,13 +379,13 @@ export default function MenuManagement() {
                     onClick={() => setShowModal(false)}
                     className="btn btn-secondary flex-1"
                   >
-                    Cancel
+                    Hủy
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary flex-1"
                   >
-                    Create
+                    Tạo
                   </button>
                 </div>
               </form>

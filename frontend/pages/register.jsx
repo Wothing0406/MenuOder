@@ -17,11 +17,109 @@ export default function Register() {
     storeName: '',
     storePhone: '',
     storeAddress: '',
+    storeGoogleMapLink: '',
   });
+  const [extractingAddress, setExtractingAddress] = useState(false);
+  const [validatingAddress, setValidatingAddress] = useState(false);
+  const [validatedAddress, setValidatedAddress] = useState(null); // { originalAddress, validatedAddress, coordinates }
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Reset validation when user edits address
+    if (name === 'storeAddress' && (addressConfirmed || validatedAddress)) {
+      setAddressConfirmed(false);
+      setValidatedAddress(null);
+    }
+  };
+
+  // Validate store address when user leaves the input field
+  const handleStoreAddressBlur = async () => {
+    if (formData.storeAddress.trim()) {
+      setValidatingAddress(true);
+      setAddressConfirmed(false);
+      setValidatedAddress(null);
+      
+      try {
+        // Validate and geocode address
+        const validateRes = await api.post('/orders/validate-address', {
+          address: formData.storeAddress.trim(),
+        });
+        
+        if (validateRes.data.success) {
+          setValidatedAddress(validateRes.data.data);
+          // Don't auto-confirm, let user confirm manually
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error validating address:', error);
+        }
+        // Show error message
+        if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error('Không thể xác thực địa chỉ. Vui lòng kiểm tra lại địa chỉ.');
+        }
+        setValidatedAddress(null);
+        setAddressConfirmed(false);
+      } finally {
+        setValidatingAddress(false);
+      }
+    }
+  };
+
+  // Confirm validated address
+  const handleConfirmAddress = () => {
+    if (!validatedAddress) return;
+    
+    setAddressConfirmed(true);
+    // Update form data with validated address
+    setFormData(prev => ({
+      ...prev,
+      storeAddress: validatedAddress.validatedAddress
+    }));
+    toast.success('Địa chỉ đã được xác nhận!');
+  };
+
+  // Reject validated address and let user edit
+  const handleRejectAddress = () => {
+    setValidatedAddress(null);
+    setAddressConfirmed(false);
+  };
+
+  // Extract address from Google Maps link (optional - just for reference)
+  const handleGoogleMapLinkBlur = async () => {
+    if (formData.storeGoogleMapLink.trim()) {
+      setExtractingAddress(true);
+      try {
+        const res = await api.post('/utils/extract-address-from-google-maps', {
+          googleMapsLink: formData.storeGoogleMapLink.trim()
+        });
+        
+        if (res.data.success && res.data.data.address) {
+          // Only auto-fill if address field is empty
+          if (!formData.storeAddress || formData.storeAddress.trim() === '') {
+            setFormData(prev => ({
+              ...prev,
+              storeAddress: res.data.data.address
+            }));
+            toast.success('Đã tự động lấy địa chỉ từ Google Maps! Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+          } else {
+            toast.info('Đã lấy địa chỉ từ Google Maps. Vui lòng so sánh với địa chỉ bạn đã nhập và chỉnh sửa nếu cần.');
+          }
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error extracting address:', error);
+        }
+        // Don't show error - just inform user to enter manually
+        toast.info('Không thể lấy địa chỉ tự động. Vui lòng nhập địa chỉ thủ công ở ô trên.');
+      } finally {
+        setExtractingAddress(false);
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -30,6 +128,16 @@ export default function Register() {
     // Validation
     if (!formData.email || !formData.password || !formData.storeName) {
       toast.error('Vui lòng điền đầy đủ thông tin: email, mật khẩu và tên cửa hàng');
+      return;
+    }
+
+    if (!formData.storeAddress || formData.storeAddress.trim() === '') {
+      toast.error('Vui lòng nhập địa chỉ cửa hàng');
+      return;
+    }
+    
+    if (!addressConfirmed || !validatedAddress) {
+      toast.error('Vui lòng xác nhận địa chỉ cửa hàng trước khi đăng ký');
       return;
     }
 
@@ -50,16 +158,45 @@ export default function Register() {
         password: formData.password,
         storeName: formData.storeName,
         storePhone: formData.storePhone,
-        storeAddress: formData.storeAddress,
+        // Use validated address if confirmed, otherwise use original
+        storeAddress: addressConfirmed && validatedAddress 
+          ? validatedAddress.validatedAddress 
+          : formData.storeAddress,
+        storeGoogleMapLink: formData.storeGoogleMapLink,
       });
 
       if (res.data.success) {
         localStorage.setItem('token', res.data.data.token);
         toast.success('Đăng ký thành công!');
         router.push('/dashboard');
+      } else {
+        toast.error(res.data.message || 'Đăng ký thất bại');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Đăng ký thất bại');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Registration error:', error);
+      }
+      
+      // Extract error message from response
+      let errorMessage = 'Đăng ký thất bại';
+      
+      if (error.response) {
+        // Server responded with error
+        errorMessage = error.response.data?.message || errorMessage;
+        
+        // Log additional error details in development
+        if (process.env.NODE_ENV === 'development' && error.response?.data?.error) {
+          console.error('Error details:', error.response.data.error);
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+      } else {
+        // Something else happened
+        errorMessage = error.message || errorMessage;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -68,7 +205,7 @@ export default function Register() {
   return (
     <Layout>
       <Head>
-        <title>Register - MenuOrder</title>
+        <title>Đăng ký - MenuOrder</title>
       </Head>
       <Navbar />
 
@@ -85,6 +222,8 @@ export default function Register() {
                   width={90} 
                   height={90}
                   className="rounded-full object-cover shadow-xl ring-4 ring-purple-100"
+                  unoptimized
+                  priority
                 />
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
@@ -138,15 +277,134 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block mb-2 font-bold text-gray-700">Địa chỉ</label>
-              <input
-                type="text"
+              <label className="block mb-2 font-bold text-gray-700">
+                Địa chỉ cửa hàng <span className="text-red-600">*</span>
+              </label>
+              <textarea
                 name="storeAddress"
                 value={formData.storeAddress}
                 onChange={handleChange}
-                className="input-field"
-                placeholder="Địa chỉ cửa hàng"
+                onBlur={handleStoreAddressBlur}
+                className={`input-field ${addressConfirmed ? 'border-green-500 bg-green-50' : validatedAddress ? 'border-yellow-500 bg-yellow-50' : ''}`}
+                rows="3"
+                placeholder="Nhập địa chỉ đầy đủ: Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố"
+                required
+                disabled={addressConfirmed}
               />
+              {validatingAddress && (
+                <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
+                  <span className="animate-spin">⏳</span>
+                  Đang xác thực địa chỉ...
+                </p>
+              )}
+              
+              {/* Address validation confirmation box */}
+              {validatedAddress && !addressConfirmed && (
+                <div className="mt-3 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">📍</span>
+                    <div className="flex-1">
+                      <p className="font-semibold text-yellow-800 mb-2">
+                        Địa chỉ đã được xác thực:
+                      </p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        <span className="font-medium">Bạn nhập:</span> {validatedAddress.originalAddress}
+                      </p>
+                      <p className="text-sm font-bold text-green-700 mb-2">
+                        <span className="font-medium">Hệ thống tìm thấy:</span> {validatedAddress.validatedAddress}
+                      </p>
+                      
+                      {/* Warning messages */}
+                      {validatedAddress.warning && (
+                        <div className="mb-3 p-3 bg-red-50 border-2 border-red-400 rounded-lg">
+                          <p className="text-sm text-red-700 font-semibold whitespace-pre-line">
+                            {validatedAddress.warning}
+                          </p>
+                          {validatedAddress.warning.includes('số nhà') && (
+                            <p className="text-xs text-red-600 mt-2">
+                              Ví dụ địa chỉ đầy đủ: <strong>58 Nguyễn Công Trứ, Tân An, Hội An, Quảng Nam</strong>
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {!validatedAddress.warning && (
+                        <div className="mb-3 p-2 bg-green-50 border border-green-300 rounded-lg">
+                          <p className="text-xs text-green-700 flex items-center gap-2">
+                            <span>✓</span>
+                            Địa chỉ có số nhà/số đường và khớp với địa chỉ bạn nhập
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Similarity indicator */}
+                      {validatedAddress.similarity !== undefined && (
+                        <div className="mb-3">
+                          <p className="text-xs text-gray-600">
+                            Độ khớp: <span className={`font-semibold ${validatedAddress.similarity >= 0.6 ? 'text-green-600' : validatedAddress.similarity >= 0.4 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {(validatedAddress.similarity * 100).toFixed(0)}%
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleConfirmAddress}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                        >
+                          ✓ Xác nhận địa chỉ này
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectAddress}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+                        >
+                          ✗ Chỉnh sửa lại
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {addressConfirmed && validatedAddress && (
+                <div className="mt-3 p-3 bg-green-50 border-2 border-green-500 rounded-lg">
+                  <p className="text-sm text-green-700 font-semibold flex items-center gap-2">
+                    <span>✓</span>
+                    Địa chỉ đã được xác nhận: {validatedAddress.validatedAddress}
+                  </p>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-1">
+                ⚠️ Địa chỉ này là bắt buộc và sẽ được dùng làm điểm xuất phát khi tính phí ship hàng.
+                <br />
+                Ví dụ: 58 Nguyễn Công Trứ, Tân An, Hội An, Quảng Nam, Việt Nam
+              </p>
+            </div>
+
+            <div>
+              <label className="block mb-2 font-bold text-gray-700">
+                Link Google Maps <span className="text-gray-500 text-sm font-normal">(Tùy chọn - để tham khảo)</span>
+              </label>
+              <input
+                type="url"
+                name="storeGoogleMapLink"
+                value={formData.storeGoogleMapLink}
+                onChange={handleChange}
+                onBlur={handleGoogleMapLinkBlur}
+                className="input-field"
+                placeholder="https://maps.google.com/?q=địa+chỉ (không bắt buộc)"
+                disabled={extractingAddress}
+              />
+              {extractingAddress && (
+                <p className="text-sm text-purple-600 mt-1">Đang lấy địa chỉ từ Google Maps...</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                💡 Có thể dán link Google Maps để tham khảo, nhưng vui lòng kiểm tra và chỉnh sửa địa chỉ ở ô trên cho chính xác.
+              </p>
             </div>
 
             <div>
@@ -181,11 +439,16 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full py-4 text-lg font-bold mt-6"
+              disabled={loading || validatingAddress || !addressConfirmed}
+              className="btn btn-primary w-full py-4 text-lg font-bold mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>
+            {!addressConfirmed && formData.storeAddress.trim() && (
+              <p className="text-sm text-red-600 mt-2 text-center">
+                ⚠️ Vui lòng xác nhận địa chỉ cửa hàng trước khi đăng ký
+              </p>
+            )}
           </form>
 
           <p className="mt-6 text-center text-gray-600">

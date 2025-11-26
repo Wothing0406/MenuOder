@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Lấy API URL từ environment variable
-let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 
 // Tự động thêm /api nếu chưa có (tránh lỗi khi người dùng quên thêm /api)
 if (API_URL && !API_URL.endsWith('/api') && !API_URL.endsWith('/api/')) {

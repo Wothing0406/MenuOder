@@ -2,14 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [
-      'localhost',
-      '127.0.0.1',
-      // Thêm domain của Render backend khi deploy
-      ...(process.env.NEXT_PUBLIC_API_URL 
-        ? [new URL(process.env.NEXT_PUBLIC_API_URL).hostname]
-        : [])
-    ],
     remotePatterns: [
       {
         protocol: 'https',
@@ -19,11 +11,31 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+      // Thêm domain của backend từ environment variable (nếu có)
+      ...(process.env.NEXT_PUBLIC_API_URL 
+        ? (() => {
+            try {
+              const url = new URL(process.env.NEXT_PUBLIC_API_URL);
+              return [{
+                protocol: url.protocol.replace(':', ''),
+                hostname: url.hostname,
+              }];
+            } catch (e) {
+              // Nếu URL không hợp lệ, bỏ qua
+              return [];
+            }
+          })()
+        : [])
     ],
     unoptimized: process.env.NODE_ENV === 'production',
   },
-  // Đảm bảo Next.js chạy tốt trên Render
-  output: 'standalone',
+  // Chỉ dùng standalone khi build production (cho deployment)
+  // Trong development, không cần standalone
+  ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
 };
 
 module.exports = nextConfig;

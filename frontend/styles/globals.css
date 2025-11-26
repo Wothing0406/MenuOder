@@ -24,6 +24,12 @@ body {
   padding: 0 1rem;
 }
 
+@media (max-width: 640px) {
+  .container-custom {
+    padding: 0 0.75rem;
+  }
+}
+
 .btn {
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -32,6 +38,18 @@ body {
   border: none;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-height: 44px; /* Minimum touch target size for mobile */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .btn {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.9375rem;
+  }
 }
 
 .btn-primary {
@@ -87,6 +105,9 @@ body {
   font-size: 1rem;
   transition: all 0.3s ease;
   background: white;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .input-field:focus {
@@ -94,6 +115,13 @@ body {
   border-color: #8b5cf6;
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
   background: #faf5ff;
+}
+
+@media (max-width: 640px) {
+  .input-field {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.875rem 1rem;
+  }
 }
 
 /* Gradient backgrounds */
@@ -170,4 +198,53 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+/* Hide scrollbar for mobile horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Better touch targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent text size adjustment on iOS */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Better tap highlight */
+  * {
+    -webkit-tap-highlight-color: rgba(139, 92, 246, 0.2);
+  }
+  
+  /* Improve card spacing on mobile */
+  .card {
+    padding: 1rem;
+  }
+  
+  /* Better line height for readability */
+  body {
+    line-height: 1.6;
+  }
+  
+  /* Safe area for mobile devices with notches */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
 }

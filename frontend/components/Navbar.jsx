@@ -24,6 +24,9 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex space-x-6">
+          <Link href="/track-order" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
+            Theo dõi đơn hàng
+          </Link>
           {token && user ? (
             <>
               <Link href="/dashboard" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
@@ -53,18 +56,30 @@ export default function Navbar() {
         </div>
 
         <button
-          className="md:hidden"
+          className="md:hidden w-10 h-10 flex items-center justify-center text-2xl hover:bg-white hover:bg-opacity-20 rounded-lg transition"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Menu"
         >
-          ☰
+          {isMenuOpen ? '✕' : '☰'}
         </button>
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden bg-blue-700 p-4 space-y-2">
+        <div className="md:hidden bg-purple-700 p-4 space-y-2 animate-fadeIn">
+          <Link 
+            href="/track-order" 
+            className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Theo dõi đơn hàng
+          </Link>
           {token && user ? (
             <>
-              <Link href="/dashboard" className="block hover:text-blue-200 transition">
+              <Link 
+                href="/dashboard" 
+                className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Bảng điều khiển
               </Link>
               <button
@@ -73,17 +88,25 @@ export default function Navbar() {
                   localStorage.removeItem('token');
                   window.location.href = '/';
                 }}
-                className="w-full text-left bg-red-500 px-4 py-2 rounded hover:bg-red-600 transition"
+                className="w-full text-left bg-red-500 px-4 py-3 rounded-lg hover:bg-red-600 transition font-medium"
               >
                 Đăng xuất
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="block hover:text-blue-200 transition">
+              <Link 
+                href="/login" 
+                className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Đăng nhập
               </Link>
-              <Link href="/register" className="block bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition">
+              <Link 
+                href="/register" 
+                className="block bg-white text-purple-600 px-4 py-3 rounded-lg hover:bg-opacity-90 transition font-semibold text-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Đăng ký
               </Link>
             </>

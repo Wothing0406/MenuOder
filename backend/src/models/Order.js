@@ -21,11 +21,13 @@ const Order = sequelize.define('Order', {
   },
   customerName: {
     type: Sequelize.STRING,
-    allowNull: false
+    allowNull: true,
+    comment: 'Customer name (required for delivery orders, optional for dine-in)'
   },
   customerPhone: {
     type: Sequelize.STRING,
-    allowNull: false
+    allowNull: true,
+    comment: 'Customer phone (required for delivery orders, optional for dine-in)'
   },
   customerEmail: {
     type: Sequelize.STRING,
@@ -34,6 +36,28 @@ const Order = sequelize.define('Order', {
   customerNote: {
     type: Sequelize.TEXT,
     allowNull: true
+  },
+  orderType: {
+    type: Sequelize.ENUM('dine_in', 'delivery'),
+    allowNull: false,
+    defaultValue: 'dine_in',
+    comment: 'Type of order: dine_in or delivery'
+  },
+  deliveryAddress: {
+    type: Sequelize.TEXT,
+    allowNull: true,
+    comment: 'Delivery address for delivery orders'
+  },
+  deliveryDistance: {
+    type: Sequelize.DECIMAL(10, 2),
+    allowNull: true,
+    comment: 'Delivery distance in kilometers'
+  },
+  shippingFee: {
+    type: Sequelize.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Shipping fee in VND'
   },
   tableNumber: {
     type: Sequelize.INTEGER,

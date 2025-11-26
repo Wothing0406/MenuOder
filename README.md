@@ -296,11 +296,12 @@ cd backend
 npm install
 
 # Tạo file .env
+cd backend
 cp .env.example .env
 # Hoặc tạo file .env với nội dung:
 ```
 
-**File `.env` mẫu:**
+**File `backend/.env` mẫu:**
 ```env
 DB_HOST=localhost
 DB_PORT=3306

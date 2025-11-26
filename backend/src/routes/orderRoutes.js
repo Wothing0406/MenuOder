@@ -5,6 +5,9 @@ const authMiddleware = require('../middleware/auth');
 
 // Public routes
 router.post('/', orderController.createOrder);
+router.post('/validate-address', orderController.validateAddress);
+router.post('/calculate-shipping', orderController.calculateShipping);
+router.get('/track', orderController.trackOrder);
 router.get('/:orderId', orderController.getOrderDetail);
 
 // Protected routes

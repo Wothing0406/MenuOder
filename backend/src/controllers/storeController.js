@@ -70,6 +70,9 @@ exports.getStoreBySlug = async (req, res) => {
     if (storeData.storeLogo) {
       storeData.storeLogo = getLogoUrl(storeData.storeLogo);
     }
+    if (storeData.storeImage) {
+      storeData.storeImage = getLogoUrl(storeData.storeImage);
+    }
 
     res.json({
       success: true,
@@ -146,6 +149,9 @@ exports.getMyStore = async (req, res) => {
     if (storeData.storeLogo) {
       storeData.storeLogo = getLogoUrl(storeData.storeLogo);
     }
+    if (storeData.storeImage) {
+      storeData.storeImage = getLogoUrl(storeData.storeImage);
+    }
 
     res.json({
       success: true,
@@ -209,6 +215,26 @@ exports.updateStore = async (req, res) => {
       updateData.storeLogo = logoPath;
     }
     
+    // Xử lý storeImage nếu có trong body
+    if (req.body.storeImage !== undefined) {
+      // Nếu là empty string, xóa ảnh cũ
+      if (req.body.storeImage === '') {
+        if (store.storeImage) {
+          const oldImagePath = path.join(__dirname, '../../', store.storeImage);
+          if (fs.existsSync(oldImagePath)) {
+            try {
+              fs.unlinkSync(oldImagePath);
+            } catch (err) {
+              console.error('Error deleting old store image:', err);
+            }
+          }
+        }
+        updateData.storeImage = null;
+      } else if (req.body.storeImage) {
+        updateData.storeImage = req.body.storeImage;
+      }
+    }
+    
     await store.update(updateData);
     await store.reload();
 
@@ -235,6 +261,9 @@ exports.updateStore = async (req, res) => {
     if (storeData.storeLogo) {
       storeData.storeLogo = getLogoUrl(storeData.storeLogo);
     }
+    if (storeData.storeImage) {
+      storeData.storeImage = getLogoUrl(storeData.storeImage);
+    }
 
     res.json({
       success: true,
@@ -246,6 +275,91 @@ exports.updateStore = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update store',
+      error: error.message
+    });
+  }
+};
+
+// Upload store image (banner)
+exports.uploadStoreImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const store = await Store.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!store) {
+      // Xóa file vừa upload nếu store không tồn tại
+      const filePath = path.join(__dirname, '../../', req.file.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    // Xóa ảnh cũ nếu có
+    if (store.storeImage) {
+      const oldImagePath = path.join(__dirname, '../../', store.storeImage);
+      if (fs.existsSync(oldImagePath)) {
+        try {
+          fs.unlinkSync(oldImagePath);
+        } catch (err) {
+          console.error('Error deleting old store image:', err);
+        }
+      }
+    }
+
+    // Cập nhật ảnh mới
+    const imagePath = '/uploads/' + req.file.filename;
+    
+    await store.update({ storeImage: imagePath });
+    await store.reload();
+
+    // Tạo full URL cho ảnh
+    const getImageUrl = (path) => {
+      if (!path) return null;
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+      }
+      
+      if (process.env.NODE_ENV === 'production') {
+        let backendUrl = process.env.BACKEND_URL;
+        if (!backendUrl) {
+          const protocol = 'https';
+          const host = req.get('host');
+          backendUrl = `${protocol}://${host}`;
+        }
+        backendUrl = backendUrl.replace(/\/$/, '');
+        const cleanPath = path.startsWith('/') ? path : '/' + path;
+        return backendUrl + cleanPath;
+      }
+      return path;
+    };
+
+    const imageUrl = getImageUrl(store.storeImage);
+
+    res.json({
+      success: true,
+      message: 'Store image uploaded successfully',
+      data: {
+        storeImage: imageUrl,
+        storeImagePath: store.storeImage
+      }
+    });
+  } catch (error) {
+    console.error('Upload store image error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload store image',
       error: error.message
     });
   }

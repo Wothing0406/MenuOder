@@ -13,7 +13,7 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <div className="relative gradient-teal text-white py-20 overflow-hidden">
+      <div className="relative gradient-teal text-white py-12 md:py-20 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 grid-pattern opacity-20"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-purple-600/20"></div>
@@ -22,30 +22,30 @@ export default function Home() {
         <div className="absolute top-20 right-10 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-2xl float-animation"></div>
         <div className="absolute bottom-20 left-10 w-40 h-40 bg-white bg-opacity-10 rounded-full blur-3xl float-animation" style={{animationDelay: '1s'}}></div>
         
-        <div className="container-custom text-center relative z-10">
-          <div className="flex justify-center mb-6">
+        <div className="container-custom text-center relative z-10 px-4">
+          <div className="flex justify-center mb-4 md:mb-6">
             <div className="relative">
               <Image 
                 src="/logo.jpg" 
                 alt="MenuOrder Logo" 
                 width={140} 
                 height={140}
-                className="rounded-full object-cover shadow-2xl ring-4 ring-white ring-offset-4 ring-offset-purple-500 float-animation"
+                className="rounded-full object-cover shadow-2xl ring-4 ring-white ring-offset-2 md:ring-offset-4 ring-offset-purple-500 float-animation w-24 h-24 md:w-[140px] md:h-[140px]"
               />
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-yellow-400 rounded-full animate-pulse"></div>
             </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 tracking-tight px-2">
             MenuOrder
           </h1>
-          <p className="text-xl md:text-2xl mb-10 opacity-95 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base md:text-xl lg:text-2xl mb-6 md:mb-10 opacity-95 max-w-2xl mx-auto leading-relaxed px-2">
             Tạo menu trực tuyến, quản lý đơn hàng và phát triển kinh doanh của bạn
           </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/register" className="bg-white text-purple-600 px-8 py-4 rounded-xl shadow-2xl hover:shadow-3xl transition-all font-bold text-lg hover:scale-105 transform">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center px-4">
+            <Link href="/register" className="bg-white text-purple-600 px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-2xl hover:shadow-3xl transition-all font-bold text-base md:text-lg hover:scale-105 transform w-full sm:w-auto min-h-[48px] flex items-center justify-center">
               Bắt đầu miễn phí
             </Link>
-            <Link href="/login" className="bg-white bg-opacity-20 backdrop-blur-sm text-white border-2 border-white border-opacity-30 px-8 py-4 rounded-xl shadow-xl hover:bg-opacity-30 transition-all font-bold text-lg hover:scale-105 transform">
+            <Link href="/login" className="bg-white bg-opacity-20 backdrop-blur-sm text-white border-2 border-white border-opacity-30 px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-xl hover:bg-opacity-30 transition-all font-bold text-base md:text-lg hover:scale-105 transform w-full sm:w-auto min-h-[48px] flex items-center justify-center">
               Đăng nhập
             </Link>
           </div>
@@ -53,15 +53,15 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <div className="container-custom py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
+      <div className="container-custom py-12 md:py-20">
+        <div className="text-center mb-8 md:mb-16 px-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
             Tính năng nổi bật
           </h2>
-          <p className="text-gray-600 text-lg">Khám phá những tính năng mạnh mẽ giúp bạn quản lý cửa hàng hiệu quả</p>
+          <p className="text-gray-600 text-base md:text-lg px-2">Khám phá những tính năng mạnh mẽ giúp bạn quản lý cửa hàng hiệu quả</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="card text-center group relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative z-10">
@@ -131,17 +131,17 @@ export default function Home() {
       </div>
 
       {/* How It Works */}
-      <div className="relative py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+      <div className="relative py-12 md:py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-10"></div>
         <div className="container-custom relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
+          <div className="text-center mb-8 md:mb-16 px-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
               Cách hoạt động
             </h2>
-            <p className="text-gray-600 text-lg">Chỉ với 4 bước đơn giản để bắt đầu</p>
+            <p className="text-gray-600 text-base md:text-lg">Chỉ với 4 bước đơn giản để bắt đầu</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 px-4">
             <div className="text-center group">
               <div className="gradient-teal text-white rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 text-2xl font-bold shadow-xl group-hover:scale-110 transition-transform relative">
                 1

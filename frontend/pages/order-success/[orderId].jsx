@@ -5,6 +5,7 @@ import api from '../../lib/api';
 import { useCart } from '../../lib/store';
 import Layout from '../../components/Layout';
 import { formatVND } from '../../lib/utils';
+import toast from 'react-hot-toast';
 
 export default function OrderSuccess() {
   const router = useRouter();
@@ -21,17 +22,56 @@ export default function OrderSuccess() {
       try {
         const res = await api.get(`/orders/${orderId}`);
         if (res.data.success) {
-          setOrder(res.data.data);
+          const orderData = res.data.data;
+          setOrder(orderData);
+          
+          // Save order code to localStorage for quick access
+          if (orderData.orderCode) {
+            const savedOrders = JSON.parse(localStorage.getItem('recentOrders') || '[]');
+            const orderInfo = {
+              orderCode: orderData.orderCode,
+              orderId: orderData.id,
+              createdAt: orderData.createdAt,
+              totalAmount: orderData.totalAmount,
+              status: orderData.status
+            };
+            
+            // Remove if already exists
+            const filtered = savedOrders.filter(o => o.orderCode !== orderData.orderCode);
+            // Add to beginning
+            filtered.unshift(orderInfo);
+            // Keep only last 5 orders
+            const recentOrders = filtered.slice(0, 5);
+            localStorage.setItem('recentOrders', JSON.stringify(recentOrders));
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch order');
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to fetch order:', error);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  const copyOrderCode = () => {
+    if (order?.orderCode) {
+      navigator.clipboard.writeText(order.orderCode);
+      toast.success('Đã sao chép mã đơn hàng!');
+    }
+  };
+
+  const goToTrackWithOrderCode = () => {
+    if (order?.orderCode) {
+      router.push(`/track-order?orderCode=${encodeURIComponent(order.orderCode)}`);
+    } else {
+      router.push('/track-order');
+    }
+  };
 
   if (loading) {
     return (
@@ -49,86 +89,125 @@ export default function OrderSuccess() {
   return (
     <Layout>
       <Head>
-        <title>Order Success - MenuOrder</title>
+        <title>Đặt hàng thành công - MenuOrder</title>
       </Head>
 
-      <div className="container-custom py-12">
+      <div className="container-custom py-6 md:py-12 px-4">
         <div className="max-w-md mx-auto card text-center">
-          <div className="mb-4">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-5xl text-green-600">✓</span>
+          <div className="mb-6">
+            <div className="w-24 h-24 md:w-28 md:h-28 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-fadeIn">
+              <span className="text-6xl md:text-7xl text-green-600">✓</span>
             </div>
-            <h1 className="text-3xl font-bold mb-2 text-green-600">Đặt hàng thành công!</h1>
-            <p className="text-gray-600">Cảm ơn bạn đã đặt hàng!</p>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 text-green-600">Đặt hàng thành công!</h1>
+            <p className="text-gray-600 text-base md:text-lg">Cảm ơn bạn đã đặt hàng!</p>
           </div>
 
           {order && (
             <>
-              <div className="bg-gray-50 p-6 rounded-lg mb-6 text-left border border-gray-200">
-                <div className="mb-3">
-                  <span className="text-sm text-gray-600">Mã đơn hàng:</span>
-                  <p className="text-blue-600 font-bold text-lg">{order.orderCode}</p>
+              <div className="bg-gray-50 p-4 md:p-6 rounded-xl mb-6 text-left border-2 border-gray-200">
+                <div className="mb-4 pb-3 border-b border-gray-300">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-xs md:text-sm text-gray-600">Mã đơn hàng:</span>
+                    <button
+                      onClick={copyOrderCode}
+                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                      title="Sao chép mã đơn hàng"
+                    >
+                      📋 Sao chép
+                    </button>
+                  </div>
+                  <p className="text-blue-600 font-bold text-lg md:text-xl break-all select-all">{order.orderCode}</p>
+                  {order.customerPhone && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Bạn có thể theo dõi đơn hàng bằng mã này hoặc số điện thoại: {order.customerPhone}
+                    </p>
+                  )}
+                  {!order.customerPhone && order.orderType === 'dine_in' && (
+                    <p className="text-xs text-orange-600 mt-1 font-semibold">
+                      ⚠️ Lưu mã đơn hàng này để theo dõi đơn hàng của bạn!
+                    </p>
+                  )}
                 </div>
                 {order.tableNumber && (
-                  <div className="mb-3">
-                    <span className="text-sm text-gray-600">Số bàn:</span>
-                    <p className="font-bold">{order.tableNumber}</p>
+                  <div className="mb-4 pb-3 border-b border-gray-300">
+                    <span className="text-xs md:text-sm text-gray-600 block mb-1">Số bàn:</span>
+                    <p className="font-bold text-base md:text-lg">{order.tableNumber}</p>
                   </div>
                 )}
-                <div className="mb-3">
-                  <span className="text-sm text-gray-600">Tổng tiền:</span>
-                  <p className="font-bold text-xl text-blue-600">{formatVND(order.totalAmount)}</p>
+                <div className="mb-4 pb-3 border-b border-gray-300">
+                  <span className="text-xs md:text-sm text-gray-600 block mb-1">Tổng tiền:</span>
+                  <p className="font-bold text-xl md:text-2xl text-blue-600">{formatVND(order.totalAmount)}</p>
                 </div>
-                <div className="mb-3">
-                  <span className="text-sm text-gray-600">Phương thức thanh toán:</span>
-                  <p className="capitalize font-medium">
+                <div className="mb-4 pb-3 border-b border-gray-300">
+                  <span className="text-xs md:text-sm text-gray-600 block mb-1">Phương thức thanh toán:</span>
+                  <p className="capitalize font-medium text-base md:text-lg">
                     {order.paymentMethod === 'cash' ? 'Tiền mặt' : 
-                     order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 
-                     'Thẻ tín dụng'}
+                     order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' 
+                    : ''}
                   </p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-600">Thời gian đặt:</span>
-                  <p className="text-sm">{new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+                  <span className="text-xs md:text-sm text-gray-600 block mb-1">Thời gian đặt:</span>
+                  <p className="text-sm md:text-base">{new Date(order.createdAt).toLocaleString('vi-VN')}</p>
                 </div>
               </div>
 
               {order.items && order.items.length > 0 && (
                 <div className="text-left mb-6">
-                  <h3 className="font-bold mb-3 text-lg">Chi tiết đơn hàng:</h3>
-                  <div className="space-y-2">
+                  <h3 className="font-bold mb-4 text-lg md:text-xl">Chi tiết đơn hàng:</h3>
+                  <div className="space-y-3">
                     {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-start p-3 bg-gray-50 rounded border">
-                        <div className="flex-1">
-                          <p className="font-bold">{item.itemName}</p>
-                          <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
+                      <div key={item.id} className="flex justify-between items-start p-3 md:p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <p className="font-bold text-base md:text-lg mb-1">{item.itemName}</p>
+                          <p className="text-sm md:text-base text-gray-600 mb-1">Số lượng: {item.quantity}</p>
                           {item.selectedAccompaniments && 
                            Array.isArray(item.selectedAccompaniments) && 
                            item.selectedAccompaniments.length > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs md:text-sm text-gray-500 mt-1">
                               Món kèm: {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
                             </p>
                           )}
                         </div>
-                        <p className="font-bold text-blue-600">{formatVND(item.subtotal)}</p>
+                        <p className="font-bold text-blue-600 text-base md:text-lg whitespace-nowrap">{formatVND(item.subtotal)}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                <p className="text-gray-700 text-sm">
+              <div className="bg-blue-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-blue-200">
+                <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
                   Cửa hàng sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Vui lòng chờ!
                 </p>
+                <div className="bg-white p-3 rounded-lg border border-blue-300 mt-3">
+                  <p className="text-xs md:text-sm text-gray-700 font-semibold mb-2">
+                    📱 Cách theo dõi đơn hàng:
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                    <li>Nhấn nút "Theo dõi đơn hàng" bên dưới</li>
+                    {order.customerPhone ? (
+                      <li>Hoặc nhập số điện thoại: <strong>{order.customerPhone}</strong></li>
+                    ) : (
+                      <li>Hoặc nhập mã đơn hàng: <strong>{order.orderCode}</strong></li>
+                    )}
+                    <li>Hoặc vào menu "Theo dõi đơn hàng" trên thanh điều hướng</li>
+                  </ul>
+                </div>
               </div>
             </>
           )}
 
-          <div className="mt-6 space-y-2">
+          <div className="mt-6 space-y-3">
+            <button
+              onClick={goToTrackWithOrderCode}
+              className="btn bg-purple-600 hover:bg-purple-700 text-white w-full py-4 text-base md:text-lg font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              📦 Theo dõi đơn hàng ngay
+            </button>
             <button
               onClick={() => router.push('/')}
-              className="btn btn-primary w-full py-3"
+              className="btn btn-primary w-full py-4 text-base md:text-lg font-bold"
             >
               Về trang chủ
             </button>

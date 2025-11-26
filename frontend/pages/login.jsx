@@ -55,7 +55,7 @@ export default function Login() {
   return (
     <Layout>
       <Head>
-        <title>Login - MenuOrder</title>
+        <title>Đăng nhập - MenuOrder</title>
       </Head>
       <Navbar />
 

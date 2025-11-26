@@ -12,5 +12,6 @@ router.get('/', storeController.getAllStores);
 router.get('/my-store', authMiddleware, storeController.getMyStore);
 router.put('/my-store', authMiddleware, upload.single('logo'), storeController.updateStore);
 router.post('/my-store/logo', authMiddleware, upload.single('logo'), storeController.uploadLogo);
+router.post('/my-store/image', authMiddleware, upload.single('storeImage'), storeController.uploadStoreImage);
 
 module.exports = router;
