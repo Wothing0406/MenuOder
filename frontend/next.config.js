@@ -1,6 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  
+  // Tối ưu hóa output cho production
+  ...(process.env.NODE_ENV === 'production' ? { 
+    output: 'standalone',
+    // Tối ưu hóa bundle size
+    swcMinify: true,
+    // Compress output
+    compress: true,
+  } : {}),
+
+  // Tối ưu hóa images
   images: {
     remotePatterns: [
       {
@@ -31,11 +42,30 @@ const nextConfig = {
           })()
         : [])
     ],
-    unoptimized: process.env.NODE_ENV === 'production',
+    // Bật image optimization để giảm kích thước
+    // Nếu Render không hỗ trợ Next.js Image Optimization, set unoptimized: true
+    unoptimized: false,
+    // Giới hạn kích thước và format
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-  // Chỉ dùng standalone khi build production (cho deployment)
-  // Trong development, không cần standalone
-  ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
+
+  // Tối ưu hóa webpack
+  webpack: (config, { isServer }) => {
+    // Giảm kích thước bundle
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        usedExports: true,
+        sideEffects: false,
+      };
+    }
+    return config;
+  },
+
+  // Tắt source maps trong production để giảm kích thước
+  productionBrowserSourceMaps: false,
 };
 
 module.exports = nextConfig;

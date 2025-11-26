@@ -375,6 +375,10 @@ Sau khi chạy seed data:
 
 - 📖 [Hướng Dẫn Cài Đặt Chi Tiết](docs/SETUP.md)
 - 🚀 [Hướng Dẫn Deploy Lên Render](docs/RENDER_DEPLOYMENT.md)
+- ⚡ [Tối Ưu Hóa Build Trên Render](docs/RENDER_OPTIMIZATION.md)
+- 📊 [So Sánh Các Dịch Vụ Deploy](docs/DEPLOYMENT_COMPARISON.md)
+- ✨ [Deploy Frontend Lên Vercel](docs/VERCEL_DEPLOYMENT.md)
+- 🚂 [Deploy Backend Lên Railway](docs/RAILWAY_DEPLOYMENT.md)
 - 🔄 [Reset Database](RESET_DATABASE.md)
 - 🔌 [API Documentation](docs/API_DOCUMENTATION.md)
 - 🗄️ [Database Schema](database/schema.sql)
