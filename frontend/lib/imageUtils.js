@@ -109,3 +109,4 @@ export async function getCroppedImg(
     }, 'image/jpeg', 0.9);
   });
 }
+

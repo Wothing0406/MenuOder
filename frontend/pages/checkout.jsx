@@ -252,7 +252,9 @@ export default function Checkout() {
       if (res.data.success) {
         toast.success('Đặt hàng thành công!');
         clearCart();
-        router.push(`/order-success/${res.data.data.id}`);
+        // Redirect to order success page with store slug
+        const storeSlug = router.query.store;
+        router.push(`/order-success/${res.data.data.id}${storeSlug ? `?store=${storeSlug}` : ''}`);
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {

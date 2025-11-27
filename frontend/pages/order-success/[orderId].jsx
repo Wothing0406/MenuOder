@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function OrderSuccess() {
   const router = useRouter();
-  const { orderId } = router.query;
+  const { orderId, store } = router.query;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const { clearCart } = useCart();
@@ -106,24 +106,27 @@ export default function OrderSuccess() {
             <>
               <div className="bg-gray-50 p-4 md:p-6 rounded-xl mb-6 text-left border-2 border-gray-200">
                 <div className="mb-4 pb-3 border-b border-gray-300">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-xs md:text-sm text-gray-600">Mã đơn hàng:</span>
-                    <button
-                      onClick={copyOrderCode}
-                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
-                      title="Sao chép mã đơn hàng"
-                    >
-                      📋 Sao chép
-                    </button>
+                  <span className="text-xs md:text-sm text-gray-600 block mb-2">Mã đơn hàng:</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0 bg-white px-3 py-2.5 rounded-lg border-2 border-blue-200 flex items-center justify-between gap-2">
+                      <p className="text-blue-600 font-bold text-base md:text-lg break-all select-all flex-1 min-w-0">{order.orderCode}</p>
+                      <button
+                        onClick={copyOrderCode}
+                        className="flex-shrink-0 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow-sm hover:shadow-md active:scale-95"
+                        title="Sao chép mã đơn hàng"
+                      >
+                        <span>📋</span>
+                        <span>Sao chép</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-blue-600 font-bold text-lg md:text-xl break-all select-all">{order.orderCode}</p>
                   {order.customerPhone && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-2">
                       💡 Bạn có thể theo dõi đơn hàng bằng mã này hoặc số điện thoại: {order.customerPhone}
                     </p>
                   )}
                   {!order.customerPhone && order.orderType === 'dine_in' && (
-                    <p className="text-xs text-orange-600 mt-1 font-semibold">
+                    <p className="text-xs text-orange-600 mt-2 font-semibold">
                       ⚠️ Lưu mã đơn hàng này để theo dõi đơn hàng của bạn!
                     </p>
                   )}
@@ -206,10 +209,16 @@ export default function OrderSuccess() {
               📦 Theo dõi đơn hàng ngay
             </button>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => {
+                if (store) {
+                  router.push(`/store/${store}`);
+                } else {
+                  router.push('/');
+                }
+              }}
               className="btn btn-primary w-full py-4 text-base md:text-lg font-bold"
             >
-              Về trang chủ
+              {store ? 'Về menu quán' : 'Về trang chủ'}
             </button>
           </div>
         </div>
