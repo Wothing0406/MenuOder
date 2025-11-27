@@ -8,6 +8,7 @@ import ImageCrop from '../../components/ImageCrop';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND, getImageUrl } from '../../lib/utils';
+import { PlusIcon, DeleteIcon, EditIcon, ArrowUpIcon, ArrowDownIcon, FolderIcon, ClipboardIcon, MoneyIcon, NoteIcon, CameraIcon, DishIcon, CheckIcon, CloseIcon } from '../../components/Icons';
 
 export default function MenuManagement() {
   const router = useRouter();
@@ -402,40 +403,41 @@ export default function MenuManagement() {
                 setFormData({ categoryName: '' });
                 setShowModal(true);
               }}
-              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover"
+              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover flex items-center gap-2"
             >
-              ➕ Thêm danh mục mới
+              <PlusIcon className="w-5 h-5" />
+              Thêm danh mục mới
             </button>
 
             <div className="space-y-3">
               {categories.map((category, index) => (
-                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift stagger-item">
+                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift stagger-item animate-fadeIn">
                   <div className="flex items-center gap-3">
                     {/* Order Controls */}
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={() => handleMoveCategory(category.id, 'up')}
                         disabled={index === 0}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition ${
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition transform hover:scale-110 ${
                           index === 0
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200 active:scale-95'
                         }`}
                         title="Di chuyển lên"
                       >
-                        ↑
+                        <ArrowUpIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleMoveCategory(category.id, 'down')}
                         disabled={index === categories.length - 1}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition ${
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition transform hover:scale-110 ${
                           index === categories.length - 1
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200 active:scale-95'
                         }`}
                         title="Di chuyển xuống"
                       >
-                        ↓
+                        <ArrowDownIcon className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -455,10 +457,11 @@ export default function MenuManagement() {
                     {/* Delete Button */}
                     <button
                       onClick={() => handleDeleteCategory(category.id)}
-                      className="btn btn-danger text-sm hover:bg-red-600 transition px-4 py-2"
+                      className="btn btn-danger text-sm hover:bg-red-600 transition px-4 py-2 flex items-center gap-2"
                       title="Xóa danh mục"
                     >
-                      🗑️ Xóa
+                      <DeleteIcon className="w-4 h-4" />
+                      Xóa
                     </button>
                   </div>
                 </div>
@@ -506,14 +509,15 @@ export default function MenuManagement() {
                         setItemImagePreview(null);
                         setShowModal(true);
                       }}
-                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover"
+                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover flex items-center gap-2"
                     >
-                      ➕ Thêm món mới
+                      <PlusIcon className="w-5 h-5" />
+                      Thêm món mới
                     </button>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                       {items.map(item => (
-                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift stagger-item">
+                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift stagger-item animate-fadeIn">
                           {/* Image Square */}
                           {item.itemImage ? (
                             <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
@@ -528,7 +532,7 @@ export default function MenuManagement() {
                             </div>
                           ) : (
                             <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                              <span className="text-2xl md:text-3xl">🍽️</span>
+                              <DishIcon className="w-12 h-12 md:w-16 md:h-16 text-purple-400" />
                             </div>
                           )}
                           
@@ -543,17 +547,17 @@ export default function MenuManagement() {
                             <div className="flex gap-1 mt-auto">
                               <button
                                 onClick={() => handleEditItem(item)}
-                                className="flex-1 px-2 py-1.5 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-600 hover:text-white transition font-medium"
+                                className="flex-1 px-2 py-1.5 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-600 hover:text-white transition font-medium flex items-center justify-center gap-1 transform hover:scale-105 active:scale-95"
                                 title="Sửa"
                               >
-                                ✏️
+                                <EditIcon className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
-                                className="flex-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-600 hover:text-white transition font-medium"
+                                className="flex-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-600 hover:text-white transition font-medium flex items-center justify-center gap-1 transform hover:scale-105 active:scale-95"
                                 title="Xóa"
                               >
-                                🗑️
+                                <DeleteIcon className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -576,18 +580,22 @@ export default function MenuManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">📂 Thêm danh mục mới</h2>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <FolderIcon className="w-6 h-6 text-purple-600" />
+                  Thêm danh mục mới
+                </h2>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  className="text-gray-500 hover:text-gray-700 transition-transform hover:rotate-90"
                 >
-                  ×
+                  <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
               <form onSubmit={handleAddCategory} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    📋 Tên danh mục <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <ClipboardIcon className="w-5 h-5 text-purple-600" />
+                    Tên danh mục <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -608,9 +616,10 @@ export default function MenuManagement() {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary flex-1 hover:bg-purple-700 transition"
+                    className="btn btn-primary flex-1 hover:bg-purple-700 transition flex items-center justify-center gap-2"
                   >
-                    ✅ Tạo danh mục
+                    <CheckIcon className="w-5 h-5" />
+                    Tạo danh mục
                   </button>
                 </div>
               </form>
@@ -623,27 +632,32 @@ export default function MenuManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">➕ Thêm món mới</h2>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <PlusIcon className="w-6 h-6 text-purple-600" />
+                  Thêm món mới
+                </h2>
                 <button
                   onClick={() => {
                     setShowModal(false);
                     setItemImage(null);
                     setItemImagePreview(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  className="text-gray-500 hover:text-gray-700 transition-transform hover:rotate-90"
                 >
-                  ×
+                  <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
-              <div className="mb-4 px-3 py-2 bg-purple-100 rounded-lg">
+              <div className="mb-4 px-3 py-2 bg-purple-100 rounded-lg flex items-center gap-2">
+                <FolderIcon className="w-5 h-5 text-purple-600" />
                 <p className="text-sm text-purple-800">
-                  📂 Danh mục: <span className="font-bold">{selectedCategory?.categoryName}</span>
+                  Danh mục: <span className="font-bold">{selectedCategory?.categoryName}</span>
                 </p>
               </div>
               <form onSubmit={handleAddItem} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    🍽️ Tên món <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <DishIcon className="w-5 h-5 text-purple-600" />
+                    Tên món <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -683,8 +697,9 @@ export default function MenuManagement() {
                 </div>
                 {/* Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    📷 Ảnh món (tùy chọn)
+                  <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <CameraIcon className="w-5 h-5 text-purple-600" />
+                    Ảnh món (tùy chọn)
                   </label>
                   {itemImagePreview && (
                     <div className="relative mb-3 group">
@@ -694,8 +709,9 @@ export default function MenuManagement() {
                           alt="Preview ảnh đã crop"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          ✅ Ảnh đã sẵn sàng
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                          <CheckIcon className="w-4 h-4" />
+                          Ảnh đã sẵn sàng
                         </div>
                       </div>
                       <div className="absolute top-2 right-2 flex gap-2">
@@ -731,7 +747,7 @@ export default function MenuManagement() {
                   {!itemImagePreview && (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition cursor-pointer"
                       onClick={() => document.getElementById('item-image-input').click()}>
-                      <div className="text-4xl mb-2">📷</div>
+                      <CameraIcon className="w-16 h-16 text-gray-400 mb-2 mx-auto" />
                       <p className="text-sm text-gray-600 mb-1">Nhấn để chọn ảnh</p>
                       <p className="text-xs text-gray-500">JPG, PNG, GIF • Tối đa 5MB</p>
                     </div>
@@ -761,7 +777,17 @@ export default function MenuManagement() {
                     disabled={uploading}
                     className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {uploading ? '⏳ Đang tạo...' : '✅ Tạo món'}
+                    {uploading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Đang tạo...
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="w-5 h-5" />
+                        Tạo món
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -774,7 +800,10 @@ export default function MenuManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">✏️ Chỉnh sửa món</h2>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <EditIcon className="w-6 h-6 text-purple-600" />
+                  Chỉnh sửa món
+                </h2>
                 <button
                   onClick={() => {
                     setShowModal(false);
@@ -782,15 +811,16 @@ export default function MenuManagement() {
                     setItemImage(null);
                     setItemImagePreview(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  className="text-gray-500 hover:text-gray-700 transition-transform hover:rotate-90"
                 >
-                  ×
+                  <CloseIcon className="w-6 h-6" />
                 </button>
               </div>
               <form onSubmit={handleUpdateItem} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    🍽️ Tên món <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <DishIcon className="w-5 h-5 text-purple-600" />
+                    Tên món <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -830,8 +860,9 @@ export default function MenuManagement() {
                 </div>
                 {/* Image Upload/Edit */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    📷 Ảnh món (tùy chọn)
+                  <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <CameraIcon className="w-5 h-5 text-purple-600" />
+                    Ảnh món (tùy chọn)
                   </label>
                   {itemImagePreview && (
                     <div className="relative mb-3 group">
@@ -841,8 +872,18 @@ export default function MenuManagement() {
                           alt="Preview ảnh"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          {itemImage ? '✅ Ảnh mới đã sẵn sàng' : '📷 Ảnh hiện tại'}
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                          {itemImage ? (
+                            <>
+                              <CheckIcon className="w-4 h-4" />
+                              Ảnh mới đã sẵn sàng
+                            </>
+                          ) : (
+                            <>
+                              <CameraIcon className="w-4 h-4" />
+                              Ảnh hiện tại
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="absolute top-2 right-2 flex gap-2">
@@ -867,7 +908,7 @@ export default function MenuManagement() {
                             className="bg-red-500 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm hover:bg-red-600 transition shadow-lg hover:scale-110"
                             title="Xóa ảnh từ server"
                           >
-                            🗑️
+                            <DeleteIcon className="w-5 h-5" />
                           </button>
                         )}
                         {itemImage && (
@@ -890,7 +931,7 @@ export default function MenuManagement() {
                   {!itemImagePreview && (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition cursor-pointer"
                       onClick={() => document.getElementById('edit-item-image-input').click()}>
-                      <div className="text-4xl mb-2">📷</div>
+                      <CameraIcon className="w-16 h-16 text-gray-400 mb-2 mx-auto" />
                       <p className="text-sm text-gray-600 mb-1">Nhấn để chọn ảnh</p>
                       <p className="text-xs text-gray-500">JPG, PNG, GIF • Tối đa 5MB</p>
                     </div>
@@ -921,7 +962,17 @@ export default function MenuManagement() {
                     disabled={uploading}
                     className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {uploading ? '⏳ Đang cập nhật...' : '✅ Cập nhật món'}
+                    {uploading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Đang cập nhật...
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="w-5 h-5" />
+                        Cập nhật món
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
