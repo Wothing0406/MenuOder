@@ -653,26 +653,25 @@ export default function Dashboard() {
                       >
                         <td className="px-4 py-2 font-bold">{order.orderCode}</td>
                         <td className="px-4 py-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-fit ${
-                            order.orderType === 'delivery'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {order.orderType === 'delivery' ? (
-                              <>
-                                <DeliveryTruckIcon className="w-4 h-4" />
-                                Giao hàng
-                              </>
-                            ) : (
-                              <>
-                                <TableIcon className="w-4 h-4" />
-                                Tại bàn
-                              </>
-                            )}
-                          </span>
-                          {order.orderType === 'dine_in' && order.tableNumber && (
-                            <span className="ml-2 text-xs text-gray-600">(Bàn {order.tableNumber})</span>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-fit ${
+                              order.orderType === 'delivery'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {order.orderType === 'delivery' ? (
+                                <>
+                                  <DeliveryTruckIcon className="w-4 h-4" />
+                                  Giao hàng
+                                </>
+                              ) : (
+                                <>
+                                  <TableIcon className="w-4 h-4" />
+                                  Tại bàn
+                                </>
+                              )}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-2">
                           {order.orderType === 'delivery' 
