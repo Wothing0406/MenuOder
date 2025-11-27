@@ -5,6 +5,7 @@ import api from '../lib/api';
 import Layout from '../components/Layout';
 import { formatVND } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { DeliveryTruckIcon, TableIcon } from '../components/Icons';
 
 const getStatusLabel = (status) => {
   const statusMap = {
@@ -251,8 +252,18 @@ export default function TrackOrder() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Loại đơn hàng</p>
-                        <p className="text-sm font-semibold text-gray-800 capitalize">
-                          {order.orderType === 'dine_in' ? '🍽️ Đặt tại quán' : '🚚 Giao hàng'}
+                        <p className="text-sm font-semibold text-gray-800 capitalize flex items-center gap-1">
+                          {order.orderType === 'dine_in' ? (
+                            <>
+                              <TableIcon className="w-4 h-4" />
+                              Đặt tại quán
+                            </>
+                          ) : (
+                            <>
+                              <DeliveryTruckIcon className="w-4 h-4" />
+                              Giao hàng
+                            </>
+                          )}
                         </p>
                       </div>
                       {order.tableNumber && (

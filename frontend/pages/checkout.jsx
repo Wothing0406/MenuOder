@@ -6,7 +6,7 @@ import { useCart } from '../lib/store';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 import { formatVND } from '../lib/utils';
-import { CartIcon } from '../components/Icons';
+import { CartIcon, DeliveryTruckIcon } from '../components/Icons';
 
 export default function Checkout() {
   const router = useRouter();
@@ -411,9 +411,7 @@ export default function Checkout() {
                   }`}
                 >
                   <div className="mb-1">
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <DeliveryTruckIcon className="w-6 h-6 md:w-8 md:h-8" />
                   </div>
                   <div className="font-semibold text-xs md:text-sm">Giao hàng</div>
                 </button>
