@@ -2,7 +2,7 @@ import { formatVND, getImageUrl } from '../lib/utils';
 
 export default function ItemCard({ item, onAddToCart }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden group cursor-pointer flex flex-col shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden group cursor-pointer flex flex-col shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02] card-glow hover-lift">
       {item.itemImage ? (
         <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
           <img

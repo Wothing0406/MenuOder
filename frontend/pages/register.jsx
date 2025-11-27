@@ -210,12 +210,12 @@ export default function Register() {
       <Navbar />
 
       <div className="container-custom py-16">
-        <div className="max-w-md mx-auto card relative overflow-hidden">
+        <div className="max-w-md mx-auto card relative overflow-hidden card-glow">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-2xl opacity-50"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-100 rounded-full blur-xl opacity-50"></div>
           <div className="relative z-10">
             <div className="flex flex-col items-center mb-8">
-              <div className="relative mb-4">
+              <div className="relative mb-4 transform transition-transform hover:scale-105">
                 <Image 
                   src="/logo.jpg" 
                   alt="MenuOrder Logo" 
@@ -227,10 +227,10 @@ export default function Register() {
                 />
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
-              <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent mb-2 tracking-tight">
                 Đăng ký cửa hàng
               </h1>
-              <p className="text-gray-600 mt-2 text-center">Tạo tài khoản mới cho cửa hàng của bạn</p>
+              <p className="text-gray-600 mt-2 text-center font-medium">Tạo tài khoản mới cho cửa hàng của bạn</p>
             </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -440,7 +440,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading || validatingAddress || !addressConfirmed}
-              className="btn btn-primary w-full py-4 text-lg font-bold mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary w-full py-4 text-lg font-bold mt-6 disabled:opacity-50 disabled:cursor-not-allowed btn-ripple scale-on-hover"
             >
               {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>

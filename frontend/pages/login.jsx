@@ -60,12 +60,12 @@ export default function Login() {
       <Navbar />
 
       <div className="container-custom py-16">
-        <div className="max-w-md mx-auto card relative overflow-hidden">
+        <div className="max-w-md mx-auto card relative overflow-hidden card-glow">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-2xl opacity-50"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-100 rounded-full blur-xl opacity-50"></div>
           <div className="relative z-10">
             <div className="flex flex-col items-center mb-8">
-              <div className="relative mb-4">
+              <div className="relative mb-4 transform transition-transform hover:scale-105">
                 <Image 
                   src="/logo.jpg" 
                   alt="MenuOrder Logo" 
@@ -75,15 +75,20 @@ export default function Login() {
                 />
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
-              <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent mb-2 tracking-tight">
                 Đăng nhập
               </h1>
-              <p className="text-gray-600 mt-2 text-center">Đăng nhập vào tài khoản cửa hàng của bạn</p>
+              <p className="text-gray-600 mt-2 text-center font-medium">Đăng nhập vào tài khoản cửa hàng của bạn</p>
             </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block mb-2 font-bold text-gray-700">Email</label>
+              <label className="block mb-2 font-bold text-gray-700 flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email
+              </label>
               <input
                 type="email"
                 name="email"
@@ -96,7 +101,12 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block mb-2 font-bold text-gray-700">Mật khẩu</label>
+              <label className="block mb-2 font-bold text-gray-700 flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Mật khẩu
+              </label>
               <input
                 type="password"
                 name="password"
@@ -111,7 +121,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary w-full py-4 text-lg font-bold mt-6"
+              className="btn btn-primary w-full py-4 text-lg font-bold mt-6 btn-ripple scale-on-hover"
             >
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>

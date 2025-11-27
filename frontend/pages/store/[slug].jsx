@@ -147,8 +147,8 @@ export default function StorePage() {
         <title>{store.storeName} - MenuOrder</title>
       </Head>
 
-      {/* Store Header with Banner Image */}
-      <div className="relative mb-4 md:mb-6 overflow-hidden rounded-b-2xl md:rounded-b-3xl shadow-xl">
+      {/* Store Header with Banner Image - Professional Design */}
+      <div className="relative mb-4 md:mb-6 overflow-hidden rounded-b-2xl md:rounded-b-3xl shadow-2xl group">
         {/* Store Banner/Image Background */}
         {store.storeImage ? (
           <div className="relative h-56 md:h-72 w-full overflow-hidden">
@@ -162,69 +162,90 @@ export default function StorePage() {
                 return apiBase + imagePath;
               })()}
               alt={store.storeName}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.parentElement.className = 'relative h-56 md:h-72 w-full bg-gradient-to-r from-purple-500 via-purple-400 to-purple-300';
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+            {/* Professional Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
+            {/* Subtle Pattern Overlay */}
+            <div className="absolute inset-0 opacity-10" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)',
+              backgroundSize: '40px 40px'
+            }}></div>
           </div>
         ) : (
           <div className="relative h-56 md:h-72 w-full bg-gradient-to-r from-purple-500 via-purple-400 to-purple-300 overflow-hidden">
             <div className="absolute inset-0 opacity-20">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-2xl"></div>
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
             </div>
+            {/* Pattern overlay for gradient background */}
+            <div className="absolute inset-0 opacity-10" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.2) 1px, transparent 0)',
+              backgroundSize: '40px 40px'
+            }}></div>
           </div>
         )}
         
-        {/* Store Info Overlay - Left Aligned */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+        {/* Store Info Overlay - Professional Design */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 z-10">
           <div className="container-custom">
-            <div className="flex items-end gap-3 md:gap-4">
-              {/* Logo - Left */}
-              <div className="relative flex-shrink-0">
+            <div className="flex items-end gap-3 md:gap-4 animate-fadeIn">
+              {/* Logo - Left with Professional Styling */}
+              <div className="relative flex-shrink-0 transform transition-transform duration-300 hover:scale-105">
                 {store.storeLogo ? (
-                  <img 
-                    src={(() => {
-                      if (store.storeLogo.startsWith('http')) {
-                        return store.storeLogo;
-                      }
-                      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-                      const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
-                      return apiBase + logoPath;
-                    })()}
-                    alt={store.storeName}
-                    className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover shadow-2xl ring-4 ring-white"
-                    onError={(e) => {
-                      e.target.src = '/logo.jpg';
-                    }}
-                  />
+                  <div className="relative">
+                    <img 
+                      src={(() => {
+                        if (store.storeLogo.startsWith('http')) {
+                          return store.storeLogo;
+                        }
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                        const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
+                        return apiBase + logoPath;
+                      })()}
+                      alt={store.storeName}
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover shadow-2xl ring-4 ring-white/90 backdrop-blur-sm"
+                      onError={(e) => {
+                        e.target.src = '/logo.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
+                  </div>
                 ) : (
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-2xl ring-4 ring-white">
-                    <span className="text-3xl md:text-4xl font-bold text-white">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-2xl ring-4 ring-white/90">
+                    <span className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
                       {(store.storeName || 'S')[0].toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-green-400 rounded-full border-[3px] border-white shadow-lg"></div>
+                {/* Status Indicator */}
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-green-400 rounded-full border-[3px] border-white shadow-lg animate-pulse"></div>
               </div>
               
-              {/* Store Info - Left Aligned */}
+              {/* Store Info - Professional Typography */}
               <div className="flex-1 text-white pb-1 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 md:mb-2 drop-shadow-lg leading-tight break-words line-clamp-2">{store.storeName}</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 md:mb-2 drop-shadow-2xl leading-tight break-words line-clamp-2 tracking-tight">
+                  {store.storeName}
+                </h1>
                 {(store.storeDetailedAddress || store.storeAddress) && (
                   <div className="flex items-start gap-1.5 mb-1.5">
-                    <span className="text-base md:text-lg flex-shrink-0 mt-0.5">📍</span> 
-                    <span className="text-xs md:text-sm text-white/95 drop-shadow-md leading-tight line-clamp-2">
+                    <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 mt-0.5 drop-shadow-md" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-xs md:text-sm text-white/95 drop-shadow-md leading-tight line-clamp-2 font-medium">
                       {store.storeDetailedAddress || store.storeAddress}
                     </span>
                   </div>
                 )}
                 {store.storePhone && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base md:text-lg flex-shrink-0">📞</span> 
+                    <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 drop-shadow-md" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                    </svg>
                     <span className="text-xs md:text-sm text-white/95 drop-shadow-md font-medium">{store.storePhone}</span>
                   </div>
                 )}
@@ -337,13 +358,13 @@ export default function StorePage() {
                     </div>
                     <button
                       onClick={() => router.push(`/checkout?store=${slug}`)}
-                      className="btn btn-primary w-full mb-2"
+                      className="btn btn-primary w-full mb-2 btn-ripple scale-on-hover"
                     >
                       Thanh toán
                     </button>
                     <button
                       onClick={() => clearCart()}
-                      className="btn btn-secondary w-full text-sm"
+                      className="btn btn-secondary w-full text-sm btn-ripple scale-on-hover"
                     >
                       Xóa giỏ hàng
                     </button>
@@ -392,7 +413,7 @@ export default function StorePage() {
               </div>
               <button
                 onClick={() => router.push(`/checkout?store=${slug}`)}
-                className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0"
+                className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0 btn-ripple scale-on-hover"
               >
                 Thanh toán
               </button>
@@ -584,7 +605,7 @@ export default function StorePage() {
               </button>
               <button
                 onClick={handleConfirmAddToCart}
-                className="btn btn-primary flex-1 py-2.5 font-semibold text-sm hover:scale-105 transform transition-transform"
+                className="btn btn-primary flex-1 py-2.5 font-semibold text-sm btn-ripple scale-on-hover"
               >
                 Thêm vào giỏ
               </button>

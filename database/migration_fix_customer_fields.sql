@@ -17,3 +17,4 @@ WHERE orderType = 'dine_in' AND (customerName = '' OR customerPhone = '');
 
 
 
+

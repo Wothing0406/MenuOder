@@ -6,6 +6,7 @@ import { useCart } from '../lib/store';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 import { formatVND } from '../lib/utils';
+import { CartIcon } from '../components/Icons';
 
 export default function Checkout() {
   const router = useRouter();
@@ -316,9 +317,13 @@ export default function Checkout() {
         </h1>
         <div className="space-y-3 md:space-y-4">
           {/* Order Summary - Compact */}
-          <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-purple-100">
+          <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-purple-100 card-glow">
             <h2 className="text-base md:text-lg font-bold mb-2 text-gray-800 flex items-center gap-1.5">
-              <span className="text-lg">📋</span>
+              <div className="icon-wrapper text-purple-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
               Tóm tắt đơn
             </h2>
 
@@ -364,9 +369,13 @@ export default function Checkout() {
           </div>
 
           {/* Form */}
-          <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 card-glow">
             <h2 className="text-base md:text-lg font-bold mb-3 text-gray-800 flex items-center gap-1.5">
-              <span className="text-lg">👤</span>
+              <div className="icon-wrapper text-purple-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
               Thông tin đơn hàng
             </h2>
 
@@ -385,7 +394,11 @@ export default function Checkout() {
                       : 'border-gray-200 bg-white active:scale-95'
                   }`}
                 >
-                  <div className="text-2xl md:text-3xl mb-1">🍽️</div>
+                  <div className="mb-1">
+                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
                   <div className="font-semibold text-xs md:text-sm">Đặt tại quán</div>
                 </button>
                 <button
@@ -397,7 +410,11 @@ export default function Checkout() {
                       : 'border-gray-200 bg-white active:scale-95'
                   }`}
                 >
-                  <div className="text-2xl md:text-3xl mb-1">🚚</div>
+                  <div className="mb-1">
+                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
                   <div className="font-semibold text-xs md:text-sm">Giao hàng</div>
                 </button>
               </div>
@@ -587,7 +604,7 @@ export default function Checkout() {
               <button
                 type="submit"
                 disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && !addressConfirmed)}
-                className="btn btn-primary w-full mt-3 py-3 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-primary w-full mt-3 py-3 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed btn-ripple scale-on-hover"
               >
                 {loading ? 'Đang đặt hàng...' : 'Đặt hàng ngay'}
               </button>

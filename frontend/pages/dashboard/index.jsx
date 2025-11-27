@@ -7,6 +7,7 @@ import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../lib/utils';
+import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon } from '../../components/Icons';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -426,45 +427,51 @@ export default function Dashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b">
+        <div className="flex gap-4 mb-8 border-b overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 font-bold transition ${
+            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'overview'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+                ? 'border-b-2 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-600'
             }`}
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
             Tổng quan
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 font-bold transition ${
+            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'orders'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+                ? 'border-b-2 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-600'
             }`}
           >
+            <CartIcon className="w-5 h-5" />
             Đơn hàng
           </button>
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-4 py-2 font-bold transition ${
+            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'menu'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+                ? 'border-b-2 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-600'
             }`}
           >
+            <CategoryIcon className="w-5 h-5" />
             Quản lý Menu
           </button>
           <button
             onClick={() => setActiveTab('qr')}
-            className={`px-4 py-2 font-bold transition ${
+            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'qr'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+                ? 'border-b-2 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-600'
             }`}
           >
+            <QRIcon className="w-5 h-5" />
             Mã QR
           </button>
           <button
@@ -491,12 +498,13 @@ export default function Dashboard() {
                 }
               }
             }}
-            className={`px-4 py-2 font-bold transition ${
+            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
+                ? 'border-b-2 border-purple-600 text-purple-600'
+                : 'text-gray-600 hover:text-purple-600'
             }`}
           >
+            <SettingsIcon className="w-5 h-5" />
             Cài đặt
           </button>
         </div>
@@ -505,45 +513,59 @@ export default function Dashboard() {
         {activeTab === 'overview' && stats && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="card group relative overflow-hidden">
+              <div className="card group relative overflow-hidden card-glow hover-lift stagger-item">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Tổng đơn hàng</h3>
-                    <span className="text-3xl transform group-hover:scale-110 transition-transform">📦</span>
+                    <div className="icon-wrapper text-blue-600 transform group-hover:scale-110 transition-transform">
+                      <CartIcon className="w-6 h-6" />
+                    </div>
                   </div>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">{stats.totalOrders}</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent count-up">{stats.totalOrders}</p>
                 </div>
               </div>
-              <div className="card group relative overflow-hidden">
+              <div className="card group relative overflow-hidden card-glow hover-lift stagger-item">
                 <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Đơn chờ xử lý</h3>
-                    <span className="text-3xl transform group-hover:scale-110 transition-transform">⏳</span>
+                    <div className="icon-wrapper text-yellow-600 transform group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                   </div>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-400 bg-clip-text text-transparent">{stats.pendingOrders}</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-400 bg-clip-text text-transparent count-up">{stats.pendingOrders}</p>
                 </div>
               </div>
-              <div className="card group relative overflow-hidden">
+              <div className="card group relative overflow-hidden card-glow hover-lift stagger-item">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Đơn hoàn thành</h3>
-                    <span className="text-3xl transform group-hover:scale-110 transition-transform">✅</span>
+                    <div className="icon-wrapper text-green-600 transform group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                   </div>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">{stats.completedOrders}</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent count-up">{stats.completedOrders}</p>
                 </div>
               </div>
               <div 
-                className="card group relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                className="card group relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow card-glow hover-lift stagger-item"
                 onClick={() => handleRevenueCardClick('today')}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Doanh thu hôm nay</h3>
-                    <span className="text-3xl transform group-hover:scale-110 transition-transform">💰</span>
+                    <div className="icon-wrapper text-purple-600 transform group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
                     {formatVND(stats.todayRevenue || 0)}
@@ -556,14 +578,18 @@ export default function Dashboard() {
             {/* Revenue Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div 
-                className="card relative overflow-hidden bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 border-2 border-green-100 cursor-pointer hover:shadow-lg transition-shadow"
+                className="card relative overflow-hidden bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 border-2 border-green-100 cursor-pointer hover:shadow-lg transition-shadow hover-lift"
                 onClick={() => handleRevenueCardClick('month')}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full blur-3xl opacity-30"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-700 font-bold text-lg">Doanh thu tháng này</h3>
-                    <span className="text-3xl">📅</span>
+                    <div className="icon-wrapper text-green-600">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-500 bg-clip-text text-transparent mb-2">
                     {formatVND(stats.monthlyRevenue || 0)}
@@ -574,14 +600,18 @@ export default function Dashboard() {
                 </div>
               </div>
               <div 
-                className="card relative overflow-hidden bg-gradient-to-br from-blue-50 via-blue-50 to-cyan-50 border-2 border-blue-100 cursor-pointer hover:shadow-lg transition-shadow"
+                className="card relative overflow-hidden bg-gradient-to-br from-blue-50 via-blue-50 to-cyan-50 border-2 border-blue-100 cursor-pointer hover:shadow-lg transition-shadow hover-lift"
                 onClick={() => handleRevenueCardClick('year')}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-700 font-bold text-lg">Doanh thu năm nay</h3>
-                    <span className="text-3xl">📊</span>
+                    <div className="icon-wrapper text-blue-600">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent mb-2">
                     {formatVND(stats.yearlyRevenue || 0)}
@@ -703,7 +733,7 @@ export default function Dashboard() {
             </p>
             <button
               onClick={() => router.push('/dashboard/menu')}
-              className="btn btn-primary"
+              className="btn btn-primary btn-ripple scale-on-hover"
             >
               Quản lý Menu
             </button>
@@ -727,7 +757,7 @@ export default function Dashboard() {
                 link.download = `${store?.storeSlug}-qr.png`;
                 link.click();
               }}
-              className="btn btn-primary"
+              className="btn btn-primary btn-ripple scale-on-hover"
             >
               Tải xuống Mã QR
             </button>
@@ -812,7 +842,7 @@ export default function Dashboard() {
                       className="hidden"
                       id="logo-upload"
                     />
-                    <span className={`btn ${uploadingLogo ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'} cursor-pointer inline-block`}>
+                    <span className={`btn ${uploadingLogo ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block`}>
                       {uploadingLogo ? 'Đang upload...' : 'Chọn ảnh logo'}
                     </span>
                   </label>
@@ -845,6 +875,103 @@ export default function Dashboard() {
                       className="btn btn-secondary ml-3"
                     >
                       Xóa logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Store Image (Banner) Upload Section */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold mb-4">Hình ảnh quán (Banner)</h3>
+              <div className="flex flex-col gap-6">
+                {/* Image Preview */}
+                <div className="w-full">
+                  <div className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg bg-gray-100">
+                    {storeImagePreview ? (
+                      <img 
+                        src={storeImagePreview}
+                        alt="Store Image Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (storeData?.storeImage || store?.storeImage) ? (
+                      <img 
+                        src={(() => {
+                          const image = storeData?.storeImage || store?.storeImage;
+                          if (!image) return null;
+                          if (image.startsWith('http')) {
+                            return image;
+                          }
+                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
+                          const imagePath = image.startsWith('/') ? image : '/' + image;
+                          return apiBase + imagePath;
+                        })()}
+                        alt="Store Banner"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🖼️</div>
+                          <p className="text-sm">Chưa có hình ảnh quán</p>
+                        </div>
+                      </div>
+                    )}
+                    {uploadingStoreImage && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Upload Button */}
+                <div>
+                  <p className="text-gray-600 mb-3">
+                    Hình ảnh này sẽ hiển thị ở đầu trang menu của cửa hàng bạn, giúp khách hàng dễ nhận biết.
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Định dạng: JPG, PNG, GIF (Tối đa 5MB). Khuyến nghị: 1200x400px hoặc tỷ lệ tương tự.
+                  </p>
+                  <label className="inline-block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleStoreImageUpload}
+                      disabled={uploadingStoreImage}
+                      className="hidden"
+                      id="store-image-upload"
+                    />
+                    <span className={`btn ${uploadingStoreImage ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block`}>
+                      {uploadingStoreImage ? 'Đang upload...' : 'Chọn hình ảnh quán'}
+                    </span>
+                  </label>
+                  {(storeData?.storeImage || store?.storeImage) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.put('/stores/my-store', {
+                            storeName: storeData?.storeName || store?.storeName,
+                            storeImage: '', // Gửi empty string để xóa
+                          });
+                          const storeRes = await api.get('/stores/my-store');
+                          if (storeRes.data.success) {
+                            useStore.setState({ store: storeRes.data.data });
+                            setStoreData(storeRes.data.data);
+                            setStoreImagePreview(null);
+                            toast.success('Đã xóa hình ảnh quán!');
+                          }
+                        } catch (error) {
+                          console.error('Delete store image error:', error);
+                          toast.error('Xóa hình ảnh thất bại!');
+                        }
+                      }}
+                      className="btn btn-secondary ml-3"
+                    >
+                      Xóa hình ảnh
                     </button>
                   )}
                 </div>
@@ -940,107 +1067,10 @@ export default function Dashboard() {
                     }
                   }}
                   disabled={savingStoreInfo}
-                  className={`btn btn-primary ${savingStoreInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`btn btn-primary ${savingStoreInfo ? 'opacity-50 cursor-not-allowed' : 'btn-ripple scale-on-hover'}`}
                 >
                   {savingStoreInfo ? 'Đang lưu...' : 'Lưu thông tin'}
                 </button>
-              </div>
-            </div>
-
-            {/* Store Image (Banner) Upload Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4">Hình ảnh quán (Banner)</h3>
-              <div className="flex flex-col gap-6">
-                {/* Image Preview */}
-                <div className="w-full">
-                  <div className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg bg-gray-100">
-                    {storeImagePreview ? (
-                      <img 
-                        src={storeImagePreview}
-                        alt="Store Image Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (storeData?.storeImage || store?.storeImage) ? (
-                      <img 
-                        src={(() => {
-                          const image = storeData?.storeImage || store?.storeImage;
-                          if (!image) return null;
-                          if (image.startsWith('http')) {
-                            return image;
-                          }
-                          const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
-                          const imagePath = image.startsWith('/') ? image : '/' + image;
-                          return apiBase + imagePath;
-                        })()}
-                        alt="Store Banner"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white">
-                        <div className="text-center">
-                          <div className="text-4xl mb-2">🖼️</div>
-                          <p className="text-sm">Chưa có hình ảnh quán</p>
-                        </div>
-                      </div>
-                    )}
-                    {uploadingStoreImage && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Upload Button */}
-                <div>
-                  <p className="text-gray-600 mb-3">
-                    Hình ảnh này sẽ hiển thị ở đầu trang menu của cửa hàng bạn, giúp khách hàng dễ nhận biết.
-                  </p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Định dạng: JPG, PNG, GIF (Tối đa 5MB). Khuyến nghị: 1200x400px hoặc tỷ lệ tương tự.
-                  </p>
-                  <label className="inline-block">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleStoreImageUpload}
-                      disabled={uploadingStoreImage}
-                      className="hidden"
-                      id="store-image-upload"
-                    />
-                    <span className={`btn ${uploadingStoreImage ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'} cursor-pointer inline-block`}>
-                      {uploadingStoreImage ? 'Đang upload...' : 'Chọn hình ảnh quán'}
-                    </span>
-                  </label>
-                  {(storeData?.storeImage || store?.storeImage) && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          await api.put('/stores/my-store', {
-                            storeName: storeData?.storeName || store?.storeName,
-                            storeImage: '', // Gửi empty string để xóa
-                          });
-                          const storeRes = await api.get('/stores/my-store');
-                          if (storeRes.data.success) {
-                            useStore.setState({ store: storeRes.data.data });
-                            setStoreData(storeRes.data.data);
-                            setStoreImagePreview(null);
-                            toast.success('Đã xóa hình ảnh quán!');
-                          }
-                        } catch (error) {
-                          console.error('Delete store image error:', error);
-                          toast.error('Xóa hình ảnh thất bại!');
-                        }
-                      }}
-                      className="btn btn-secondary ml-3"
-                    >
-                      Xóa hình ảnh
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           </div>

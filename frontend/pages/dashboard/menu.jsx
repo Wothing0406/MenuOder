@@ -402,14 +402,14 @@ export default function MenuManagement() {
                 setFormData({ categoryName: '' });
                 setShowModal(true);
               }}
-              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl"
+              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover"
             >
               ➕ Thêm danh mục mới
             </button>
 
             <div className="space-y-3">
               {categories.map((category, index) => (
-                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300">
+                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift stagger-item">
                   <div className="flex items-center gap-3">
                     {/* Order Controls */}
                     <div className="flex flex-col gap-1">
@@ -506,14 +506,14 @@ export default function MenuManagement() {
                         setItemImagePreview(null);
                         setShowModal(true);
                       }}
-                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl"
+                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover"
                     >
                       ➕ Thêm món mới
                     </button>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                       {items.map(item => (
-                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col">
+                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift stagger-item">
                           {/* Image Square */}
                           {item.itemImage ? (
                             <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
