@@ -272,28 +272,87 @@ export default function MenuManagement() {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = async (itemId, e) => {
+    // Prevent form submission and event bubbling
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!confirm('Bạn có chắc chắn muốn xóa món này không?')) return;
+    
+    // Optimistic update: Remove item from UI immediately
+    const itemToDelete = items.find(item => item.id === itemId);
+    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    
     try {
       const res = await api.delete(`/items/${itemId}`);
       if (res.data.success) {
         toast.success('Đã xóa món thành công');
-        fetchItems(selectedCategory.id);
+        // Only refetch if API call succeeds (already updated optimistically)
+        // This ensures data consistency without full page reload
+      } else {
+        // Revert optimistic update on failure
+        if (itemToDelete) {
+          setItems(prevItems => [...prevItems, itemToDelete].sort((a, b) => a.id - b.id));
+        }
+        toast.error('Không thể xóa món');
       }
     } catch (error) {
+      // Revert optimistic update on error
+      if (itemToDelete) {
+        setItems(prevItems => [...prevItems, itemToDelete].sort((a, b) => a.id - b.id));
+      }
       toast.error(error.response?.data?.message || 'Không thể xóa món');
     }
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa danh mục này không?')) return;
+  const handleDeleteCategory = async (categoryId, e) => {
+    // Prevent form submission and event bubbling
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (!confirm('Bạn có chắc chắn muốn xóa danh mục này không? Tất cả món trong danh mục này cũng sẽ bị xóa.')) return;
+    
+    // Optimistic update: Remove category from UI immediately
+    const categoryToDelete = categories.find(cat => cat.id === categoryId);
+    const wasSelected = selectedCategory?.id === categoryId;
+    const remainingCategories = categories.filter(cat => cat.id !== categoryId);
+    
+    setCategories(remainingCategories);
+    
+    // If deleted category was selected, select first remaining category or clear
+    if (wasSelected) {
+      if (remainingCategories.length > 0) {
+        setSelectedCategory(remainingCategories[0]);
+        fetchItems(remainingCategories[0].id);
+      } else {
+        setSelectedCategory(null);
+        setItems([]);
+      }
+    }
+    
     try {
       const res = await api.delete(`/categories/${categoryId}`);
       if (res.data.success) {
         toast.success('Đã xóa danh mục thành công');
+        // Only refetch if needed (already updated optimistically)
+        // Refetch to ensure all related items are also removed
         fetchData();
+      } else {
+        // Revert optimistic update on failure
+        if (categoryToDelete) {
+          setCategories(prevCategories => [...prevCategories, categoryToDelete].sort((a, b) => a.id - b.id));
+        }
+        toast.error('Không thể xóa danh mục');
       }
     } catch (error) {
+      // Revert optimistic update on error
+      if (categoryToDelete) {
+        setCategories(prevCategories => [...prevCategories, categoryToDelete].sort((a, b) => a.id - b.id));
+      }
       toast.error(error.response?.data?.message || 'Không thể xóa danh mục');
     }
   }
@@ -456,7 +515,8 @@ export default function MenuManagement() {
 
                     {/* Delete Button */}
                     <button
-                      onClick={() => handleDeleteCategory(category.id)}
+                      type="button"
+                      onClick={(e) => handleDeleteCategory(category.id, e)}
                       className="btn btn-danger text-sm hover:bg-red-600 transition px-4 py-2 flex items-center gap-2"
                       title="Xóa danh mục"
                     >
@@ -553,7 +613,8 @@ export default function MenuManagement() {
                                 <EditIcon className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleDeleteItem(item.id)}
+                                type="button"
+                                onClick={(e) => handleDeleteItem(item.id, e)}
                                 className="flex-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-600 hover:text-white transition font-medium flex items-center justify-center gap-1 transform hover:scale-105 active:scale-95"
                                 title="Xóa"
                               >

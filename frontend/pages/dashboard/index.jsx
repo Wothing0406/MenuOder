@@ -135,6 +135,25 @@ export default function Dashboard() {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    // Tìm đơn hàng để kiểm tra trạng thái hiện tại
+    const order = orders.find(o => o.id === orderId);
+    
+    // Không cho phép thay đổi trạng thái nếu đơn đã hủy hoặc hoàn tất
+    if (order && (order.status === 'cancelled' || order.status === 'completed')) {
+      toast.error('Không thể thay đổi trạng thái đơn hàng đã hủy hoặc hoàn tất');
+      // Reset select về giá trị cũ
+      fetchData();
+      return;
+    }
+    
+    // Kiểm tra cả orderDetail nếu đang mở
+    if (orderDetail && orderDetail.id === orderId && 
+        (orderDetail.status === 'cancelled' || orderDetail.status === 'completed')) {
+      toast.error('Không thể thay đổi trạng thái đơn hàng đã hủy hoặc hoàn tất');
+      fetchData();
+      return;
+    }
+    
     try {
       const res = await api.put(`/orders/${orderId}/status`, { status: newStatus });
       if (res.data.success) {
@@ -146,6 +165,8 @@ export default function Dashboard() {
       }
     } catch (error) {
       toast.error('Cập nhật trạng thái đơn hàng thất bại');
+      // Reset select về giá trị cũ nếu có lỗi
+      fetchData();
     }
   };
 
@@ -164,6 +185,7 @@ export default function Dashboard() {
   };
 
   const handleOrderClick = (order) => {
+    // Cho phép xem chi tiết đơn hàng (kể cả đã hủy hoặc hoàn tất)
     setSelectedOrder(order.id);
     fetchOrderDetail(order.id);
   };
@@ -645,7 +667,9 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {orders.map((order) => {
+                      const isDisabled = order.status === 'cancelled' || order.status === 'completed';
+                      return (
                       <tr 
                         key={order.id} 
                         className="border-b hover:bg-gray-50 cursor-pointer"
@@ -713,7 +737,12 @@ export default function Dashboard() {
                           <select
                             value={order.status}
                             onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                            className="border rounded px-2 py-1"
+                            disabled={order.status === 'cancelled' || order.status === 'completed'}
+                            className={`border rounded px-2 py-1 ${
+                              order.status === 'cancelled' || order.status === 'completed'
+                                ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                                : 'bg-white cursor-pointer'
+                            }`}
                           >
                             <option value="pending">Chờ xử lý</option>
                             <option value="confirmed">Đã xác nhận</option>
@@ -725,7 +754,8 @@ export default function Dashboard() {
                           </select>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1352,13 +1382,19 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     {dateOrders.map((order) => {
                       const isCompleted = order.status === 'completed';
+                      const isCancelled = order.status === 'cancelled';
                       return (
                         <div 
                           key={order.id} 
-                          className={`border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            isCompleted ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                          className={`border rounded-lg p-4 transition-colors cursor-pointer ${
+                            isCompleted 
+                              ? 'border-green-300 bg-green-50 hover:bg-green-100' 
+                              : isCancelled
+                              ? 'border-red-200 bg-red-50 hover:bg-red-100'
+                              : 'border-gray-200 hover:bg-gray-50'
                           }`}
                           onClick={() => {
+                            // Cho phép xem chi tiết đơn hàng (kể cả đã hủy hoặc hoàn tất)
                             setSelectedOrder(order.id);
                             fetchOrderDetail(order.id);
                             setShowDateOrdersModal(false);
