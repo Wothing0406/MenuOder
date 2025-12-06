@@ -147,16 +147,29 @@ const startServer = async () => {
     console.log('✅ Database synchronized successfully');
 
     // Start server
-    // Use 'localhost' for development to avoid permission issues on Windows
-    // Use '0.0.0.0' only in production or when explicitly set
-    const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost');
+    // Detect if running on Render (or other cloud platforms)
+    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_NAME;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isCloudPlatform = isRender || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
+    
+    // Use 'localhost' for local development to avoid permission issues on Windows
+    // Use '0.0.0.0' for cloud platforms (Render, Railway, Heroku, etc.) or production
+    const HOST = process.env.HOST || (isCloudPlatform || isProduction ? '0.0.0.0' : 'localhost');
+    
     const server = app.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📡 API URL: http://localhost:${PORT}/api`);
+      console.log(`🌐 Host: ${HOST}`);
+      
       if (HOST === '0.0.0.0') {
-        console.log(`📡 Network API URL: http://localhost:${PORT}/api`);
+        console.log(`📡 Server accessible from all network interfaces`);
+        if (process.env.RENDER_EXTERNAL_URL) {
+          console.log(`📡 External URL: ${process.env.RENDER_EXTERNAL_URL}`);
+        }
+      } else {
+        console.log(`📡 API URL: http://localhost:${PORT}/api`);
       }
+      
       if (process.env.FRONTEND_URL) {
         console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
       } else {
