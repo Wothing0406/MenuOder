@@ -595,12 +595,12 @@ export default function Dashboard() {
             <h1 className="text-4xl font-bold mb-3 tracking-tight">Chào mừng, {user?.storeName}</h1>
             <div className="flex flex-col md:flex-row gap-4 mt-4">
               <div className="bg-white bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg">
-                <p className="text-sm text-purple-100 mb-1">Slug cửa hàng</p>
-                <p className="font-bold">{store?.storeSlug}</p>
+                <p className="text-sm text-white font-medium mb-1">Slug cửa hàng</p>
+                <p className="font-bold text-white">{store?.storeSlug}</p>
               </div>
               <div className="bg-white bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg">
-                <p className="text-sm text-purple-100 mb-1">URL cửa hàng</p>
-                <p className="font-bold text-sm break-all">
+                <p className="text-sm text-white font-medium mb-1">URL cửa hàng</p>
+                <p className="font-bold text-white text-sm break-all">
                   {typeof window !== 'undefined' && `${window.location.origin}/store/${store?.storeSlug}`}
                 </p>
               </div>
@@ -609,13 +609,13 @@ export default function Dashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b overflow-x-auto">
+        <div className="flex gap-4 mb-8 border-b border-gray-300 overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <BarChartIcon className="w-5 h-5" />
@@ -626,7 +626,7 @@ export default function Dashboard() {
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'orders'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <CartIcon className="w-5 h-5" />
@@ -637,7 +637,7 @@ export default function Dashboard() {
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'menu'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <CategoryIcon className="w-5 h-5" />
@@ -648,7 +648,7 @@ export default function Dashboard() {
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               router.pathname === '/dashboard/reviews'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <StarIcon className="w-5 h-5" />
@@ -659,7 +659,7 @@ export default function Dashboard() {
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'qr'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <QRIcon className="w-5 h-5" />
@@ -693,7 +693,7 @@ export default function Dashboard() {
             className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'settings'
                 ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-600 hover:text-purple-600'
+                : 'text-gray-800 hover:text-purple-600'
             }`}
           >
             <SettingsIcon className="w-5 h-5" />
@@ -770,15 +770,16 @@ export default function Dashboard() {
             {/* Analytics Link */}
             <div className="mb-6">
               <Link href="/dashboard/analytics">
-                <div className="card bg-gradient-to-r from-purple-600 to-blue-600 text-white cursor-pointer hover:shadow-xl transition-all hover-lift">
-                  <div className="flex items-center justify-between">
+                <div className="card group relative overflow-hidden card-glow cursor-pointer hover:shadow-xl transition-all hover-lift">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative z-10 flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold mb-2">📊 Xem Thống Kê Chi Tiết</h3>
-                      <p className="text-purple-100">
+                      <h3 className="text-xl font-bold mb-2 text-gray-600">📊 Xem Thống Kê Chi Tiết</h3>
+                      <p className="text-gray-600 font-semibold">
                         Biểu đồ doanh thu, món bán chạy, và phân tích đơn hàng
                       </p>
                     </div>
-                    <svg className="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-purple-600 opacity-80 transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>

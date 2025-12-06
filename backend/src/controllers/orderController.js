@@ -869,54 +869,75 @@ exports.getTopSellingItems = async (req, res) => {
       startDate = null; // All time
     }
 
-    const orderWhereCondition = {
+    // Detect database dialect
+    const dbDialect = sequelize.getDialect();
+    const isPostgres = dbDialect === 'postgres';
+
+    // Build SQL query based on database type
+    let sqlQuery;
+    if (isPostgres) {
+      // PostgreSQL query with quoted identifiers
+      sqlQuery = `
+        SELECT 
+          oi."itemId",
+          i."itemName",
+          i."itemPrice",
+          i."itemImage",
+          SUM(oi.quantity)::integer as "totalQuantity",
+          SUM(oi.quantity * oi."itemPrice")::decimal as "totalRevenue"
+        FROM "order_items" oi
+        INNER JOIN "orders" o ON oi."orderId" = o.id
+        INNER JOIN "items" i ON oi."itemId" = i.id
+        WHERE o."storeId" = :storeId 
+          AND o.status = 'completed'
+          ${startDate ? 'AND o."createdAt" >= :startDate' : ''}
+        GROUP BY oi."itemId", i."itemName", i."itemPrice", i."itemImage"
+        ORDER BY "totalQuantity" DESC
+        LIMIT :limit
+      `;
+    } else {
+      // MySQL query
+      sqlQuery = `
+        SELECT 
+          oi.itemId,
+          i.itemName,
+          i.itemPrice,
+          i.itemImage,
+          SUM(oi.quantity) as totalQuantity,
+          SUM(oi.quantity * oi.itemPrice) as totalRevenue
+        FROM order_items oi
+        INNER JOIN orders o ON oi.orderId = o.id
+        INNER JOIN items i ON oi.itemId = i.id
+        WHERE o.storeId = :storeId 
+          AND o.status = 'completed'
+          ${startDate ? 'AND o.createdAt >= :startDate' : ''}
+        GROUP BY oi.itemId, i.itemName, i.itemPrice, i.itemImage
+        ORDER BY totalQuantity DESC
+        LIMIT :limit
+      `;
+    }
+
+    const replacements = {
       storeId: store.id,
-      status: 'completed'
+      limit: parseInt(limit)
     };
 
     if (startDate) {
-      orderWhereCondition.createdAt = {
-        [Op.gte]: startDate
-      };
+      replacements.startDate = startDate;
     }
 
-    // Get top selling items
-    // Note: PostgreSQL is case-sensitive. Sequelize with freezeTableName: true creates camelCase columns
-    // but PostgreSQL converts unquoted identifiers to lowercase. We need to use quoted identifiers.
-    // Check the actual column names in database - Sequelize might create them as camelCase with quotes
-    const topItemsData = await sequelize.query(`
-      SELECT 
-        oi."itemId",
-        i."itemName",
-        i."itemPrice",
-        i."itemImage",
-        SUM(oi.quantity)::integer as "totalQuantity",
-        SUM(oi.quantity * oi."itemPrice")::decimal as "totalRevenue"
-      FROM "order_items" oi
-      INNER JOIN "orders" o ON oi."orderId" = o.id
-      INNER JOIN "items" i ON oi."itemId" = i.id
-      WHERE o."storeId" = :storeId 
-        AND o.status = 'completed'
-        ${startDate ? 'AND o."createdAt" >= :startDate' : ''}
-      GROUP BY oi."itemId", i."itemName", i."itemPrice", i."itemImage"
-      ORDER BY "totalQuantity" DESC
-      LIMIT :limit
-    `, {
-      replacements: {
-        storeId: store.id,
-        ...(startDate && { startDate }),
-        limit: parseInt(limit)
-      },
+    const topItemsData = await sequelize.query(sqlQuery, {
+      replacements,
       type: Sequelize.QueryTypes.SELECT
     });
 
     const formattedItems = topItemsData.map(item => ({
-      itemId: item.itemId,
-      itemName: item.itemName || 'Unknown',
-      itemPrice: parseFloat(item.itemPrice || 0),
-      itemImage: item.itemImage || null,
-      totalQuantity: parseInt(item.totalQuantity || 0),
-      totalRevenue: parseFloat(item.totalRevenue || 0)
+      itemId: item.itemId || item.itemid, // Handle case sensitivity
+      itemName: item.itemName || item.itemname || 'Unknown',
+      itemPrice: parseFloat(item.itemPrice || item.itemprice || 0),
+      itemImage: item.itemImage || item.itemimage || null,
+      totalQuantity: parseInt(item.totalQuantity || item.totalquantity || 0),
+      totalRevenue: parseFloat(item.totalRevenue || item.totalrevenue || 0)
     }));
 
     res.json({
@@ -925,6 +946,7 @@ exports.getTopSellingItems = async (req, res) => {
     });
   } catch (error) {
     console.error('Get top selling items error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to get top selling items',

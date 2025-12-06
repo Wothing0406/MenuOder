@@ -31,12 +31,14 @@ export default function TopItemsChart({ data, type = 'quantity' }) {
             angle={-45}
             textAnchor="end"
             height={80}
-            stroke="#666"
-            style={{ fontSize: '11px' }}
+            stroke="#333"
+            style={{ fontSize: '13px', fontWeight: '500', fill: '#333' }}
+            tick={{ fill: '#333' }}
           />
           <YAxis 
-            stroke="#666"
-            style={{ fontSize: '12px' }}
+            stroke="#333"
+            style={{ fontSize: '14px', fontWeight: '500', fill: '#333' }}
+            tick={{ fill: '#333' }}
             tickFormatter={(value) => type === 'quantity' ? value : `${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip 
@@ -52,9 +54,19 @@ export default function TopItemsChart({ data, type = 'quantity' }) {
               }
               return label;
             }}
-            contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
+            contentStyle={{ 
+              backgroundColor: '#fff', 
+              border: '1px solid #ccc', 
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              padding: '10px'
+            }}
+            labelStyle={{ fontWeight: '600', color: '#333' }}
           />
-          <Legend />
+          <Legend 
+            wrapperStyle={{ fontSize: '14px', fontWeight: '500' }}
+          />
           {type === 'quantity' ? (
             <Bar dataKey="quantity" name="Số lượng bán" fill="#10b981">
               {chartData.map((entry, index) => (

@@ -25,6 +25,10 @@ export default function OrderTypePieChart({ data }) {
     );
   }
 
+  const renderLabel = ({ name, percent }) => {
+    return `${name}: ${(percent * 100).toFixed(0)}%`;
+  };
+
   return (
     <div>
       <ResponsiveContainer width="100%" height={300}>
@@ -34,7 +38,7 @@ export default function OrderTypePieChart({ data }) {
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            label={renderLabel}
             outerRadius={100}
             fill="#8884d8"
             dataKey="value"
@@ -50,9 +54,19 @@ export default function OrderTypePieChart({ data }) {
               }
               return [formatVND(props.payload.revenue), 'Doanh thu'];
             }}
-            contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
+            contentStyle={{ 
+              backgroundColor: '#fff', 
+              border: '1px solid #ccc', 
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              padding: '10px'
+            }}
+            labelStyle={{ fontWeight: '600', color: '#333' }}
           />
-          <Legend />
+          <Legend 
+            wrapperStyle={{ fontSize: '14px', fontWeight: '500' }}
+          />
         </PieChart>
       </ResponsiveContainer>
       

@@ -111,7 +111,7 @@ export default function Analytics() {
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-800 font-medium"
             >
               <option value="week">7 ngày qua</option>
               <option value="month">30 ngày qua</option>
@@ -124,7 +124,7 @@ export default function Analytics() {
         <div className="card mb-8">
           <div className="mb-4">
             <h2 className="text-2xl font-bold mb-2">Biểu Đồ Doanh Thu</h2>
-            <p className="text-gray-600">
+            <p className="text-gray-700 font-medium">
               Doanh thu và số lượng đơn hàng theo thời gian
             </p>
           </div>
@@ -137,25 +137,25 @@ export default function Analytics() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold mb-2">Món Bán Chạy</h2>
-                <p className="text-gray-600">Top 10 món được đặt nhiều nhất</p>
+                <p className="text-gray-700 font-medium">Top 10 món được đặt nhiều nhất</p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setChartType('quantity')}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition ${
                     chartType === 'quantity'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300'
                   }`}
                 >
                   Số lượng
                 </button>
                 <button
                   onClick={() => setChartType('revenue')}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition ${
                     chartType === 'revenue'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300'
                   }`}
                 >
                   Doanh thu
@@ -169,7 +169,7 @@ export default function Analytics() {
           <div className="card">
             <div className="mb-4">
               <h2 className="text-2xl font-bold mb-2">Phân Loại Đơn Hàng</h2>
-              <p className="text-gray-600">
+              <p className="text-gray-700 font-medium">
                 Tỷ lệ đơn tại quán vs giao hàng
               </p>
             </div>

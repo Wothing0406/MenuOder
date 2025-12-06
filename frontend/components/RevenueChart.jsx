@@ -30,12 +30,14 @@ export default function RevenueChart({ data, period = 'month' }) {
         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
         <XAxis 
           dataKey="dateFormatted" 
-          stroke="#666"
-          style={{ fontSize: '12px' }}
+          stroke="#333"
+          style={{ fontSize: '14px', fontWeight: '500', fill: '#333' }}
+          tick={{ fill: '#333' }}
         />
         <YAxis 
-          stroke="#666"
-          style={{ fontSize: '12px' }}
+          stroke="#333"
+          style={{ fontSize: '14px', fontWeight: '500', fill: '#333' }}
+          tick={{ fill: '#333' }}
           tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
         />
         <Tooltip 
@@ -46,9 +48,20 @@ export default function RevenueChart({ data, period = 'month' }) {
             return [value, 'Số đơn'];
           }}
           labelFormatter={(label) => `Ngày: ${label}`}
-          contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
+          contentStyle={{ 
+            backgroundColor: '#fff', 
+            border: '1px solid #ccc', 
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            padding: '10px'
+          }}
+          labelStyle={{ fontWeight: '600', color: '#333' }}
         />
-        <Legend />
+        <Legend 
+          wrapperStyle={{ fontSize: '14px', fontWeight: '500' }}
+          iconType="line"
+        />
         <Line 
           type="monotone" 
           dataKey="revenue" 

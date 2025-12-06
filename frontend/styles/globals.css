@@ -887,3 +887,41 @@ html {
 .count-up {
   animation: countUp 0.6s ease-out;
 }
+
+/* Chart text clarity improvements */
+.recharts-cartesian-axis-tick-value,
+.recharts-legend-item-text,
+.recharts-tooltip-label {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  fill: #333 !important;
+  color: #333 !important;
+}
+
+.recharts-cartesian-axis-tick {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  fill: #333 !important;
+}
+
+.recharts-legend-item {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.recharts-tooltip {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.recharts-pie-label-text {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  fill: #333 !important;
+}
+
+/* Improve chart text contrast */
+.recharts-text {
+  fill: #333 !important;
+  font-weight: 500 !important;
+}
