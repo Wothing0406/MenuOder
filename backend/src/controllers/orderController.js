@@ -881,22 +881,25 @@ exports.getTopSellingItems = async (req, res) => {
     }
 
     // Get top selling items
+    // Note: PostgreSQL is case-sensitive. Sequelize with freezeTableName: true creates camelCase columns
+    // but PostgreSQL converts unquoted identifiers to lowercase. We need to use quoted identifiers.
+    // Check the actual column names in database - Sequelize might create them as camelCase with quotes
     const topItemsData = await sequelize.query(`
       SELECT 
-        oi.itemId,
-        i.itemName,
-        i.itemPrice,
-        i.itemImage,
-        SUM(oi.quantity) as totalQuantity,
-        SUM(oi.quantity * oi.itemPrice) as totalRevenue
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      INNER JOIN items i ON oi.itemId = i.id
-      WHERE o.storeId = :storeId 
+        oi."itemId",
+        i."itemName",
+        i."itemPrice",
+        i."itemImage",
+        SUM(oi.quantity)::integer as "totalQuantity",
+        SUM(oi.quantity * oi."itemPrice")::decimal as "totalRevenue"
+      FROM "order_items" oi
+      INNER JOIN "orders" o ON oi."orderId" = o.id
+      INNER JOIN "items" i ON oi."itemId" = i.id
+      WHERE o."storeId" = :storeId 
         AND o.status = 'completed'
-        ${startDate ? 'AND o.createdAt >= :startDate' : ''}
-      GROUP BY oi.itemId, i.itemName, i.itemPrice, i.itemImage
-      ORDER BY totalQuantity DESC
+        ${startDate ? 'AND o."createdAt" >= :startDate' : ''}
+      GROUP BY oi."itemId", i."itemName", i."itemPrice", i."itemImage"
+      ORDER BY "totalQuantity" DESC
       LIMIT :limit
     `, {
       replacements: {

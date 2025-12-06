@@ -123,3 +123,5 @@ if (require.main === module) {
 
 module.exports = { addRoleColumn };
 
+
+

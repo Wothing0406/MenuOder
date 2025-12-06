@@ -695,10 +695,24 @@ export default function StorePage() {
           <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4">
             {/* Header - Compact */}
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base md:text-lg font-bold text-gray-800">Đánh Giá</h2>
+              <div className="flex-1">
+                <h2 className="text-base md:text-lg font-bold text-gray-800 mb-2">Đánh Giá</h2>
+                {/* Average Rating Display */}
+                {store.averageRating > 0 && (
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={store.averageRating} readonly size="sm" />
+                    <span className="text-sm md:text-base font-semibold text-gray-800">
+                      {parseFloat(store.averageRating).toFixed(1)}
+                    </span>
+                    <span className="text-xs md:text-sm text-gray-500">
+                      ({store.totalReviews || 0} đánh giá)
+                    </span>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setShowReviewForm(!showReviewForm)}
-                className="px-3 py-1.5 md:px-4 md:py-2 bg-purple-600 text-white text-xs md:text-sm font-semibold rounded-lg hover:bg-purple-700 transition active:scale-95"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-purple-600 text-white text-xs md:text-sm font-semibold rounded-lg hover:bg-purple-700 transition active:scale-95 flex-shrink-0 ml-3"
               >
                 {showReviewForm ? 'Hủy' : 'Viết đánh giá'}
               </button>

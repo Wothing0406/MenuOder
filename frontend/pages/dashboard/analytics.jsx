@@ -59,7 +59,28 @@ export default function Analytics() {
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      toast.error('Không thể tải dữ liệu thống kê');
+      
+      // Log chi tiết lỗi để debug
+      if (error.response) {
+        console.error('API Error Response:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('API Request Error:', error.request);
+        console.error('API URL:', api.defaults.baseURL);
+      } else {
+        console.error('Error:', error.message);
+      }
+      
+      // Hiển thị thông báo lỗi cụ thể hơn
+      if (error.response?.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        router.push('/login');
+      } else if (error.response?.status === 404) {
+        toast.error('Không tìm thấy dữ liệu. Có thể chưa có đơn hàng hoàn thành.');
+      } else if (error.networkError) {
+        toast.error('Không thể kết nối đến server. Vui lòng kiểm tra kết nối.');
+      } else {
+        toast.error('Không thể tải dữ liệu thống kê: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setLoading(false);
     }
@@ -199,5 +220,7 @@ export default function Analytics() {
     </Layout>
   );
 }
+
+
 
 
