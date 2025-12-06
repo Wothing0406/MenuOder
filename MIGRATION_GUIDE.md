@@ -123,11 +123,16 @@ Sau khi đã xác nhận dữ liệu đã được copy đầy đủ:
 
 Nếu bạn đang deploy trên Render:
 
-1. Vào **Dashboard Render** → **Environment** của service
-2. Thêm hoặc cập nhật biến môi trường:
+**Xem hướng dẫn chi tiết trong file `RENDER_SETUP_GUIDE.md`**
+
+Tóm tắt nhanh:
+1. Vào **Dashboard Render** → **Services** → Chọn service backend
+2. Vào tab **Environment** → Thêm/cập nhật:
    - `DATABASE_URL` = connection string mới
    - `NODE_ENV` = `production`
-3. **Restart service** để áp dụng thay đổi
+3. **Link database** với service (nếu chưa link) trong tab **Connections**
+4. **Restart service** để áp dụng thay đổi
+5. Kiểm tra **Logs** để đảm bảo kết nối thành công
 
 ## ⚠️ Lưu Ý Quan Trọng
 

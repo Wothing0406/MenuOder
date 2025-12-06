@@ -35,6 +35,17 @@ if (process.env.DATABASE_URL && hasPostgresUrl) {
   currentDialect = 'postgres';
   const isProduction = process.env.NODE_ENV === 'production';
   
+  // Parse DATABASE_URL để kiểm tra
+  const dbUrl = process.env.DATABASE_URL;
+  const urlObj = new URL(dbUrl);
+  
+  // Log thông tin connection (không log password)
+  console.log('📊 Database Connection Info:');
+  console.log('  - Host:', urlObj.hostname);
+  console.log('  - Port:', urlObj.port || '5432 (default)');
+  console.log('  - Database:', urlObj.pathname.replace('/', ''));
+  console.log('  - SSL:', isProduction ? 'Required' : 'Optional');
+  
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
@@ -48,7 +59,23 @@ if (process.env.DATABASE_URL && hasPostgresUrl) {
       max: 5,
       min: 0,
       acquire: 30000,
-      idle: 10000
+      idle: 10000,
+      evict: 10000 // Check for idle connections every 10 seconds
+    },
+    retry: {
+      max: 3, // Retry up to 3 times
+      match: [
+        /ECONNREFUSED/,
+        /ETIMEDOUT/,
+        /EHOSTUNREACH/,
+        /EAI_AGAIN/,
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotFoundError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeInvalidConnectionError/,
+        /SequelizeConnectionTimedOutError/
+      ]
     },
     define: {
       timestamps: true,

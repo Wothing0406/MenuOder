@@ -98,10 +98,43 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // Test database connection first
+    // Test database connection first với retry logic
     console.log('🔌 Testing database connection...');
-    await sequelize.authenticate();
-    console.log('✅ Database connection established');
+    
+    let retries = 5;
+    let connected = false;
+    
+    while (retries > 0 && !connected) {
+      try {
+        await sequelize.authenticate();
+        console.log('✅ Database connection established');
+        connected = true;
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          console.error('❌ Failed to connect to database after 5 attempts');
+          console.error('Error:', error.message);
+          
+          // Hướng dẫn cụ thể cho Render
+          if (error.message.includes('ECONNREFUSED') || error.message.includes('Connection refused')) {
+            console.error('\n💡 Render Database Connection Issue:');
+            console.error('   1. Check if database is "Running" in Render Dashboard');
+            console.error('   2. Ensure database is linked to this service:');
+            console.error('      - Go to Service → Connections → Link Database');
+            console.error('   3. Verify DATABASE_URL in Environment Variables');
+            console.error('   4. Wait a few minutes if database was just created');
+            console.error('   5. Try restarting the service');
+          }
+          
+          throw error;
+        } else {
+          console.log(`⚠️  Connection failed, retrying... (${retries} attempts left)`);
+          console.log(`   Error: ${error.message}`);
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 2000 * (6 - retries)));
+        }
+      }
+    }
 
     // Sync database (create tables if not exist, but don't alter existing)
     // Use { alter: false } to avoid modifying existing tables
