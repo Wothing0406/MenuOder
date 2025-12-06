@@ -140,9 +140,15 @@ const startServer = async () => {
     // Use { alter: false } to avoid modifying existing tables
     // Use { force: false } to avoid dropping tables
     console.log('🔄 Syncing database models...');
+    
+    // Check if we're on Render or production - use alter: true to add missing columns
+    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const shouldAlter = isRender || isProduction;
+    
     await sequelize.sync({ 
-      alter: false,
-      force: false 
+      alter: shouldAlter, // Auto-add missing columns on Render/production
+      force: false // Never drop tables
     });
     console.log('✅ Database synchronized successfully');
 
