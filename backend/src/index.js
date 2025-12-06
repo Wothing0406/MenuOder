@@ -141,9 +141,12 @@ const startServer = async () => {
     // Use { force: false } to avoid dropping tables
     console.log('🔄 Syncing database models...');
     
-    // Check if we're on Render or production - use alter: true to add missing columns
-    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL;
+    // Detect if running on Render (or other cloud platforms)
+    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_NAME;
     const isProduction = process.env.NODE_ENV === 'production';
+    const isCloudPlatform = isRender || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
+    
+    // Check if we're on Render or production - use alter: true to add missing columns
     const shouldAlter = isRender || isProduction;
     
     await sequelize.sync({ 
@@ -153,10 +156,6 @@ const startServer = async () => {
     console.log('✅ Database synchronized successfully');
 
     // Start server
-    // Detect if running on Render (or other cloud platforms)
-    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_NAME;
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isCloudPlatform = isRender || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
     
     // Use 'localhost' for local development to avoid permission issues on Windows
     // Use '0.0.0.0' for cloud platforms (Render, Railway, Heroku, etc.) or production
