@@ -23,7 +23,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     // In development, allow all localhost origins
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return callback(null, true);
       }
@@ -45,7 +45,16 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'X-Admin-Secret',
+    'x-admin-secret' // Also allow lowercase version
+  ],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -63,6 +72,8 @@ app.use('/api/item-options', require('./routes/itemOptionRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));
 app.use('/api/utils', require('./routes/utilsRoutes'));
+app.use('/api/vouchers', require('./routes/voucherRoutes'));
+app.use('/api/reviews', require('./routes/reviewRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -103,14 +114,16 @@ const startServer = async () => {
     console.log('✅ Database synchronized successfully');
 
     // Start server
-    // Use '0.0.0.0' to listen on all network interfaces (IPv4 and IPv6)
-    // This ensures compatibility with both localhost and network access
-    const HOST = process.env.HOST || '0.0.0.0';
+    // Use 'localhost' for development to avoid permission issues on Windows
+    // Use '0.0.0.0' only in production or when explicitly set
+    const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost');
     const server = app.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📡 API URL: http://localhost:${PORT}/api`);
-      console.log(`📡 Network API URL: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api`);
+      if (HOST === '0.0.0.0') {
+        console.log(`📡 Network API URL: http://localhost:${PORT}/api`);
+      }
       if (process.env.FRONTEND_URL) {
         console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
       } else {
@@ -133,12 +146,19 @@ const startServer = async () => {
     console.error('Error message:', error.message);
     
     // Check for port conflict errors
-    if (error.code === 'EACCES' || error.code === 'EADDRINUSE') {
-      console.error(`\n⚠️  Port ${PORT} is already in use or requires elevated permissions.`);
+    if (error.code === 'EACCES') {
+      console.error(`\n⚠️  Permission denied on port ${PORT}.`);
       console.error('   Solutions:');
-      console.error(`   1. Change PORT in your .env file to a different port (e.g., 5000, 5002, 3001)`);
+      console.error(`   1. Change PORT in your .env file to a different port (e.g., 5001, 5002, 3001)`);
+      console.error(`   2. Or change HOST in your .env file to 'localhost' instead of '0.0.0.0'`);
+      console.error(`   3. On Windows, you can try running PowerShell as administrator`);
+      console.error(`   4. Recommended: Use port 5001 or higher (they don't require special permissions)`);
+    } else if (error.code === 'EADDRINUSE') {
+      console.error(`\n⚠️  Port ${PORT} is already in use.`);
+      console.error('   Solutions:');
+      console.error(`   1. Change PORT in your .env file to a different port (e.g., 5001, 5002, 3001)`);
       console.error(`   2. Stop the process using port ${PORT}`);
-      console.error(`   3. On Windows, try running as administrator if needed`);
+      console.error(`   3. Run: npm run restart (to automatically kill and restart)`);
     }
     
     // More detailed error logging in development

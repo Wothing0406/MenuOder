@@ -81,6 +81,31 @@ const Order = sequelize.define('Order', {
     type: Sequelize.BOOLEAN,
     defaultValue: false
   },
+  voucherId: {
+    type: Sequelize.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'vouchers',
+      key: 'id'
+    }
+  },
+  voucherCode: {
+    type: Sequelize.STRING(100),
+    allowNull: true
+  },
+  discountType: {
+    type: Sequelize.ENUM('percentage', 'fixed'),
+    allowNull: true
+  },
+  discountValue: {
+    type: Sequelize.DECIMAL(10, 2),
+    allowNull: true
+  },
+  discountAmount: {
+    type: Sequelize.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0
+  },
   createdAt: {
     type: Sequelize.DATE,
     defaultValue: Sequelize.NOW

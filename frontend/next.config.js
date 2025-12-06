@@ -58,8 +58,55 @@ const nextConfig = {
   },
 
   // Tối ưu hóa webpack
-  // Lưu ý: Next.js 14 đã tự động optimize tốt, không cần cấu hình thêm
-  // Bỏ phần webpack config vì gây xung đột với Next.js 14
+  // Cấu hình watchOptions để tránh lỗi Watchpack trên Windows
+  webpack: (config, { isServer, dev }) => {
+    // Chỉ cấu hình cho development mode
+    if (dev) {
+      // Suppress Watchpack errors by improving watchOptions
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          // Ignore common directories
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next/**',
+          '**/dist/**',
+          '**/build/**',
+          // Ignore Windows system files và directories (multiple patterns)
+          '**/System Volume Information/**',
+          '**/System Repair/**',
+          '**/hiberfil.sys',
+          '**/pagefile.sys',
+          '**/swapfile.sys',
+          '**/DumpStack.log.tmp',
+          // Ignore root drive system files (Windows) - absolute paths
+          'C:\\System Volume Information',
+          'C:\\System Repair',
+          'C:\\hiberfil.sys',
+          'C:\\pagefile.sys',
+          'C:\\swapfile.sys',
+          'C:\\DumpStack.log.tmp',
+          // Also try with forward slashes
+          'C:/System Volume Information',
+          'C:/System Repair',
+          'C:/hiberfil.sys',
+          'C:/pagefile.sys',
+          'C:/swapfile.sys',
+          'C:/DumpStack.log.tmp',
+        ],
+        aggregateTimeout: 300,
+        poll: false,
+        followSymlinks: false, // Don't follow symlinks to avoid system files
+      };
+      
+      // Configure infrastructure logging to filter Watchpack warnings
+      config.infrastructureLogging = {
+        level: 'error', // Only show errors, not warnings
+        debug: false,
+      };
+    }
+    return config;
+  },
 
   // Tắt source maps trong production để giảm kích thước
   productionBrowserSourceMaps: false,

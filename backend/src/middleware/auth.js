@@ -18,7 +18,10 @@ const authMiddleware = (req, res, next) => {
     });
   }
 
-  req.user = decoded;
+  req.user = {
+    id: decoded.id,
+    role: decoded.role || 'store_owner'
+  };
   next();
 };
 

@@ -43,7 +43,8 @@ export default function Login() {
         setUser(res.data.data.user);
         setStore(res.data.data.store);
         toast.success('Đăng nhập thành công!');
-        router.push('/dashboard');
+        const targetPath = res.data.data.user?.role === 'admin' ? '/admin' : '/dashboard';
+        router.push(targetPath);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');

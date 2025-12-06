@@ -27,6 +27,11 @@ const User = sequelize.define('User', {
     type: Sequelize.STRING,
     allowNull: true
   },
+  role: {
+    type: Sequelize.ENUM('store_owner', 'admin'),
+    allowNull: false,
+    defaultValue: 'store_owner'
+  },
   createdAt: {
     type: Sequelize.DATE,
     defaultValue: Sequelize.NOW

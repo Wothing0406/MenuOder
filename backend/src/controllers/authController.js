@@ -103,7 +103,9 @@ exports.register = async (req, res) => {
       // Commit transaction
       await transaction.commit();
 
-      const token = generateToken(user.id);
+      // Ensure role is present in token and response (default to store_owner)
+      const effectiveRole = user.role || 'store_owner';
+      const token = generateToken({ id: user.id, role: effectiveRole });
 
       return res.status(201).json({
         success: true,
@@ -112,7 +114,8 @@ exports.register = async (req, res) => {
           user: {
             id: user.id,
             email: user.email,
-            storeName: user.storeName
+            storeName: user.storeName,
+            role: effectiveRole
           },
           store: {
             id: store.id,
@@ -201,7 +204,16 @@ exports.login = async (req, res) => {
     // Get user's store
     const store = await Store.findOne({ where: { userId: user.id } });
 
-    const token = generateToken(user.id);
+    // Determine effective role for token/response
+    const adminEmails = (process.env.ROOT_ADMIN_EMAILS || '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const effectiveRole = adminEmails.includes(user.email.toLowerCase())
+      ? 'admin'
+      : (user.role || 'store_owner');
+
+    const token = generateToken({ id: user.id, role: effectiveRole });
 
     res.json({
       success: true,
@@ -210,7 +222,8 @@ exports.login = async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          storeName: user.storeName
+          storeName: user.storeName,
+          role: effectiveRole
         },
         store: {
           id: store.id,
@@ -257,6 +270,73 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get profile',
+      error: error.message
+    });
+  }
+};
+
+// Admin login using environment password (no DB dependency)
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    const adminEmails = (process.env.ROOT_ADMIN_EMAILS || '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+      return res.status(500).json({
+        success: false,
+        message: 'ADMIN_PASSWORD chưa được cấu hình trong môi trường'
+      });
+    }
+
+    if (!adminEmails.includes(email.toLowerCase())) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    if (password !== adminPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Issue admin token (role=admin). Use id=0; admin routes shouldn't depend on userId.
+    const token = generateToken({ id: 0, role: 'admin' });
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          id: 0,
+          email,
+          storeName: 'Website Owner',
+          role: 'admin'
+        },
+        store: null,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Login failed',
       error: error.message
     });
   }

@@ -44,6 +44,7 @@ Nếu bạn đã có database và muốn thêm tính năng mới:
 
 ## 📝 Migration mới nhất
 
+- `migration_add_vouchers.sql` - Thêm bảng `vouchers`, cột `role` cho `users` và các cột giảm giá trong `orders` để hỗ trợ quản lý mã khuyến mãi
 - `migration_add_detailed_address.sql` - Thêm trường `storeDetailedAddress` để chủ quán có thể thêm địa chỉ chi tiết
 
 ## 🔍 Kiểm tra database

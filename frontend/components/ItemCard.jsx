@@ -1,4 +1,5 @@
 import { formatVND, getImageUrl } from '../lib/utils';
+import { DishIcon, PlusIcon } from './Icons';
 
 export default function ItemCard({ item, onAddToCart }) {
   return (
@@ -17,7 +18,7 @@ export default function ItemCard({ item, onAddToCart }) {
         </div>
       ) : (
         <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-          <span className="text-2xl md:text-3xl">🍽️</span>
+          <DishIcon className="w-12 h-12 md:w-16 md:h-16 text-purple-400" strokeWidth={1.5} />
         </div>
       )}
       <div className="p-2 flex flex-col flex-1 min-h-0">
@@ -49,18 +50,15 @@ export default function ItemCard({ item, onAddToCart }) {
           </span>
           <button
             onClick={() => onAddToCart(item)}
-            className="flex-shrink-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+            className="flex-shrink-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center"
             style={{ 
               minWidth: '28px', 
               height: '28px', 
               padding: '0 8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px'
             }}
+            aria-label="Thêm vào giỏ hàng"
           >
-            ➕
+            <PlusIcon className="w-4 h-4" strokeWidth={3} />
           </button>
         </div>
       </div>

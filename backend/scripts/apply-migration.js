@@ -12,6 +12,35 @@ const DB_CONFIG = {
   multipleStatements: true
 };
 
+async function dropFkIfExists(connection, dbName, table, fkName) {
+  try {
+    const [rows] = await connection.query(
+      `SELECT CONSTRAINT_NAME FROM information_schema.referential_constraints WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ?`,
+      [dbName, table, fkName]
+    );
+    if (rows.length > 0) {
+      console.log(`⚠️  Đang xoá foreign key trùng: ${fkName} trên ${table}`);
+      await connection.query(`ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${fkName}\``);
+    }
+  } catch (err) {
+    if (!String(err.message || '').includes('references nonexistent constraint')) {
+      console.log(`ℹ️  Bỏ qua lỗi khi xoá FK ${fkName}:`, err.message);
+    }
+  }
+}
+
+async function dropIndexIfExists(connection, table, indexName) {
+  try {
+    const [rows] = await connection.query(`SHOW INDEX FROM \`${table}\` WHERE Key_name = ?`, [indexName]);
+    if (rows.length > 0) {
+      console.log(`⚠️  Đang xoá index trùng: ${indexName} trên ${table}`);
+      await connection.query(`DROP INDEX \`${indexName}\` ON \`${table}\``);
+    }
+  } catch (err) {
+    console.log(`ℹ️  Bỏ qua lỗi khi xoá index ${indexName}:`, err.message);
+  }
+}
+
 async function applyMigration() {
   let connection;
   
@@ -69,22 +98,27 @@ async function applyMigration() {
       }
     }
     
-    // Apply migration to add 'completed' status
+    // Apply migration to add vouchers and order voucher fields
     try {
-      const completedStatusMigrationPath = path.join(__dirname, '../../database/migration_add_completed_status.sql');
-      if (fs.existsSync(completedStatusMigrationPath)) {
-        // Read and parse migration file (skip PostgreSQL part for MySQL)
-        let migrationSql = fs.readFileSync(completedStatusMigrationPath, 'utf8');
-        // Remove PostgreSQL comments and keep only MySQL part
-        migrationSql = migrationSql.split('-- For PostgreSQL')[0];
-        migrationSql = migrationSql.replace(/^--.*$/gm, '').trim();
-        
-        await connection.query(migrationSql);
-        console.log('✅ Migration thêm trạng thái "completed" đã được apply!');
+      const vouchersMigrationPath = path.join(__dirname, '../../database/migration_add_vouchers.sql');
+      if (fs.existsSync(vouchersMigrationPath)) {
+        // Pre-drop conflicting FK and indexes to avoid errno 121
+        const dbName = DB_CONFIG.database;
+        await dropFkIfExists(connection, dbName, 'orders', 'fk_orders_voucherId');
+        await dropIndexIfExists(connection, 'orders', 'idx_orders_voucherCode');
+
+        const vouchersSql = fs.readFileSync(vouchersMigrationPath, 'utf8');
+        await connection.query(vouchersSql);
+        console.log('✅ Migration vouchers (bảng vouchers + cột voucherId/voucherCode/discount*) đã được apply!');
       }
     } catch (error) {
-      if (error.code === 'ER_PARSE_ERROR' || error.message.includes('Duplicate column')) {
-        console.log('⚠️  Trạng thái "completed" có thể đã tồn tại. Bỏ qua...');
+      if (
+        error.code === 'ER_DUP_FIELDNAME' ||
+        error.message.includes('Duplicate column') ||
+        error.message.includes('Can\'t write; duplicate key') ||
+        error.code === 'ER_TABLE_EXISTS_ERROR'
+      ) {
+        console.log('⚠️  Vouchers migration có vẻ đã tồn tại. Bỏ qua...');
       } else {
         throw error;
       }
@@ -101,7 +135,9 @@ async function applyMigration() {
     console.log('   - orders.customerName (cho phép NULL)');
     console.log('   - orders.customerPhone (cho phép NULL)');
     console.log('   - orders.status (thêm trạng thái "completed" - hoàn tất)');
-    console.log('\n✨ Hoàn tất! Bạn có thể đặt hàng tại bàn và sử dụng trạng thái "Hoàn tất" ngay bây giờ.');
+    console.log('   - vouchers.* (bảng vouchers)');
+    console.log('   - orders.voucherId, orders.voucherCode, orders.discountType, orders.discountValue, orders.discountAmount');
+    console.log('\n✨ Hoàn tất! Bạn có thể sử dụng vouchers trong đơn hàng.');
     
   } catch (error) {
     console.error('❌ Lỗi:', error.message);

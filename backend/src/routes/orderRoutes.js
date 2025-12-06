@@ -14,5 +14,8 @@ router.get('/:orderId', orderController.getOrderDetail);
 router.get('/my-store/list', authMiddleware, orderController.getMyStoreOrders);
 router.put('/:orderId/status', authMiddleware, orderController.updateOrderStatus);
 router.get('/my-store/stats', authMiddleware, orderController.getOrderStats);
+router.get('/my-store/revenue-chart', authMiddleware, orderController.getRevenueChartData);
+router.get('/my-store/top-items', authMiddleware, orderController.getTopSellingItems);
+router.get('/my-store/order-type-stats', authMiddleware, orderController.getOrderTypeStats);
 
 module.exports = router;

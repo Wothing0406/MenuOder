@@ -29,6 +29,9 @@ export default function Checkout() {
     customerNote: '',
     paymentMethod: 'cash',
   });
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherInfo, setVoucherInfo] = useState(null);
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
 
   useEffect(() => {
     if (!router.query.store) return;
@@ -49,6 +52,11 @@ export default function Checkout() {
     fetchStoreId();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.store]);
+
+  // Reset voucher when giỏ hàng thay đổi
+  useEffect(() => {
+    setVoucherInfo(null);
+  }, [total]);
 
   // Reset form when order type changes
   useEffect(() => {
@@ -106,19 +114,20 @@ export default function Checkout() {
           setValidatedAddress(validateRes.data.data);
           // Don't auto-confirm, let user confirm manually
         }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error validating address:', error);
-        }
-        // Show error message
-        if (error.response?.data?.message) {
-          toast.error(error.response.data.message);
-        } else {
-          toast.error('Không thể xác thực địa chỉ. Vui lòng kiểm tra lại địa chỉ.');
-        }
-        setValidatedAddress(null);
-        setAddressConfirmed(false);
-      } finally {
+    } catch (error) {
+      console.error('Error validating address:', error);
+      
+      // Handle network errors
+      if (error.networkError || error.code === 'ECONNREFUSED' || error.message?.includes('Network Error') || error.message?.includes('ERR_NETWORK')) {
+        toast.error('Không thể kết nối đến server. Vui lòng kiểm tra backend server có đang chạy không.');
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(error.userMessage || 'Không thể xác thực địa chỉ. Vui lòng kiểm tra lại địa chỉ.');
+      }
+      setValidatedAddress(null);
+      setAddressConfirmed(false);
+    } finally {
         setValidatingAddress(false);
       }
     }
@@ -139,13 +148,18 @@ export default function Checkout() {
       });
       
       if (distanceRes.data.success) {
-        setShippingFee(distanceRes.data.data.shippingFee);
+        const shippingFeeValue = distanceRes.data.data.shippingFee || 0;
+        setShippingFee(shippingFeeValue);
         // Update form data with validated address
         setFormData(prev => ({
           ...prev,
           deliveryAddress: validatedAddress.validatedAddress
         }));
         toast.success('Địa chỉ đã được xác nhận!');
+      } else {
+        toast.error(distanceRes.data.message || 'Không thể tính phí ship');
+        setAddressConfirmed(false);
+        setShippingFee(0);
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -168,6 +182,44 @@ export default function Checkout() {
     setValidatedAddress(null);
     setAddressConfirmed(false);
     setShippingFee(0);
+  };
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim()) {
+      toast.error('Vui lòng nhập mã voucher');
+      return;
+    }
+    if (!storeId) {
+      toast.error('Không tìm thấy thông tin cửa hàng để áp dụng voucher');
+      return;
+    }
+
+    try {
+      setApplyingVoucher(true);
+      const res = await api.post('/vouchers/validate', {
+        code: voucherCode.trim().toUpperCase(),
+        storeId,
+        orderAmount: total
+      });
+
+      if (res.data.success) {
+        setVoucherInfo(res.data.data);
+        toast.success(res.data.message || 'Áp dụng voucher thành công!');
+      }
+    } catch (error) {
+      setVoucherInfo(null);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Apply voucher error:', error);
+      }
+      toast.error(error.response?.data?.message || 'Voucher không hợp lệ');
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setVoucherInfo(null);
+    toast('Đã huỷ voucher');
   };
 
   const handleSubmit = async (e) => {
@@ -233,6 +285,10 @@ export default function Checkout() {
         items: orderItems,
       };
 
+      if (voucherInfo?.code) {
+        orderPayload.voucherCode = voucherInfo.code;
+      }
+
       if (orderType === 'dine_in') {
         orderPayload.tableNumber = parseInt(formData.tableNumber.trim());
         // Include phone number if provided for tracking
@@ -284,7 +340,8 @@ export default function Checkout() {
     }
   };
 
-  const finalTotal = total + shippingFee;
+  const discountAmount = voucherInfo?.discountAmount ? Number(voucherInfo.discountAmount) : 0;
+  const finalTotal = Math.max(0, total - discountAmount) + shippingFee;
 
   if (cartItems.length === 0) {
     return (
@@ -348,11 +405,58 @@ export default function Checkout() {
               ))}
             </div>
 
+            <div className="mt-3">
+              <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                Nhập mã voucher (nếu có)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                  className="input-field flex-1 uppercase"
+                  placeholder="VD: GIAM20"
+                  maxLength={20}
+                />
+                {voucherInfo ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveVoucher}
+                    className="px-4 py-2 rounded-lg bg-gray-200 font-semibold text-sm hover:bg-gray-300 transition"
+                  >
+                    Huỷ
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApplyVoucher}
+                    disabled={applyingVoucher || !storeId}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm bg-purple-600 text-white hover:bg-purple-700 transition ${
+                      applyingVoucher ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {applyingVoucher ? 'Đang áp dụng...' : 'Áp dụng'}
+                  </button>
+                )}
+              </div>
+              {voucherInfo && (
+                <p className="text-xs text-green-600 mt-1">
+                  Voucher {voucherInfo.code} giảm {formatVND(discountAmount)}
+                </p>
+              )}
+            </div>
+
             <div className="pt-2 border-t border-gray-200 space-y-1">
               <div className="flex justify-between text-xs md:text-sm text-gray-600">
                 <span>Tạm tính:</span>
                 <span className="font-semibold">{formatVND(total)}</span>
               </div>
+              {voucherInfo && (
+                <div className="flex justify-between text-xs md:text-sm text-green-600">
+                  <span>Voucher ({voucherInfo.code}):</span>
+                  <span>-{formatVND(discountAmount)}</span>
+                </div>
+              )}
               {orderType === 'delivery' && (
                 <div className="flex justify-between text-xs md:text-sm text-gray-600">
                   <span>Phí giao hàng:</span>

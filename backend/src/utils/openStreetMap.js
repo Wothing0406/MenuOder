@@ -370,14 +370,41 @@ async function geocodeAddress(address) {
       }
     }
     
-    // If all queries failed, throw error
-    throw new Error(`Không tìm thấy địa chỉ: "${address}". Vui lòng thử nhập địa chỉ theo định dạng: "Tên đường, Phường/Xã, Thành phố, Tỉnh" hoặc chỉ "Thành phố, Tỉnh". Ví dụ: "Hội An, Quảng Nam" hoặc "Nguyễn Công Trứ, Hội An, Quảng Nam".`);
+    // If all queries failed, throw error with helpful message
+    console.warn(`Could not geocode address: "${address}"`);
+    throw new Error(`Không tìm thấy địa chỉ: "${address}". Vui lòng thử nhập địa chỉ theo định dạng: "Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Thành phố, Tỉnh" hoặc "Tên đường, Phường/Xã, Thành phố, Tỉnh". Ví dụ: "123 Nguyễn Huệ, Bến Nghé, Quận 1, TP. Hồ Chí Minh" hoặc "Hội An, Quảng Nam".`);
   } catch (error) {
     console.error('Geocoding error:', error.message);
+    console.error('Error details:', {
+      code: error.code,
+      response: error.response?.status,
+      address: address
+    });
+    
+    // Preserve original error message if it's already user-friendly
     if (error.message.includes('Không tìm thấy')) {
       throw error;
     }
-    throw new Error(`Lỗi khi tìm địa chỉ: ${error.message}`);
+    
+    // Handle specific error types
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Không thể kết nối đến dịch vụ xác thực địa chỉ. Vui lòng kiểm tra kết nối internet và thử lại.');
+    }
+    
+    if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      throw new Error('Yêu cầu xác thực địa chỉ quá thời gian. Vui lòng thử lại sau.');
+    }
+    
+    if (error.response?.status === 429 || error.message.includes('rate limit')) {
+      throw new Error('Quá nhiều yêu cầu xác thực địa chỉ. Vui lòng đợi một chút rồi thử lại.');
+    }
+    
+    if (error.response?.status >= 500) {
+      throw new Error('Dịch vụ xác thực địa chỉ đang gặp sự cố. Vui lòng thử lại sau.');
+    }
+    
+    // Generic error
+    throw new Error(`Lỗi khi tìm địa chỉ: ${error.message}. Vui lòng thử lại hoặc nhập địa chỉ theo định dạng: "Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Thành phố, Tỉnh".`);
   }
 }
 

@@ -6,8 +6,12 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "restart": "node scripts/restart-server.js",
     "reset-db": "node scripts/reset-db.js",
-    "apply-migration": "node scripts/apply-migration.js"
+    "apply-migration": "node scripts/apply-migration.js",
+    "migrate-db": "node scripts/migrate-database.js",
+    "test-db": "node scripts/test-db-connection.js",
+    "test-api": "node scripts/test-backend-api.js"
   },
   "dependencies": {
     "express": "^4.18.2",

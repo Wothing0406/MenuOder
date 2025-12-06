@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   storeName VARCHAR(255) NOT NULL,
   storePhone VARCHAR(20),
   storeAddress TEXT,
+  role ENUM('store_owner', 'admin') NOT NULL DEFAULT 'store_owner',
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email)

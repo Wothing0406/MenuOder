@@ -1,8 +1,16 @@
 const jwt = require('jsonwebtoken');
 
-const generateToken = (userId) => {
+const generateToken = (user) => {
+  const payload = {
+    id: user.id
+  };
+
+  if (user.role) {
+    payload.role = user.role;
+  }
+
   return jwt.sign(
-    { id: userId },
+    payload,
     process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production',
     { expiresIn: process.env.JWT_EXPIRE || '24h' }
   );

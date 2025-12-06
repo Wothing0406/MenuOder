@@ -2,6 +2,7 @@ const Store = require('../models/Store');
 const Category = require('../models/Category');
 const Item = require('../models/Item');
 const ItemOption = require('../models/ItemOption');
+const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
 const { 
@@ -106,16 +107,20 @@ exports.getAllStores = async (req, res) => {
       attributes: { exclude: [] }
     });
 
+    // Convert Sequelize instances to plain objects
+    const storesData = stores.map(store => store.toJSON());
+
     res.json({
       success: true,
-      data: stores
+      data: storesData
     });
   } catch (error) {
     console.error('Get all stores error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to get stores',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -401,6 +406,73 @@ exports.uploadStoreImage = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to upload store image',
+      error: error.message
+    });
+  }
+};
+
+// Admin: get all stores with owner info
+exports.adminGetStores = async (req, res) => {
+  try {
+    const stores = await Store.findAll({
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'email', 'storeName', 'role'],
+          required: false // LEFT JOIN để lấy cả stores không có owner
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Convert Sequelize instances to plain objects
+    const storesData = stores.map(store => {
+      const storeData = store.toJSON();
+      return storeData;
+    });
+
+    res.json({
+      success: true,
+      data: storesData
+    });
+  } catch (error) {
+    console.error('Admin get stores error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tải danh sách cửa hàng',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin: update store status
+exports.adminUpdateStoreStatus = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { isActive } = req.body;
+
+    const store = await Store.findByPk(storeId);
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cửa hàng không tồn tại'
+      });
+    }
+
+    await store.update({ isActive: Boolean(isActive) });
+
+    res.json({
+      success: true,
+      message: 'Cập nhật trạng thái cửa hàng thành công',
+      data: store
+    });
+  } catch (error) {
+    console.error('Admin update store status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể cập nhật trạng thái cửa hàng',
       error: error.message
     });
   }

@@ -6,7 +6,11 @@ import { useCart } from '../../lib/store';
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
 import ItemCard from '../../components/ItemCard';
+import ReviewCard from '../../components/ReviewCard';
+import ReviewForm from '../../components/ReviewForm';
+import StarRating from '../../components/StarRating';
 import { formatVND, formatVNDNumber } from '../../lib/utils';
+import { DishIcon } from '../../components/Icons';
 
 export default function StorePage() {
   const router = useRouter();
@@ -22,12 +26,26 @@ export default function StorePage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedAccompaniments, setSelectedAccompaniments] = useState({});
   const [itemNote, setItemNote] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewTotalPages, setReviewTotalPages] = useState(1);
 
   useEffect(() => {
     if (!slug) return;
     fetchStoreData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  useEffect(() => {
+    if (store?.id) {
+      fetchReviews();
+      fetchReviewStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
 
   const fetchStoreData = async () => {
     try {
@@ -47,6 +65,48 @@ export default function StorePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchReviews = async (page = 1) => {
+    if (!store?.id) return;
+    try {
+      setLoadingReviews(true);
+      const res = await api.get(`/reviews/store/${store.id}?page=${page}&limit=10&sort=newest`);
+      if (res.data.success) {
+        if (page === 1) {
+          setReviews(res.data.data.reviews);
+        } else {
+          setReviews(prev => [...prev, ...res.data.data.reviews]);
+        }
+        setReviewTotalPages(res.data.data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const fetchReviewStats = async () => {
+    if (!store?.id) return;
+    try {
+      const res = await api.get(`/reviews/store/${store.id}?page=1&limit=1`);
+      // Calculate stats from reviews
+      if (res.data.success && res.data.data.reviews.length > 0) {
+        // We'll get stats from the store data if available
+        // Or calculate from reviews
+      }
+    } catch (error) {
+      // Ignore
+    }
+  };
+
+  const handleReviewSubmit = (review) => {
+    setReviews(prev => [review, ...prev]);
+    setShowReviewForm(false);
+    toast.success('Cảm ơn bạn đã đánh giá!');
+    // Refresh reviews
+    fetchReviews(1);
   };
 
   const handleCategorySelect = (categoryId) => {
@@ -157,7 +217,7 @@ export default function StorePage() {
                 if (store.storeImage.startsWith('http')) {
                   return store.storeImage;
                 }
-                const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
                 const imagePath = store.storeImage.startsWith('/') ? store.storeImage : '/' + store.storeImage;
                 return apiBase + imagePath;
               })()}
@@ -203,7 +263,7 @@ export default function StorePage() {
                         if (store.storeLogo.startsWith('http')) {
                           return store.storeLogo;
                         }
-                        const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
                         const logoPath = store.storeLogo.startsWith('/') ? store.storeLogo : '/' + store.storeLogo;
                         return apiBase + logoPath;
                       })()}
@@ -231,6 +291,20 @@ export default function StorePage() {
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1.5 md:mb-2 drop-shadow-2xl leading-tight break-words line-clamp-2 tracking-tight">
                   {store.storeName}
                 </h1>
+                
+                {/* Rating Display - Compact */}
+                {store.averageRating > 0 && (
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <StarRating rating={store.averageRating} readonly size="sm" />
+                    <span className="text-xs md:text-sm font-semibold text-white drop-shadow-md">
+                      {store.averageRating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-white/80 drop-shadow-md">
+                      ({store.totalReviews || 0})
+                    </span>
+                  </div>
+                )}
+                
                 {(store.storeDetailedAddress || store.storeAddress) && (
                   <div className="flex items-start gap-1.5 mb-1.5">
                     <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 mt-0.5 drop-shadow-md" fill="currentColor" viewBox="0 0 20 20">
@@ -518,7 +592,7 @@ export default function StorePage() {
             {showItemDetail.accompaniments && showItemDetail.accompaniments.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-2 text-sm text-gray-800 flex items-center gap-1.5">
-                  <span className="text-base">🍽️</span>
+                  <DishIcon className="w-4 h-4 text-purple-600" strokeWidth={2} />
                   Món ăn kèm
                 </h3>
                 <div className="space-y-2">
@@ -611,6 +685,64 @@ export default function StorePage() {
               </button>
             </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reviews Section - Compact Mobile Design */}
+      {store && (
+        <div className="container-custom py-4 md:py-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4">
+            {/* Header - Compact */}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base md:text-lg font-bold text-gray-800">Đánh Giá</h2>
+              <button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-purple-600 text-white text-xs md:text-sm font-semibold rounded-lg hover:bg-purple-700 transition active:scale-95"
+              >
+                {showReviewForm ? 'Hủy' : 'Viết đánh giá'}
+              </button>
+            </div>
+
+            {/* Review Form - Compact */}
+            {showReviewForm && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <ReviewForm
+                  storeId={store.id}
+                  onSuccess={handleReviewSubmit}
+                  onCancel={() => setShowReviewForm(false)}
+                />
+              </div>
+            )}
+
+            {/* Reviews List - Compact */}
+            {reviews.length > 0 ? (
+              <div className="space-y-3">
+                {reviews.map((review) => (
+                  <div key={review.id} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
+                    <ReviewCard review={review} />
+                  </div>
+                ))}
+                
+                {reviewPage < reviewTotalPages && (
+                  <button
+                    onClick={() => {
+                      const nextPage = reviewPage + 1;
+                      setReviewPage(nextPage);
+                      fetchReviews(nextPage);
+                    }}
+                    disabled={loadingReviews}
+                    className="w-full py-2 text-sm text-purple-600 font-medium hover:bg-purple-50 rounded-lg transition"
+                  >
+                    {loadingReviews ? 'Đang tải...' : 'Xem thêm đánh giá'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                <p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+              </div>
+            )}
           </div>
         </div>
       )}

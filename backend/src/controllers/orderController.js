@@ -2,7 +2,8 @@ const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Store = require('../models/Store');
 const Item = require('../models/Item');
-const { Sequelize } = require('sequelize');
+const Voucher = require('../models/Voucher');
+const { sequelize, Sequelize } = require('../config/database');
 const Op = Sequelize.Op;
 // Use OpenStreetMap (FREE) instead of Google Maps
 const { calculateDistance, calculateShippingFee, geocodeAddress } = require('../utils/openStreetMap');
@@ -36,6 +37,43 @@ function calculateStreetSimilarity(str1, str2) {
   
   return matches / Math.max(words1.length, words2.length);
 }
+
+const normalizeVoucherCode = (code = '') => code.trim().toUpperCase();
+
+const ensureVoucherAvailable = (voucher) => {
+  if (!voucher.isActive) {
+    throw new Error('Voucher đã bị vô hiệu hoá');
+  }
+  const now = new Date();
+  if (voucher.startsAt && now < voucher.startsAt) {
+    throw new Error('Voucher chưa đến thời gian sử dụng');
+  }
+  if (!voucher.neverExpires && voucher.expiresAt && now > voucher.expiresAt) {
+    throw new Error('Voucher đã hết hạn');
+  }
+  if (voucher.usageLimit && voucher.usageCount >= voucher.usageLimit) {
+    throw new Error('Voucher đã đạt giới hạn sử dụng');
+  }
+};
+
+const calculateVoucherDiscount = (voucher, orderAmount) => {
+  let discount = 0;
+  if (voucher.discountType === 'percentage') {
+    discount = (orderAmount * Number(voucher.discountValue)) / 100;
+  } else {
+    discount = Number(voucher.discountValue);
+  }
+
+  if (voucher.maxDiscountAmount) {
+    discount = Math.min(discount, Number(voucher.maxDiscountAmount));
+  }
+
+  if (discount > orderAmount) {
+    discount = orderAmount;
+  }
+
+  return parseFloat(discount.toFixed(2));
+};
 
 // Generate order code
 const generateOrderCode = () => {
@@ -190,7 +228,7 @@ exports.createOrder = async (req, res) => {
     }
 
     // Calculate total and create order items
-    let totalAmount = 0;
+    let itemsSubtotal = 0;
     const orderItems = [];
 
     for (const cartItem of items) {
@@ -214,7 +252,7 @@ exports.createOrder = async (req, res) => {
       
       const qty = parseInt(cartItem.quantity || 1, 10);
       const itemSubtotal = parseFloat((price * qty).toFixed(2));
-      totalAmount += itemSubtotal;
+      itemsSubtotal += itemSubtotal;
 
       orderItems.push({
         itemId: item.id,
@@ -229,7 +267,56 @@ exports.createOrder = async (req, res) => {
     }
 
     // Add shipping fee to total for delivery orders
-    const finalTotal = totalAmount + shippingFee;
+    // Apply voucher if provided
+    const requestedVoucherCode = normalizeVoucherCode(req.body.voucherCode || '');
+    let appliedVoucher = null;
+    let discountAmount = 0;
+
+    if (requestedVoucherCode) {
+      let voucher = await Voucher.findOne({
+        where: {
+          storeId: store.id,
+          code: requestedVoucherCode
+        }
+      });
+
+      // Fallback: try global voucher (storeId is NULL)
+      if (!voucher) {
+        voucher = await Voucher.findOne({
+          where: {
+            storeId: null,
+            code: requestedVoucherCode
+          }
+        });
+      }
+
+      if (!voucher) {
+        // Ignore invalid voucher code: proceed without applying any discount
+        voucher = null;
+      }
+
+      if (voucher) {
+        try {
+          ensureVoucherAvailable(voucher);
+        } catch (voucherError) {
+          // Ignore unavailable voucher and proceed without applying any discount
+          voucher = null;
+        }
+      }
+
+      if (voucher && itemsSubtotal < Number(voucher.minOrderAmount || 0)) {
+        // Do not apply voucher if minimum order amount is not met
+        voucher = null;
+      }
+
+      if (voucher) {
+        discountAmount = calculateVoucherDiscount(voucher, itemsSubtotal);
+        appliedVoucher = voucher;
+      }
+    }
+
+    const subtotalAfterDiscount = Math.max(0, itemsSubtotal - discountAmount);
+    const finalTotal = subtotalAfterDiscount + shippingFee;
 
     // Create order
     const orderData = {
@@ -250,6 +337,11 @@ exports.createOrder = async (req, res) => {
       customerEmail: orderType === 'delivery' ? null : (customerEmail && typeof customerEmail === 'string' ? customerEmail.trim() : (customerEmail || null)),
       customerNote: customerNote && typeof customerNote === 'string' ? customerNote.trim() : (customerNote || null),
       paymentMethod: req.body.paymentMethod || 'cash',
+      voucherId: appliedVoucher ? appliedVoucher.id : null,
+      voucherCode: appliedVoucher ? appliedVoucher.code : null,
+      discountType: appliedVoucher ? appliedVoucher.discountType : null,
+      discountValue: appliedVoucher ? appliedVoucher.discountValue : null,
+      discountAmount: parseFloat(discountAmount.toFixed(2)),
       totalAmount: parseFloat(finalTotal.toFixed(2))
     };
     
@@ -283,9 +375,20 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    if (appliedVoucher) {
+      try {
+        await appliedVoucher.increment('usageCount');
+      } catch (voucherCountError) {
+        console.error('Voucher usage increment error:', voucherCountError);
+      }
+    }
+
     // Fetch complete order with items
     const completeOrder = await Order.findByPk(order.id, {
-      include: { association: 'items' }
+      include: [
+        { association: 'items' },
+        { association: 'voucher', required: false }
+      ]
     });
 
     res.status(201).json({
@@ -385,7 +488,10 @@ exports.getOrderDetail = async (req, res) => {
     const { orderId } = req.params;
 
     const order = await Order.findByPk(orderId, {
-      include: { association: 'items' }
+      include: [
+        { association: 'items' },
+        { association: 'voucher', required: false }
+      ]
     });
 
     if (!order) {
@@ -505,9 +611,18 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Determine next status and payment flag
+    const nextStatus = status || order.status;
+    let nextIsPaid = isPaid !== undefined ? isPaid : order.isPaid;
+
+    // Auto mark as paid when completed if not explicitly provided
+    if (nextStatus === 'completed' && isPaid === undefined) {
+      nextIsPaid = true;
+    }
+
     await order.update({
-      status: status || order.status,
-      isPaid: isPaid !== undefined ? isPaid : order.isPaid
+      status: nextStatus,
+      isPaid: nextIsPaid
     });
 
     res.json({
@@ -557,7 +672,7 @@ exports.getOrderStats = async (req, res) => {
     
     // Get completed orders (delivered status)
     const completedOrders = await Order.count({
-      where: { storeId: store.id, status: 'delivered' }
+      where: { storeId: store.id, status: 'completed' }
     });
 
     // Calculate total revenue (all completed orders - paid)
@@ -641,6 +756,260 @@ exports.getOrderStats = async (req, res) => {
   }
 };
 
+// Get revenue chart data (daily, weekly, monthly)
+exports.getRevenueChartData = async (req, res) => {
+  try {
+    const store = await Store.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    const { period = 'month' } = req.query; // 'week', 'month', 'year'
+    const now = new Date();
+    let startDate, endDate;
+
+    if (period === 'week') {
+      // Last 7 days
+      endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 6);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (period === 'month') {
+      // Last 30 days
+      endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 29);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (period === 'year') {
+      // Last 12 months
+      endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 11);
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    // Get orders grouped by date
+    const orders = await Order.findAll({
+      where: {
+        storeId: store.id,
+        status: 'completed',
+        createdAt: {
+          [Op.between]: [startDate, endDate]
+        }
+      },
+      attributes: [
+        [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'date'],
+        [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'revenue'],
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'orderCount']
+      ],
+      group: [Sequelize.fn('DATE', Sequelize.col('createdAt'))],
+      order: [[Sequelize.fn('DATE', Sequelize.col('createdAt')), 'ASC']],
+      raw: true
+    });
+
+    // Format data for chart
+    const chartData = orders.map(item => ({
+      date: item.date,
+      revenue: parseFloat(item.revenue || 0),
+      orderCount: parseInt(item.orderCount || 0)
+    }));
+
+    res.json({
+      success: true,
+      data: chartData
+    });
+  } catch (error) {
+    console.error('Get revenue chart data error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get revenue chart data',
+      error: error.message
+    });
+  }
+};
+
+// Get top selling items
+exports.getTopSellingItems = async (req, res) => {
+  try {
+    const store = await Store.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    const { limit = 10, period = 'month' } = req.query;
+    const now = new Date();
+    let startDate;
+
+    if (period === 'week') {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (period === 'month') {
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 1);
+    } else if (period === 'year') {
+      startDate = new Date(now);
+      startDate.setFullYear(startDate.getFullYear() - 1);
+    } else {
+      startDate = null; // All time
+    }
+
+    const orderWhereCondition = {
+      storeId: store.id,
+      status: 'completed'
+    };
+
+    if (startDate) {
+      orderWhereCondition.createdAt = {
+        [Op.gte]: startDate
+      };
+    }
+
+    // Get top selling items
+    const topItemsData = await sequelize.query(`
+      SELECT 
+        oi.itemId,
+        i.itemName,
+        i.itemPrice,
+        i.itemImage,
+        SUM(oi.quantity) as totalQuantity,
+        SUM(oi.quantity * oi.itemPrice) as totalRevenue
+      FROM order_items oi
+      INNER JOIN orders o ON oi.orderId = o.id
+      INNER JOIN items i ON oi.itemId = i.id
+      WHERE o.storeId = :storeId 
+        AND o.status = 'completed'
+        ${startDate ? 'AND o.createdAt >= :startDate' : ''}
+      GROUP BY oi.itemId, i.itemName, i.itemPrice, i.itemImage
+      ORDER BY totalQuantity DESC
+      LIMIT :limit
+    `, {
+      replacements: {
+        storeId: store.id,
+        ...(startDate && { startDate }),
+        limit: parseInt(limit)
+      },
+      type: Sequelize.QueryTypes.SELECT
+    });
+
+    const formattedItems = topItemsData.map(item => ({
+      itemId: item.itemId,
+      itemName: item.itemName || 'Unknown',
+      itemPrice: parseFloat(item.itemPrice || 0),
+      itemImage: item.itemImage || null,
+      totalQuantity: parseInt(item.totalQuantity || 0),
+      totalRevenue: parseFloat(item.totalRevenue || 0)
+    }));
+
+    res.json({
+      success: true,
+      data: formattedItems
+    });
+  } catch (error) {
+    console.error('Get top selling items error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get top selling items',
+      error: error.message
+    });
+  }
+};
+
+// Get order type statistics (dine_in vs delivery)
+exports.getOrderTypeStats = async (req, res) => {
+  try {
+    const store = await Store.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    const { period = 'month' } = req.query;
+    const now = new Date();
+    let startDate;
+
+    if (period === 'week') {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (period === 'month') {
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 1);
+    } else if (period === 'year') {
+      startDate = new Date(now);
+      startDate.setFullYear(startDate.getFullYear() - 1);
+    } else {
+      startDate = null;
+    }
+
+    const whereCondition = {
+      storeId: store.id,
+      status: 'completed'
+    };
+
+    if (startDate) {
+      whereCondition.createdAt = {
+        [Op.gte]: startDate
+      };
+    }
+
+    const stats = await Order.findAll({
+      where: whereCondition,
+      attributes: [
+        'orderType',
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count'],
+        [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'revenue']
+      ],
+      group: ['orderType'],
+      raw: true
+    });
+
+    const formattedStats = {
+      dine_in: { count: 0, revenue: 0 },
+      delivery: { count: 0, revenue: 0 }
+    };
+
+    stats.forEach(stat => {
+      const type = stat.orderType === 'dine_in' ? 'dine_in' : 'delivery';
+      formattedStats[type] = {
+        count: parseInt(stat.count || 0),
+        revenue: parseFloat(stat.revenue || 0)
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedStats
+    });
+  } catch (error) {
+    console.error('Get order type stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get order type statistics',
+      error: error.message
+    });
+  }
+};
+
 // Calculate shipping fee (public - for preview)
 // Validate and geocode address (public)
 exports.validateAddress = async (req, res) => {
@@ -718,10 +1087,29 @@ exports.validateAddress = async (req, res) => {
     });
   } catch (error) {
     console.error('Validate address error:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Không thể xác thực địa chỉ';
+    
+    if (error.message) {
+      if (error.message.includes('Không tìm thấy địa chỉ')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
+        errorMessage = 'Không thể kết nối đến dịch vụ xác thực địa chỉ. Vui lòng thử lại sau.';
+      } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = 'Yêu cầu xác thực địa chỉ quá thời gian. Vui lòng thử lại.';
+      } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+        errorMessage = 'Quá nhiều yêu cầu. Vui lòng đợi một chút rồi thử lại.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     res.status(400).json({
       success: false,
-      message: error.message || 'Không thể xác thực địa chỉ',
-      error: error.message
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

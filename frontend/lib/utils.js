@@ -47,7 +47,7 @@ export function getImageUrl(imagePath) {
   }
   
   // Nếu là relative path, chuyển thành full URL
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5002';
   const cleanBase = apiBase.replace(/\/$/, ''); // Remove trailing slash
   const cleanPath = imagePath.startsWith('/') ? imagePath : '/' + imagePath;
   

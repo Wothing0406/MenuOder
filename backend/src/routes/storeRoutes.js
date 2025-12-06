@@ -3,10 +3,16 @@ const router = express.Router();
 const storeController = require('../controllers/storeController');
 const authMiddleware = require('../middleware/auth');
 const { upload, useCloudinary } = require('../middleware/upload');
+const requireRole = require('../middleware/role');
+const adminSecret = require('../middleware/adminSecret');
 
 // Public route
 router.get('/slug/:slug', storeController.getStoreBySlug);
 router.get('/', storeController.getAllStores);
+
+// Admin routes protected by secret key (no login required)
+router.get('/admin', adminSecret, storeController.adminGetStores);
+router.patch('/admin/:storeId/status', adminSecret, storeController.adminUpdateStoreStatus);
 
 // Protected routes
 router.get('/my-store', authMiddleware, storeController.getMyStore);

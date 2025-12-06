@@ -19,8 +19,8 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Password: password123 (đã hash bằng bcrypt)
 -- Hash này sẽ được generate tự động bởi script reset-db.js
 -- Tạm thời sử dụng hash mẫu, script sẽ thay thế bằng hash thật
-INSERT INTO users (email, password, storeName, storePhone, storeAddress, createdAt, updatedAt) VALUES
-('admin@restaurant.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nhà Hàng Mẫu', '0123456789', '123 Đường ABC, Quận 1, TP.HCM', NOW(), NOW());
+INSERT INTO users (email, password, storeName, storePhone, storeAddress, role, createdAt, updatedAt) VALUES
+('admin@restaurant.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nhà Hàng Mẫu', '0123456789', '123 Đường ABC, Quận 1, TP.HCM', 'admin', NOW(), NOW());
 
 SET @userId = LAST_INSERT_ID();
 

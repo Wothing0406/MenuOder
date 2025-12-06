@@ -7,6 +7,8 @@ const ItemAccompaniment = require('./ItemAccompaniment');
 const User = require('./User');
 const Order = require('./Order');
 const OrderItem = require('./OrderItem');
+const Voucher = require('./Voucher');
+const Review = require('./Review');
 
 // Define associations
 Store.hasMany(Category, {
@@ -90,6 +92,51 @@ Order.belongsTo(Store, {
   as: 'store'
 });
 
+Store.hasMany(Voucher, {
+  foreignKey: 'storeId',
+  as: 'vouchers'
+});
+Voucher.belongsTo(Store, {
+  foreignKey: 'storeId',
+  as: 'store'
+});
+
+Voucher.hasMany(Order, {
+  foreignKey: 'voucherId',
+  as: 'orders'
+});
+Order.belongsTo(Voucher, {
+  foreignKey: 'voucherId',
+  as: 'voucher'
+});
+
+Store.hasMany(Review, {
+  foreignKey: 'storeId',
+  as: 'reviews'
+});
+Review.belongsTo(Store, {
+  foreignKey: 'storeId',
+  as: 'store'
+});
+
+Item.hasMany(Review, {
+  foreignKey: 'itemId',
+  as: 'reviews'
+});
+Review.belongsTo(Item, {
+  foreignKey: 'itemId',
+  as: 'item'
+});
+
+Order.hasMany(Review, {
+  foreignKey: 'orderId',
+  as: 'reviews'
+});
+Review.belongsTo(Order, {
+  foreignKey: 'orderId',
+  as: 'order'
+});
+
 module.exports = {
   Store,
   Category,
@@ -98,5 +145,7 @@ module.exports = {
   ItemAccompaniment,
   User,
   Order,
-  OrderItem
+  OrderItem,
+  Voucher,
+  Review
 };

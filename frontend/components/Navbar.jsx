@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useStore } from '../lib/store';
 import { useState } from 'react';
+import { MenuIcon, X as XIcon, LogOutIcon, UserIcon } from './Icons';
 
 export default function Navbar() {
   const { user, token, logout } = useStore();
@@ -29,6 +30,11 @@ export default function Navbar() {
           </Link>
           {token && user ? (
             <>
+              {user?.role === 'admin' && (
+                <Link href="/admin" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
+                  Quản trị
+                </Link>
+              )}
               <Link href="/dashboard" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
                 Bảng điều khiển
               </Link>
@@ -38,8 +44,9 @@ export default function Navbar() {
                   localStorage.removeItem('token');
                   window.location.href = '/';
                 }}
-                className="bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-2 rounded-lg transition backdrop-blur-sm border border-white border-opacity-30"
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-2 rounded-lg transition backdrop-blur-sm border border-white border-opacity-30 flex items-center gap-2"
               >
+                <LogOutIcon className="w-4 h-4" />
                 Đăng xuất
               </button>
             </>
@@ -56,11 +63,15 @@ export default function Navbar() {
         </div>
 
         <button
-          className="md:hidden w-10 h-10 flex items-center justify-center text-2xl hover:bg-white hover:bg-opacity-20 rounded-lg transition"
+          className="md:hidden w-10 h-10 flex items-center justify-center hover:bg-white hover:bg-opacity-20 rounded-lg transition"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Menu"
         >
-          {isMenuOpen ? '✕' : '☰'}
+          {isMenuOpen ? (
+            <XIcon className="w-6 h-6" strokeWidth={2.5} />
+          ) : (
+            <MenuIcon className="w-6 h-6" strokeWidth={2} />
+          )}
         </button>
       </div>
 
@@ -75,6 +86,15 @@ export default function Navbar() {
           </Link>
           {token && user ? (
             <>
+              {user?.role === 'admin' && (
+                <Link 
+                  href="/admin" 
+                  className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Quản trị
+                </Link>
+              )}
               <Link 
                 href="/dashboard" 
                 className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
@@ -88,8 +108,9 @@ export default function Navbar() {
                   localStorage.removeItem('token');
                   window.location.href = '/';
                 }}
-                className="w-full text-left bg-red-500 px-4 py-3 rounded-lg hover:bg-red-600 transition font-medium"
+                className="w-full text-left bg-red-500 px-4 py-3 rounded-lg hover:bg-red-600 transition font-medium flex items-center gap-2"
               >
+                <LogOutIcon className="w-4 h-4" />
                 Đăng xuất
               </button>
             </>

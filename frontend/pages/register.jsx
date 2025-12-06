@@ -53,14 +53,15 @@ export default function Register() {
           // Don't auto-confirm, let user confirm manually
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error validating address:', error);
-        }
-        // Show error message
-        if (error.response?.data?.message) {
+        console.error('Error validating address:', error);
+        
+        // Handle network errors
+        if (error.networkError || error.code === 'ECONNREFUSED' || error.message?.includes('Network Error') || error.message?.includes('ERR_NETWORK')) {
+          toast.error('Không thể kết nối đến server. Vui lòng kiểm tra backend server có đang chạy không.');
+        } else if (error.response?.data?.message) {
           toast.error(error.response.data.message);
         } else {
-          toast.error('Không thể xác thực địa chỉ. Vui lòng kiểm tra lại địa chỉ.');
+          toast.error(error.userMessage || 'Không thể xác thực địa chỉ. Vui lòng kiểm tra lại địa chỉ.');
         }
         setValidatedAddress(null);
         setAddressConfirmed(false);
@@ -173,16 +174,15 @@ export default function Register() {
         toast.error(res.data.message || 'Đăng ký thất bại');
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Registration error:', error);
-      }
+      console.error('Registration error:', error);
       
-      // Extract error message from response
-      let errorMessage = 'Đăng ký thất bại';
-      
-      if (error.response) {
+      // Handle network errors
+      if (error.networkError || error.code === 'ECONNREFUSED' || error.message?.includes('Network Error') || error.message?.includes('ERR_NETWORK')) {
+        toast.error('Không thể kết nối đến server. Vui lòng kiểm tra backend server có đang chạy không.');
+      } else if (error.response) {
         // Server responded with error
-        errorMessage = error.response.data?.message || errorMessage;
+        const errorMessage = error.response.data?.message || 'Đăng ký thất bại';
+        toast.error(errorMessage);
         
         // Log additional error details in development
         if (process.env.NODE_ENV === 'development' && error.response?.data?.error) {
@@ -190,13 +190,11 @@ export default function Register() {
         }
       } else if (error.request) {
         // Request was made but no response received
-        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+        toast.error('Không thể kết nối đến server. Vui lòng kiểm tra backend server có đang chạy không.');
       } else {
         // Something else happened
-        errorMessage = error.message || errorMessage;
+        toast.error(error.userMessage || error.message || 'Đăng ký thất bại');
       }
-      
-      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
