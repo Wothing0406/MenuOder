@@ -419,8 +419,7 @@ export default function AdminDashboard() {
               onChange={(e) => setSelectedStoreId(e.target.value)}
               className="input-field w-full md:w-80"
             >
-              <option value="">Tất cả voucher (gồm toàn hệ thống)</option>
-              <option value="global">Chỉ voucher toàn hệ thống</option>
+              <option value="">Toàn hệ thống</option>
               {stores.map((store) => (
                 <option key={store.id} value={store.id}>
                   {store.storeName} ({store.storeSlug})

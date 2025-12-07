@@ -124,6 +124,29 @@ async function applyMigration() {
       }
     }
     
+    // Apply migration to fix vouchers.storeId to allow NULL
+    try {
+      const fixStoreIdMigrationPath = path.join(__dirname, '../../database/migration_fix_voucher_storeId_nullable.sql');
+      if (fs.existsSync(fixStoreIdMigrationPath)) {
+        const fixStoreIdSql = fs.readFileSync(fixStoreIdMigrationPath, 'utf8');
+        await connection.query(fixStoreIdSql);
+        console.log('✅ Migration sửa vouchers.storeId cho phép NULL đã được apply!');
+      }
+    } catch (error) {
+      if (
+        error.code === 'ER_BAD_FIELD_ERROR' ||
+        error.message.includes('Unknown column') ||
+        error.message.includes('doesn\'t exist')
+      ) {
+        console.log('⚠️  Bảng vouchers chưa tồn tại. Bỏ qua migration này...');
+      } else if (error.message.includes('does not support') || error.message.includes('Invalid use of NULL')) {
+        console.log('⚠️  Cột storeId đã cho phép NULL. Bỏ qua...');
+      } else {
+        // Log but don't throw - this is a fix migration that might not be needed
+        console.log('ℹ️  Migration storeId nullable:', error.message);
+      }
+    }
+    
     console.log('\n✅ Tất cả migration đã được apply thành công!');
     console.log('\n📊 Các thay đổi:');
     console.log('   - stores.storeGoogleMapLink');

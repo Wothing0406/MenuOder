@@ -8,7 +8,7 @@ const Voucher = sequelize.define('Voucher', {
   },
   storeId: {
     type: Sequelize.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'stores',
       key: 'id'

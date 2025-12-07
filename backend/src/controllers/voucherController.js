@@ -352,6 +352,19 @@ exports.adminCreateVoucher = async (req, res) => {
       }
     } else {
       storeId = null; // voucher toàn hệ thống
+      // Kiểm tra xem đã có voucher toàn hệ thống với mã này chưa
+      const existingSystemVoucher = await Voucher.findOne({
+        where: {
+          storeId: null,
+          code: payload.code
+        }
+      });
+      if (existingSystemVoucher) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mã voucher toàn hệ thống đã tồn tại. Vui lòng sử dụng mã khác.'
+        });
+      }
     }
 
     // Admin routes don't have req.user, so createdBy can be null
