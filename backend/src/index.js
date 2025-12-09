@@ -94,8 +94,9 @@ app.use((req, res) => {
   });
 });
 
-// Initialize database and start server
+// Initialize database and start server (only if not on Vercel)
 const PORT = process.env.PORT || 5000;
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
 
 const startServer = async () => {
   try {
@@ -145,7 +146,7 @@ const startServer = async () => {
     // Detect if running on Render (or other cloud platforms)
     const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_NAME;
     const isProduction = process.env.NODE_ENV === 'production';
-    const isCloudPlatform = isRender || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
+    const isCloudPlatform = isRender || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
     
     // Check if we're on Render or production - use alter: true to add missing columns
     const shouldAlter = isRender || isProduction;
@@ -156,42 +157,47 @@ const startServer = async () => {
     });
     console.log('✅ Database synchronized successfully');
 
-    // Start server
-    
-    // Use 'localhost' for local development to avoid permission issues on Windows
-    // Use '0.0.0.0' for cloud platforms (Render, Railway, Heroku, etc.) or production
-    const HOST = process.env.HOST || (isCloudPlatform || isProduction ? '0.0.0.0' : 'localhost');
-    
-    const server = app.listen(PORT, HOST, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 Host: ${HOST}`);
+    // Only start HTTP server if not on Vercel (Vercel handles requests automatically)
+    if (!isVercel) {
+      // Start server
       
-      if (HOST === '0.0.0.0') {
-        console.log(`📡 Server accessible from all network interfaces`);
-        if (process.env.RENDER_EXTERNAL_URL) {
-          console.log(`📡 External URL: ${process.env.RENDER_EXTERNAL_URL}`);
+      // Use 'localhost' for local development to avoid permission issues on Windows
+      // Use '0.0.0.0' for cloud platforms (Render, Railway, Heroku, etc.) or production
+      const HOST = process.env.HOST || (isCloudPlatform || isProduction ? '0.0.0.0' : 'localhost');
+      
+      const server = app.listen(PORT, HOST, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🌐 Host: ${HOST}`);
+        
+        if (HOST === '0.0.0.0') {
+          console.log(`📡 Server accessible from all network interfaces`);
+          if (process.env.RENDER_EXTERNAL_URL) {
+            console.log(`📡 External URL: ${process.env.RENDER_EXTERNAL_URL}`);
+          }
+        } else {
+          console.log(`📡 API URL: http://localhost:${PORT}/api`);
         }
-      } else {
-        console.log(`📡 API URL: http://localhost:${PORT}/api`);
-      }
+        
+        if (process.env.FRONTEND_URL) {
+          console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+        } else {
+          console.log(`🔗 Frontend URL: http://localhost:3000`);
+        }
+      });
       
-      if (process.env.FRONTEND_URL) {
-        console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
-      } else {
-        console.log(`🔗 Frontend URL: http://localhost:3000`);
-      }
-    });
-    
-    // Handle server errors
-    server.on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-        console.error('   Please stop the process using this port or change PORT in .env');
-      } else {
-        console.error('❌ Server error:', error);
-      }
-    });
+      // Handle server errors
+      server.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+          console.error(`❌ Port ${PORT} is already in use`);
+          console.error('   Please stop the process using this port or change PORT in .env');
+        } else {
+          console.error('❌ Server error:', error);
+        }
+      });
+    } else {
+      console.log('✅ Running on Vercel - serverless mode');
+    }
   } catch (error) {
     console.error('❌ Failed to start server:');
     console.error('Error name:', error.name);
@@ -218,10 +224,27 @@ const startServer = async () => {
       console.error('Full error:', error);
     }
     
-    process.exit(1);
+    if (!isVercel) {
+      process.exit(1);
+    }
   }
 };
 
-startServer();
+// Only start server if not on Vercel (Vercel will handle requests via serverless function)
+if (!isVercel) {
+  startServer();
+} else {
+  // On Vercel, just initialize database connection
+  (async () => {
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Database connection established (Vercel)');
+      await sequelize.sync({ alter: false, force: false });
+      console.log('✅ Database synchronized (Vercel)');
+    } catch (error) {
+      console.error('❌ Database initialization error:', error.message);
+    }
+  })();
+}
 
 module.exports = app;
