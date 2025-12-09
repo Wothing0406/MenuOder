@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useStore } from '../lib/store';
 import { useState } from 'react';
-import { MenuIcon, X as XIcon, LogOutIcon, UserIcon } from './Icons';
+import { MenuIcon, CloseIcon as XIcon, LogOutIcon, UserIcon } from './Icons';
 
 export default function Navbar() {
   const { user, token, logout } = useStore();

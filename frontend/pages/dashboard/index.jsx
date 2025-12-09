@@ -8,7 +8,7 @@ import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../lib/utils';
-import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon } from '../../components/Icons';
+import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon, ArrowRightIcon } from '../../components/Icons';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -26,6 +26,17 @@ export default function Dashboard() {
   const [uploadingStoreImage, setUploadingStoreImage] = useState(false);
   const [storeImagePreview, setStoreImagePreview] = useState(null);
   const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
+  const [zaloPayConfig, setZaloPayConfig] = useState({
+    zaloPayAppId: '',
+    zaloPayKey1: '',
+    zaloPayKey2: '',
+    zaloPayMerchantId: '',
+    zaloPayIsActive: false,
+    zaloPayLink: ''
+  });
+  const [savingZaloPay, setSavingZaloPay] = useState(false);
+  const [verifyingZaloPay, setVerifyingZaloPay] = useState(false);
+  const [zaloPayStatus, setZaloPayStatus] = useState(null); // {type: 'success'|'error', message: string}
   const [selectedDate, setSelectedDate] = useState(null); // Date for revenue cards
   const [selectedDateType, setSelectedDateType] = useState(null); // 'today', 'month', 'year'
   const [dateOrders, setDateOrders] = useState([]); // Orders for selected date
@@ -86,6 +97,17 @@ export default function Dashboard() {
           useStore.setState({ store: storeRes.data.data });
           // Cập nhật storeData cho settings tab
           setStoreData(storeRes.data.data);
+          // ZaloPay config (ẩn key, chỉ điền khi người dùng nhập)
+          const zp = storeRes.data.data.zaloPayConfig || {};
+          setZaloPayConfig({
+            zaloPayAppId: zp.appId || '',
+            zaloPayKey1: '',
+            zaloPayKey2: '',
+            zaloPayMerchantId: zp.merchantId || '',
+            zaloPayIsActive: zp.isActive || false,
+            zaloPayLink: zp.link || ''
+          });
+          setZaloPayStatus(null);
           // Cập nhật form data
           setStoreFormData({
             storeName: storeRes.data.data.storeName || '',
@@ -581,19 +603,20 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <Head>
-        <title>Bảng điều khiển - MenuOrder</title>
-      </Head>
-      <Navbar />
+      <>
+        <Head>
+          <title>Bảng điều khiển - MenuOrder</title>
+        </Head>
+        <Navbar />
 
-      <div className="container-custom py-8">
+      <div className="container-custom px-3 md:px-6 py-8">
         {/* Header */}
-        <div className="mb-8 gradient-teal text-white p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+        <div className="mb-8 gradient-teal text-white p-5 md:p-8 rounded-2xl shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 grid-pattern opacity-20"></div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-white bg-opacity-10 rounded-full blur-3xl"></div>
           <div className="relative z-10">
-            <h1 className="text-4xl font-bold mb-3 tracking-tight">Chào mừng, {user?.storeName}</h1>
-            <div className="flex flex-col md:flex-row gap-4 mt-4">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight">Chào mừng, {user?.storeName}</h1>
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 mt-3">
               <div className="bg-white bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg">
                 <p className="text-sm text-white font-medium mb-1">Slug cửa hàng</p>
                 <p className="font-bold text-white">{store?.storeSlug}</p>
@@ -609,13 +632,18 @@ export default function Dashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-300 overflow-x-auto">
+        <div className="relative overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0">
+          {/* gradient edges as swipe hint */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent hidden sm:block" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent hidden sm:block" />
+
+          <div className="flex gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm min-w-max snap-x snap-mandatory overflow-x-auto scroll-smooth">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'overview'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <BarChartIcon className="w-5 h-5" />
@@ -623,10 +651,10 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'orders'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <CartIcon className="w-5 h-5" />
@@ -634,10 +662,10 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'menu'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <CategoryIcon className="w-5 h-5" />
@@ -645,10 +673,10 @@ export default function Dashboard() {
           </button>
           <Link
             href="/dashboard/reviews"
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               router.pathname === '/dashboard/reviews'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <StarIcon className="w-5 h-5" />
@@ -656,10 +684,10 @@ export default function Dashboard() {
           </Link>
           <button
             onClick={() => setActiveTab('qr')}
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'qr'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <QRIcon className="w-5 h-5" />
@@ -690,15 +718,22 @@ export default function Dashboard() {
                 }
               }
             }}
-            className={`px-4 py-2 font-bold transition flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'settings'
-                ? 'border-b-2 border-purple-600 text-purple-600'
-                : 'text-gray-800 hover:text-purple-600'
+                ? 'bg-purple-100 text-purple-700 shadow-inner'
+                : 'text-gray-800 hover:bg-gray-100'
             }`}
           >
             <SettingsIcon className="w-5 h-5" />
             Cài đặt
           </button>
+          </div>
+
+          {/* swipe hint for small screens */}
+          <div className="flex items-center gap-1 text-xs text-gray-500 md:hidden px-1 pb-2">
+            Vuốt để xem thêm
+            <ArrowRightIcon className="w-4 h-4 animate-pulse" />
+          </div>
         </div>
 
         {/* Overview Tab */}
@@ -1303,6 +1338,144 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* ZaloPay configuration */}
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold mb-2">💳 Cấu hình ZaloPay</h3>
+                <p className="text-sm text-gray-600">
+                  Nhập App ID và Key 1/2 từ ZaloPay. Merchant ID có thể để trống (sẽ dùng App ID thay thế). Bật công tắc để hiển thị phương thức ZaloPay cho khách.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">App ID *</label>
+                  <input
+                    type="text"
+                    value={zaloPayConfig.zaloPayAppId}
+                    onChange={(e) => setZaloPayConfig({ ...zaloPayConfig, zaloPayAppId: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Nhập App ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Merchant ID (tùy chọn)</label>
+                  <input
+                    type="text"
+                    value={zaloPayConfig.zaloPayMerchantId}
+                    onChange={(e) => setZaloPayConfig({ ...zaloPayConfig, zaloPayMerchantId: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Nếu trống sẽ dùng App ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Key 1 *</label>
+                  <input
+                    type="password"
+                    value={zaloPayConfig.zaloPayKey1}
+                    onChange={(e) => setZaloPayConfig({ ...zaloPayConfig, zaloPayKey1: e.target.value })}
+                    className="input-field w-full"
+                    placeholder={storeData?.zaloPayConfig?.hasKey1 ? 'Đã lưu (nhập để thay đổi)' : 'Nhập Key 1'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Key 2 (tùy chọn)</label>
+                  <input
+                    type="password"
+                    value={zaloPayConfig.zaloPayKey2}
+                    onChange={(e) => setZaloPayConfig({ ...zaloPayConfig, zaloPayKey2: e.target.value })}
+                    className="input-field w-full"
+                    placeholder={storeData?.zaloPayConfig?.hasKey2 ? 'Đã lưu (nhập để thay đổi)' : 'Nhập Key 2'}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="inline-flex items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={zaloPayConfig.zaloPayIsActive}
+                      onChange={(e) => setZaloPayConfig({ ...zaloPayConfig, zaloPayIsActive: e.target.checked })}
+                    />
+                    Bật thanh toán ZaloPay cho khách
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Khi bật, khách sẽ thấy phương thức ZaloPay QR tại trang thanh toán.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4">
+                {zaloPayStatus && (
+                  <div className={`mb-3 text-sm font-semibold ${zaloPayStatus.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>
+                    {zaloPayStatus.message}
+                  </div>
+                )}
+                <div className="flex flex-col md:flex-row gap-2">
+                  <button
+                    onClick={async () => {
+                      setVerifyingZaloPay(true);
+                      setZaloPayStatus(null);
+                      try {
+                        const res = await api.post('/zalopay/verify', {
+                          zaloPayAppId: zaloPayConfig.zaloPayAppId,
+                          zaloPayKey1: zaloPayConfig.zaloPayKey1,
+                          zaloPayKey2: zaloPayConfig.zaloPayKey2,
+                          zaloPayMerchantId: zaloPayConfig.zaloPayMerchantId
+                        });
+                        if (res.data.success) {
+                          setZaloPayStatus({ type: 'success', message: 'Liên kết thành công (ZaloPay xác nhận).' });
+                          toast.success('Liên kết ZaloPay thành công!');
+                        }
+                      } catch (error) {
+                        const msg = error.response?.data?.message || 'Liên kết thất bại. Kiểm tra App ID / Key 1 / Key 2.';
+                        setZaloPayStatus({ type: 'error', message: msg });
+                        toast.error(msg);
+                      } finally {
+                        setVerifyingZaloPay(false);
+                      }
+                    }}
+                    disabled={verifyingZaloPay || !zaloPayConfig.zaloPayAppId || !zaloPayConfig.zaloPayKey1}
+                    className="btn btn-secondary"
+                  >
+                    {verifyingZaloPay ? 'Đang kiểm tra...' : 'Liên kết với ZaloPay'}
+                  </button>
+                <button
+                  onClick={async () => {
+                    setSavingZaloPay(true);
+                    try {
+                      const payload = { ...zaloPayConfig };
+                      const res = await api.put('/stores/my-store', payload);
+                      if (res.data.success) {
+                        toast.success('Đã lưu cấu hình ZaloPay');
+                        const storeRes = await api.get('/stores/my-store');
+                        if (storeRes.data.success) {
+                          useStore.setState({ store: storeRes.data.data });
+                          setStoreData(storeRes.data.data);
+                          const zp = storeRes.data.data.zaloPayConfig || {};
+                          setZaloPayConfig({
+                            zaloPayAppId: zp.appId || '',
+                            zaloPayKey1: '',
+                            zaloPayKey2: '',
+                            zaloPayMerchantId: zp.merchantId || '',
+                            zaloPayIsActive: zp.isActive || false,
+                            zaloPayLink: zp.link || ''
+                          });
+                        }
+                      }
+                    } catch (error) {
+                      toast.error(error.response?.data?.message || 'Lưu cấu hình ZaloPay thất bại');
+                      if (process.env.NODE_ENV === 'development') {
+                        console.error('Save ZaloPay config error:', error);
+                      }
+                    } finally {
+                      setSavingZaloPay(false);
+                    }
+                  }}
+                  disabled={savingZaloPay}
+                  className="btn btn-primary"
+                >
+                  {savingZaloPay ? 'Đang lưu...' : 'Lưu cấu hình ZaloPay'}
+                </button>
+              </div>
+            </div>
+
             {/* Voucher customization */}
             <div className="border-t border-gray-200 pt-6 mt-6">
               <div className="mb-6">
@@ -1622,6 +1795,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {/* End settings card */}
+        </div>
         )}
       </div>
 
@@ -1988,6 +2163,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      </>
     </Layout>
   );
 }

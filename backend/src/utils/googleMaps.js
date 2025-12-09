@@ -48,19 +48,54 @@ async function calculateDistance(origin, destination) {
 }
 
 /**
- * Calculate shipping fee based on distance
+ * Calculate shipping fee with business rules:
+ * - <= 1km: free
+ * - > 15km: out of range
+ * - 1–15km: distance * pricePerKm (rounded up)
+ *
  * @param {number} distanceInKm - Distance in kilometers
  * @param {number} pricePerKm - Price per kilometer (default: 10000 VND)
- * @returns {number} Shipping fee in VND
+ * @returns {{distance: number, shippingFee: number, status: 'ok'|'error', message: string}}
  */
 function calculateShippingFee(distanceInKm, pricePerKm = 10000) {
-  if (!distanceInKm || distanceInKm <= 0) {
-    return 0;
+  const normalizedDistance = Number(distanceInKm);
+
+  if (Number.isNaN(normalizedDistance) || normalizedDistance < 0) {
+    return {
+      distance: normalizedDistance,
+      shippingFee: 0,
+      status: 'error',
+      message: 'Khoảng cách không hợp lệ'
+    };
   }
-  
-  // Round up to nearest kilometer for fee calculation
-  const roundedDistance = Math.ceil(distanceInKm);
-  return roundedDistance * pricePerKm;
+
+  if (normalizedDistance <= 1) {
+    return {
+      distance: normalizedDistance,
+      shippingFee: 0,
+      status: 'ok',
+      message: 'Miễn phí vận chuyển trong phạm vi 1km'
+    };
+  }
+
+  if (normalizedDistance > 15) {
+    return {
+      distance: normalizedDistance,
+      shippingFee: 0,
+      status: 'error',
+      message: 'Ngoài phạm vi giao hàng'
+    };
+  }
+
+  const roundedDistance = Math.ceil(normalizedDistance);
+  const shippingFee = roundedDistance * pricePerKm;
+
+  return {
+    distance: normalizedDistance,
+    shippingFee,
+    status: 'ok',
+    message: 'Phí giao hàng tạm tính'
+  };
 }
 
 /**

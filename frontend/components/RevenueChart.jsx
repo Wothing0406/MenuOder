@@ -42,10 +42,20 @@ export default function RevenueChart({ data, period = 'month' }) {
         />
         <Tooltip 
           formatter={(value, name) => {
-            if (name === 'revenue') {
-              return [formatVND(value), 'Doanh thu'];
+            const mapping = {
+              revenue: 'Tổng doanh thu',
+              cashRevenue: 'Tiền mặt',
+              bankTransferRevenue: 'Chuyển khoản',
+              zaloPayRevenue: 'ZaloPay',
+              nonCashRevenue: 'Không tiền mặt',
+              orderCount: 'Số đơn',
+              otherRevenue: 'Khác'
+            };
+            const label = mapping[name] || name;
+            if (name === 'orderCount') {
+              return [value, label];
             }
-            return [value, 'Số đơn'];
+            return [formatVND(value), label];
           }}
           labelFormatter={(label) => `Ngày: ${label}`}
           contentStyle={{ 
@@ -73,8 +83,35 @@ export default function RevenueChart({ data, period = 'month' }) {
         />
         <Line 
           type="monotone" 
-          dataKey="orderCount" 
+          dataKey="cashRevenue" 
+          stroke="#f59e0b" 
+          strokeWidth={2}
+          name="Tiền mặt"
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="bankTransferRevenue" 
           stroke="#3b82f6" 
+          strokeWidth={2}
+          name="Chuyển khoản"
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="zaloPayRevenue" 
+          stroke="#8b5cf6" 
+          strokeWidth={2}
+          name="ZaloPay"
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="orderCount" 
+          stroke="#0ea5e9" 
           strokeWidth={2}
           name="Số đơn"
           dot={{ r: 4 }}

@@ -15,7 +15,7 @@ import { DishIcon } from '../../components/Icons';
 export default function StorePage() {
   const router = useRouter();
   const { slug } = router.query;
-  const { addItem, items: cartItems, clearCart } = useCart();
+  const { addItem, items: cartItems, clearCart, removeItem, updateItem } = useCart();
   const [store, setStore] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -32,6 +32,7 @@ export default function StorePage() {
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewTotalPages, setReviewTotalPages] = useState(1);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -402,8 +403,41 @@ export default function StorePage() {
                       <div key={item.id} className="border-b pb-2 last:border-0">
                         <div className="flex justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{item.name}</p>
-                            <p className="text-xs text-gray-600">SL: {item.quantity}</p>
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="font-bold text-sm truncate flex-1">{item.name}</p>
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center text-xs font-bold transition-colors active:scale-95"
+                                title="Xóa món"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-gray-600">SL:</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => updateItem(item.id, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                                    item.quantity <= 1
+                                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700 active:scale-95'
+                                  }`}
+                                >
+                                  −
+                                </button>
+                                <span className="text-xs font-semibold text-gray-700 min-w-[20px] text-center">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => updateItem(item.id, item.quantity + 1)}
+                                  className="w-6 h-6 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center text-xs font-bold transition-all active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
                             {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
                               <p className="text-xs text-gray-500 truncate">
                                 + {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
@@ -415,7 +449,7 @@ export default function StorePage() {
                               </p>
                             )}
                           </div>
-                          <p className="font-bold text-sm whitespace-nowrap">
+                          <p className="font-bold text-sm whitespace-nowrap ml-2">
                             {formatVND(item.subtotal)}
                           </p>
                         </div>
@@ -469,31 +503,157 @@ export default function StorePage() {
 
       {/* Mobile: Floating Cart Button */}
       {cartItems.length > 0 && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-2xl border-t-2 border-purple-300 z-40 safe-area-inset-bottom">
-          <div className="py-3 px-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-2xl flex-shrink-0">🛒</span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-sm text-gray-800 leading-tight">
-                    {cartItems.length} món
-                  </p>
-                  <p className="text-xs text-gray-600 leading-tight">
-                    Tổng: <span className="font-bold text-purple-600 text-sm sm:text-base leading-none inline-block">
-                      {formatVND(cartItems.reduce((acc, item) => acc + item.subtotal, 0))}
-                    </span>
-                  </p>
-                </div>
+        <>
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-2xl border-t-2 border-purple-300 z-40 safe-area-inset-bottom">
+            <div className="py-3 px-4">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setShowMobileCart(true)}
+                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                >
+                  <span className="text-2xl flex-shrink-0">🛒</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-gray-800 leading-tight">
+                      {cartItems.length} món
+                    </p>
+                    <p className="text-xs text-gray-600 leading-tight">
+                      Tổng: <span className="font-bold text-purple-600 text-sm sm:text-base leading-none inline-block">
+                        {formatVND(cartItems.reduce((acc, item) => acc + item.subtotal, 0))}
+                      </span>
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => router.push(`/checkout?store=${slug}`)}
+                  className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0 btn-ripple scale-on-hover"
+                >
+                  Thanh toán
+                </button>
               </div>
-              <button
-                onClick={() => router.push(`/checkout?store=${slug}`)}
-                className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0 btn-ripple scale-on-hover"
-              >
-                Thanh toán
-              </button>
             </div>
           </div>
-        </div>
+
+          {/* Mobile Cart Drawer */}
+          {showMobileCart && (
+            <div className="md:hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 animate-fadeIn">
+              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slideUp">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <span className="text-2xl">🛒</span>
+                    Giỏ hàng ({cartItems.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowMobileCart(false)}
+                    className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Cart Items */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {cartItems.length === 0 ? (
+                    <p className="text-gray-600 text-sm text-center py-8">Giỏ hàng trống</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <p className="font-bold text-sm flex-1">{item.name}</p>
+                            <button
+                              onClick={() => removeItem(item.id)}
+                              className="flex-shrink-0 w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center text-sm font-bold transition-colors active:scale-95"
+                              title="Xóa món"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-gray-600">Số lượng:</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateItem(item.id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                                  item.quantity <= 1
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700 active:scale-95'
+                                }`}
+                              >
+                                −
+                              </button>
+                              <span className="text-sm font-semibold text-gray-700 min-w-[24px] text-center">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => updateItem(item.id, item.quantity + 1)}
+                                className="w-7 h-7 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center text-sm font-bold transition-all active:scale-95"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
+                            <p className="text-xs text-gray-500 mb-1">
+                              + {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
+                            </p>
+                          )}
+                          {item.notes && (
+                            <p className="text-xs text-blue-600 italic mb-2">
+                              {item.notes}
+                            </p>
+                          )}
+                          
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                            <span className="text-xs text-gray-600">Thành tiền:</span>
+                            <p className="font-bold text-sm text-purple-600">
+                              {formatVND(item.subtotal)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                {cartItems.length > 0 && (
+                  <div className="border-t border-gray-200 p-4 bg-white">
+                    <div className="flex justify-between items-center font-bold mb-3">
+                      <span>Tổng cộng:</span>
+                      <span className="text-purple-600 text-lg">
+                        {formatVND(cartItems.reduce((acc, item) => acc + item.subtotal, 0))}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          clearCart();
+                          setShowMobileCart(false);
+                        }}
+                        className="btn btn-secondary flex-1 text-sm btn-ripple scale-on-hover"
+                      >
+                        Xóa giỏ hàng
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMobileCart(false);
+                          router.push(`/checkout?store=${slug}`);
+                        }}
+                        className="btn btn-primary flex-1 btn-ripple scale-on-hover"
+                      >
+                        Thanh toán
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Item Detail Modal */}

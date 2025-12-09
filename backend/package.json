@@ -10,6 +10,7 @@
     "reset-db": "node scripts/reset-db.js",
     "apply-migration": "node scripts/apply-migration.js",
     "migrate-db": "node scripts/migrate-database.js",
+    "migrate:all": "node scripts/run-all-migrations.js",
     "add-role-column": "node scripts/add-role-column.js",
     "test-db": "node scripts/test-db-connection.js",
     "test-api": "node scripts/test-backend-api.js"

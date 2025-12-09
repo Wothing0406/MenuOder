@@ -74,6 +74,7 @@ app.use('/api/qr', require('./routes/qrRoutes'));
 app.use('/api/utils', require('./routes/utilsRoutes'));
 app.use('/api/vouchers', require('./routes/voucherRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
+app.use('/api/zalopay', require('./routes/zaloPayRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -74,12 +74,28 @@ const Order = sequelize.define('Order', {
     comment: 'Order status: pending, confirmed, preparing, ready, delivered, completed (paid), cancelled'
   },
   paymentMethod: {
-    type: Sequelize.ENUM('cash', 'bank_transfer', 'credit_card'),
+    type: Sequelize.ENUM('cash', 'bank_transfer', 'credit_card', 'zalopay_qr'),
     defaultValue: 'cash'
   },
   isPaid: {
     type: Sequelize.BOOLEAN,
     defaultValue: false
+  },
+  // ZaloPay fields
+  zaloPayTransactionId: {
+    type: Sequelize.STRING(100),
+    allowNull: true,
+    comment: 'ZaloPay transaction ID (app_trans_id)'
+  },
+  zaloPayStatus: {
+    type: Sequelize.ENUM('pending', 'success', 'failed'),
+    allowNull: true,
+    comment: 'ZaloPay transaction status'
+  },
+  zaloPayQrCode: {
+    type: Sequelize.TEXT,
+    allowNull: true,
+    comment: 'ZaloPay QR code data (URL or image data)'
   },
   voucherId: {
     type: Sequelize.INTEGER,

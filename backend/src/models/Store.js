@@ -53,6 +53,37 @@ const Store = sequelize.define('Store', {
     type: Sequelize.STRING,
     allowNull: true
   },
+  // ZaloPay configuration
+  zaloPayAppId: {
+    type: Sequelize.STRING(100),
+    allowNull: true,
+    comment: 'ZaloPay App ID'
+  },
+  zaloPayKey1: {
+    type: Sequelize.STRING(200),
+    allowNull: true,
+    comment: 'ZaloPay Key 1'
+  },
+  zaloPayKey2: {
+    type: Sequelize.STRING(200),
+    allowNull: true,
+    comment: 'ZaloPay Key 2'
+  },
+  zaloPayMerchantId: {
+    type: Sequelize.STRING(100),
+    allowNull: true,
+    comment: 'ZaloPay Merchant ID (optional)'
+  },
+  zaloPayIsActive: {
+    type: Sequelize.BOOLEAN,
+    defaultValue: false,
+    comment: 'Enable ZaloPay for this store'
+  },
+  zaloPayLink: {
+    type: Sequelize.STRING(500),
+    allowNull: true,
+    comment: 'ZaloPay payment link (optional/manual)'
+  },
   isActive: {
     type: Sequelize.BOOLEAN,
     defaultValue: true

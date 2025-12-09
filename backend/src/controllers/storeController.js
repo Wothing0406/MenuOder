@@ -82,6 +82,16 @@ exports.getStoreBySlug = async (req, res) => {
       storeData.storeImage = getLogoUrl(storeData.storeImage);
     }
 
+    // Expose ZaloPay config flags (no secrets)
+    storeData.zaloPayConfig = {
+      isActive: storeData.zaloPayIsActive || false,
+      appId: storeData.zaloPayAppId || null,
+      merchantId: storeData.zaloPayMerchantId || null,
+      hasKey1: !!storeData.zaloPayKey1,
+      hasKey2: !!storeData.zaloPayKey2,
+      link: storeData.zaloPayLink || null
+    };
+
     res.json({
       success: true,
       data: {
@@ -167,6 +177,16 @@ exports.getMyStore = async (req, res) => {
       storeData.storeImage = getLogoUrl(storeData.storeImage);
     }
 
+    // ZaloPay config (expose non-sensitive flags only)
+    storeData.zaloPayConfig = {
+      isActive: storeData.zaloPayIsActive || false,
+      appId: storeData.zaloPayAppId || null,
+      merchantId: storeData.zaloPayMerchantId || null,
+      hasKey1: !!storeData.zaloPayKey1,
+      hasKey2: !!storeData.zaloPayKey2,
+      link: storeData.zaloPayLink || null
+    };
+
     res.json({
       success: true,
       data: storeData
@@ -184,7 +204,7 @@ exports.getMyStore = async (req, res) => {
 // Update store
 exports.updateStore = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, storeDetailedAddress, storeDescription } = req.body;
+    const { storeName, storePhone, storeAddress, storeDetailedAddress, storeDescription, zaloPayAppId, zaloPayKey1, zaloPayKey2, zaloPayMerchantId, zaloPayIsActive, zaloPayLink } = req.body;
     const logoFile = req.file; // File từ multer
 
     const store = await Store.findOne({
@@ -235,6 +255,13 @@ exports.updateStore = async (req, res) => {
       storeDetailedAddress: storeDetailedAddress !== undefined ? storeDetailedAddress : store.storeDetailedAddress,
       storeDescription: storeDescription || store.storeDescription
     };
+    // ZaloPay config updates (optional)
+    if (zaloPayAppId !== undefined) updateData.zaloPayAppId = zaloPayAppId || null;
+    if (zaloPayKey1 !== undefined) updateData.zaloPayKey1 = zaloPayKey1 || null;
+    if (zaloPayKey2 !== undefined) updateData.zaloPayKey2 = zaloPayKey2 || null;
+    if (zaloPayMerchantId !== undefined) updateData.zaloPayMerchantId = zaloPayMerchantId || null;
+    if (zaloPayIsActive !== undefined) updateData.zaloPayIsActive = !!zaloPayIsActive;
+    if (zaloPayLink !== undefined) updateData.zaloPayLink = zaloPayLink || null;
     
     // Nếu có logo mới, cập nhật
     if (logoPath) {

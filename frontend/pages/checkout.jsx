@@ -14,8 +14,10 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [storeId, setStoreId] = useState(null);
   const [storeAddress, setStoreAddress] = useState(null);
+  const [storeInfo, setStoreInfo] = useState(null); // chứa cấu hình ZaloPay
   const [orderType, setOrderType] = useState('dine_in'); // 'dine_in' or 'delivery'
   const [shippingFee, setShippingFee] = useState(0);
+  const [shippingCalculated, setShippingCalculated] = useState(false);
   const [calculatingShipping, setCalculatingShipping] = useState(false);
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [validatedAddress, setValidatedAddress] = useState(null); // { originalAddress, validatedAddress, coordinates }
@@ -32,16 +34,22 @@ export default function Checkout() {
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherInfo, setVoucherInfo] = useState(null);
   const [applyingVoucher, setApplyingVoucher] = useState(false);
+  // ZaloPay UI states
+  const [showZaloPayQR, setShowZaloPayQR] = useState(false);
+  const [zaloPayQRCode, setZaloPayQRCode] = useState(null);
+  const [zaloPayOrderId, setZaloPayOrderId] = useState(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
     if (!router.query.store) return;
 
-    const fetchStoreId = async () => {
+    const fetchStoreData = async () => {
       try {
         const res = await api.get(`/stores/slug/${router.query.store}`);
         if (res.data.success) {
           setStoreId(res.data.data.store.id);
           setStoreAddress(res.data.data.store.storeAddress);
+          setStoreInfo(res.data.data.store);
         }
       } catch (error) {
         toast.error('Không tìm thấy cửa hàng');
@@ -49,7 +57,7 @@ export default function Checkout() {
       }
     };
 
-    fetchStoreId();
+    fetchStoreData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.store]);
 
@@ -69,6 +77,7 @@ export default function Checkout() {
         deliveryAddress: '',
       }));
       setShippingFee(0);
+      setShippingCalculated(false);
       setValidatedAddress(null);
       setAddressConfirmed(false);
     } else {
@@ -82,6 +91,7 @@ export default function Checkout() {
         setValidatedAddress(null);
         setAddressConfirmed(false);
         setShippingFee(0);
+        setShippingCalculated(false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,6 +113,7 @@ export default function Checkout() {
       setAddressConfirmed(false);
       setValidatedAddress(null);
       setShippingFee(0);
+      setShippingCalculated(false);
       
       try {
         // Validate and geocode address
@@ -127,6 +138,7 @@ export default function Checkout() {
       }
       setValidatedAddress(null);
       setAddressConfirmed(false);
+      setShippingCalculated(false);
     } finally {
         setValidatingAddress(false);
       }
@@ -147,19 +159,22 @@ export default function Checkout() {
         destination: validatedAddress.validatedAddress,
       });
       
-      if (distanceRes.data.success) {
-        const shippingFeeValue = distanceRes.data.data.shippingFee || 0;
-        setShippingFee(shippingFeeValue);
+      const { success, status, shippingFee: fee = 0, message } = distanceRes.data || {};
+
+      if (success && status === 'ok') {
+        setShippingFee(fee);
+        setShippingCalculated(true);
         // Update form data with validated address
         setFormData(prev => ({
           ...prev,
           deliveryAddress: validatedAddress.validatedAddress
         }));
-        toast.success('Địa chỉ đã được xác nhận!');
+        toast.success(message || 'Địa chỉ đã được xác nhận!');
       } else {
-        toast.error(distanceRes.data.message || 'Không thể tính phí ship');
+        toast.error(message || distanceRes.data?.message || 'Không thể tính phí ship');
         setAddressConfirmed(false);
         setShippingFee(0);
+        setShippingCalculated(false);
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -172,6 +187,7 @@ export default function Checkout() {
       }
       setAddressConfirmed(false);
       setShippingFee(0);
+      setShippingCalculated(false);
     } finally {
       setCalculatingShipping(false);
     }
@@ -182,6 +198,7 @@ export default function Checkout() {
     setValidatedAddress(null);
     setAddressConfirmed(false);
     setShippingFee(0);
+    setShippingCalculated(false);
   };
 
   const handleApplyVoucher = async () => {
@@ -220,6 +237,37 @@ export default function Checkout() {
   const handleRemoveVoucher = () => {
     setVoucherInfo(null);
     toast('Đã huỷ voucher');
+  };
+
+  const handleCheckZaloPayStatus = async () => {
+    if (!zaloPayOrderId) return;
+    setCheckingPayment(true);
+    try {
+      const res = await api.get(`/zalopay/check-status/${zaloPayOrderId}`);
+      if (res.data.success) {
+        const status = res.data.data.status;
+        if (status === 'success') {
+          toast.success('Thanh toán ZaloPay thành công!');
+          const storeSlug = router.query.store;
+          router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+          return;
+        } else if (status === 'failed') {
+          toast.error('Thanh toán ZaloPay thất bại. Vui lòng thử lại hoặc chọn phương thức khác.');
+        } else {
+          toast('Thanh toán đang chờ. Vui lòng thử lại sau vài giây.', { icon: '⏳' });
+        }
+      } else {
+        toast.error(res.data?.message || 'Không kiểm tra được trạng thái ZaloPay.');
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Check ZaloPay status error:', error);
+        console.error('Error response:', error.response?.data);
+      }
+      toast.error(error.response?.data?.message || 'Không kiểm tra được trạng thái thanh toán.');
+    } finally {
+      setCheckingPayment(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -307,11 +355,36 @@ export default function Checkout() {
       const res = await api.post('/orders', orderPayload);
 
       if (res.data.success) {
+        const newOrderId = res.data.data.id;
+
+        // Nếu chọn ZaloPay QR: tạo QR sau khi tạo order
+        if (formData.paymentMethod === 'zalopay_qr') {
+          try {
+            const qrRes = await api.post(`/zalopay/create-qr/${newOrderId}`);
+            if (qrRes.data.success) {
+              setZaloPayQRCode(qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode);
+              setZaloPayOrderId(newOrderId);
+              setShowZaloPayQR(true);
+              clearCart();
+              toast.success('Đã tạo QR ZaloPay. Quét mã để thanh toán.');
+              return; // giữ lại modal, không redirect ngay
+            } else {
+              toast.error(qrRes.data?.message || 'Không thể tạo QR ZaloPay. Vui lòng thanh toán bằng phương thức khác.');
+            }
+          } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error creating ZaloPay QR:', error);
+              console.error('Error response:', error.response?.data);
+            }
+            toast.error(error.response?.data?.message || 'Không thể tạo QR ZaloPay. Vui lòng thử lại hoặc chọn phương thức khác.');
+          }
+        }
+
+        // Default flow cho các phương thức khác
         toast.success('Đặt hàng thành công!');
         clearCart();
-        // Redirect to order success page with store slug
         const storeSlug = router.query.store;
-        router.push(`/order-success/${res.data.data.id}${storeSlug ? `?store=${storeSlug}` : ''}`);
+        router.push(`/order-success/${newOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -461,7 +534,11 @@ export default function Checkout() {
                 <div className="flex justify-between text-xs md:text-sm text-gray-600">
                   <span>Phí giao hàng:</span>
                   <span className="font-semibold">
-                    {shippingFee > 0 ? formatVND(shippingFee) : calculatingShipping ? 'Đang tính...' : 'Chưa tính'}
+                    {calculatingShipping
+                      ? 'Đang tính...'
+                      : shippingCalculated
+                        ? formatVND(shippingFee)
+                        : 'Chưa tính'}
                   </span>
                 </div>
               )}
@@ -608,6 +685,7 @@ export default function Checkout() {
                           setAddressConfirmed(false);
                           setValidatedAddress(null);
                           setShippingFee(0);
+                      setShippingCalculated(false);
                         }
                       }}
                       onBlur={handleDeliveryAddressBlur}
@@ -700,17 +778,20 @@ export default function Checkout() {
                 >
                   <option value="cash">Tiền mặt</option>
                   <option value="bank_transfer">Chuyển khoản</option>
+                {storeInfo?.zaloPayConfig?.isActive && storeInfo?.zaloPayConfig?.appId && storeInfo?.zaloPayConfig?.hasKey1 && (
+                  <option value="zalopay_qr">ZaloPay QR (tự điền số tiền)</option>
+                )}
                 </select>
               </div>
 
               <button
                 type="submit"
-                disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && !addressConfirmed)}
+                disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && (!addressConfirmed || !shippingCalculated))}
                 className="btn btn-primary w-full mt-3 py-3 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed btn-ripple scale-on-hover"
               >
                 {loading ? 'Đang đặt hàng...' : 'Đặt hàng ngay'}
               </button>
-              {orderType === 'delivery' && !addressConfirmed && (
+              {orderType === 'delivery' && (!addressConfirmed || !shippingCalculated) && (
                 <p className="text-xs text-red-600 mt-1.5 text-center">
                   ⚠️ Vui lòng xác nhận địa chỉ giao hàng
                 </p>
@@ -719,6 +800,50 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Modal ZaloPay QR */}
+      {showZaloPayQR && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4 relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowZaloPayQR(false)}
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-bold text-center text-purple-700">Quét mã ZaloPay</h3>
+            <p className="text-sm text-gray-600 text-center">
+              Vui lòng mở ZaloPay và quét mã bên dưới. Số tiền sẽ tự điền.
+            </p>
+            {zaloPayQRCode ? (
+              <div className="flex justify-center">
+                <img
+                  src={zaloPayQRCode}
+                  alt="ZaloPay QR"
+                  className="w-64 h-64 object-contain border border-gray-200 rounded-xl shadow-sm"
+                />
+              </div>
+            ) : (
+              <p className="text-center text-sm text-gray-500">Đang tải QR...</p>
+            )}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleCheckZaloPayStatus}
+                disabled={checkingPayment}
+                className="btn btn-primary w-full"
+              >
+                {checkingPayment ? 'Đang kiểm tra...' : 'Tôi đã thanh toán'}
+              </button>
+              <button
+                onClick={() => setShowZaloPayQR(false)}
+                className="btn btn-secondary w-full"
+              >
+                Đóng (thanh toán sau)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -197,7 +197,32 @@ exports.createOrder = async (req, res) => {
         );
         
         deliveryDistance = distanceResult.distance;
-        shippingFee = calculateShippingFee(deliveryDistance, 10000); // 12,000 VND per km
+
+        // Enforce hard business rules for delivery distance
+        if (deliveryDistance > 15) {
+          return res.status(400).json({
+            success: false,
+            message: 'Ngoài phạm vi giao hàng'
+          });
+        }
+
+        const shippingResult = calculateShippingFee(deliveryDistance, 10000); // business rules handled internally
+
+        if (shippingResult.status === 'error') {
+          return res.status(400).json({
+            success: false,
+            message: shippingResult.message || 'Không thể tính phí giao hàng'
+          });
+        }
+
+        shippingFee = shippingResult.shippingFee;
+        // Optionally surface message/status for client if needed later
+        req.shippingInfo = {
+          distance: deliveryDistance,
+          status: shippingResult.status,
+          message: shippingResult.message,
+          shippingFee
+        };
 
         console.log('Delivery calculation:', {
           origin: store.storeAddress,
@@ -798,7 +823,7 @@ exports.getRevenueChartData = async (req, res) => {
       startDate.setHours(0, 0, 0, 0);
     }
 
-    // Get orders grouped by date
+    // Get orders grouped by date & payment method to build breakdown by channel
     const orders = await Order.findAll({
       where: {
         storeId: store.id,
@@ -809,20 +834,56 @@ exports.getRevenueChartData = async (req, res) => {
       },
       attributes: [
         [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'date'],
+        'paymentMethod',
         [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'revenue'],
         [Sequelize.fn('COUNT', Sequelize.col('id')), 'orderCount']
       ],
-      group: [Sequelize.fn('DATE', Sequelize.col('createdAt'))],
-      order: [[Sequelize.fn('DATE', Sequelize.col('createdAt')), 'ASC']],
+      group: [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'paymentMethod'],
+      order: [
+        [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'ASC']
+      ],
       raw: true
     });
 
-    // Format data for chart
-    const chartData = orders.map(item => ({
-      date: item.date,
-      revenue: parseFloat(item.revenue || 0),
-      orderCount: parseInt(item.orderCount || 0)
-    }));
+    // Aggregate revenue by payment method for each date
+    const aggregatedByDate = {};
+    orders.forEach(item => {
+      const dateKey = item.date;
+      if (!aggregatedByDate[dateKey]) {
+        aggregatedByDate[dateKey] = {
+          date: dateKey,
+          revenue: 0,
+          orderCount: 0,
+          cashRevenue: 0,
+          bankTransferRevenue: 0,
+          zaloPayRevenue: 0,
+          otherRevenue: 0
+        };
+      }
+
+      const revenue = parseFloat(item.revenue || 0);
+      const count = parseInt(item.orderCount || 0);
+      aggregatedByDate[dateKey].revenue += revenue;
+      aggregatedByDate[dateKey].orderCount += count;
+
+      const method = item.paymentMethod || 'cash';
+      if (method === 'cash') {
+        aggregatedByDate[dateKey].cashRevenue += revenue;
+      } else if (method === 'bank_transfer') {
+        aggregatedByDate[dateKey].bankTransferRevenue += revenue;
+      } else if (method === 'zalopay_qr') {
+        aggregatedByDate[dateKey].zaloPayRevenue += revenue;
+      } else {
+        aggregatedByDate[dateKey].otherRevenue += revenue;
+      }
+    });
+
+    const chartData = Object.values(aggregatedByDate)
+      .map(item => ({
+        ...item,
+        nonCashRevenue: item.bankTransferRevenue + item.zaloPayRevenue + item.otherRevenue
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     res.json({
       success: true,
@@ -1151,22 +1212,47 @@ exports.calculateShipping = async (req, res) => {
     }
 
     const distanceResult = await calculateDistance(origin, destination);
-    const shippingFee = calculateShippingFee(distanceResult.distance, 10000);
+    const distance = distanceResult.distance;
+
+    // Enforce business limits explicitly
+    if (distance > 15) {
+      return res.status(400).json({
+        success: false,
+        distance,
+        shippingFee: 0,
+        status: 'error',
+        message: 'Ngoài phạm vi giao hàng'
+      });
+    }
+
+    const shippingResult = calculateShippingFee(distance, 10000);
+
+    if (shippingResult.status === 'error') {
+      return res.status(400).json({
+        success: false,
+        distance: shippingResult.distance,
+        shippingFee: shippingResult.shippingFee,
+        status: 'error',
+        message: shippingResult.message
+      });
+    }
 
     res.json({
       success: true,
-      data: {
-        distance: distanceResult.distance,
-        duration: distanceResult.duration,
-        shippingFee: shippingFee
-      }
+      distance: shippingResult.distance,
+      shippingFee: shippingResult.shippingFee,
+      status: 'ok',
+      message: shippingResult.message || 'Tính phí giao hàng thành công',
+      duration: distanceResult.duration
     });
   } catch (error) {
     console.error('Calculate shipping error:', error);
     res.status(400).json({
       success: false,
-      message: `Không thể tính khoảng cách: ${error.message}`,
-      error: error.message
+      distance: null,
+      shippingFee: 0,
+      status: 'error',
+      message: `Không thể tính khoảng cách: ${error.message}`
     });
   }
 };
