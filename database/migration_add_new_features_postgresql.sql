@@ -8,18 +8,9 @@ ADD COLUMN IF NOT EXISTS storeGoogleMapLink VARCHAR(500);
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS orderType TEXT NOT NULL DEFAULT 'dine_in';
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.constraint_column_usage
-    WHERE table_name = 'orders'
-      AND constraint_name = 'orders_orderType_check'
-  ) THEN
-    ALTER TABLE orders
-    ADD CONSTRAINT orders_orderType_check CHECK (orderType IN ('dine_in', 'delivery'));
-  END IF;
-END $$;
+-- Add check constraint; safe to re-run because runner skips "already exists"
+ALTER TABLE orders
+ADD CONSTRAINT orders_orderType_check CHECK (orderType IN ('dine_in', 'delivery'));
 
 -- deliveryAddress
 ALTER TABLE orders
