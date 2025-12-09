@@ -5,7 +5,7 @@
 
 -- For PostgreSQL
 ALTER TABLE order_items 
-  ALTER COLUMN itemId DROP NOT NULL;
+  ALTER COLUMN "itemId" DROP NOT NULL;
 
 -- Drop the old foreign key constraint (adjust constraint name if different)
 ALTER TABLE order_items 
@@ -14,5 +14,5 @@ ALTER TABLE order_items
 -- Add the new foreign key constraint with ON DELETE SET NULL
 ALTER TABLE order_items 
   ADD CONSTRAINT order_items_itemId_fkey 
-  FOREIGN KEY (itemId) REFERENCES items(id) ON DELETE SET NULL;
+  FOREIGN KEY ("itemId") REFERENCES items(id) ON DELETE SET NULL;
 
