@@ -51,7 +51,7 @@ const MIGRATIONS_MYSQL = [
 ];
 
 const MIGRATIONS_POSTGRES = [
-  'migration_add_new_features.sql', // generic, mostly MySQL-safe, skip if errors
+  'migration_add_new_features_postgresql.sql',
   'migration_add_completed_status_postgresql.sql',
   'migration_fix_item_deletion_postgresql.sql',
   'migration_add_reviews_postgresql.sql'
