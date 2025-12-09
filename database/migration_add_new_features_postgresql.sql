@@ -8,7 +8,8 @@ ADD COLUMN IF NOT EXISTS storeGoogleMapLink VARCHAR(500);
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS orderType TEXT NOT NULL DEFAULT 'dine_in';
 
--- Add check constraint; safe to re-run because runner skips "already exists"
+
+-- Add check constraint (runner will skip "already exists" errors)
 ALTER TABLE orders
 ADD CONSTRAINT orders_orderType_check CHECK (orderType IN ('dine_in', 'delivery'));
 
