@@ -44,3 +44,11 @@
     "nodemon": "^3.0.1"
   }
 }
+
+    "cloudinary": "^1.41.0",
+    "multer-storage-cloudinary": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

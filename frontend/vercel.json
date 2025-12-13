@@ -11,15 +11,3 @@
 }
 
 
-
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "crons": [
-    {
-      "path": "/api/ping-render",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
-
-

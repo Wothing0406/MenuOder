@@ -32,3 +32,13 @@ $$;
 -- Add comment
 COMMENT ON COLUMN orders."paymentAccountId" IS 'Reference to payment account used for this order';
 
+
+      REFERENCES payment_accounts(id) 
+      ON DELETE SET NULL;
+  END IF;
+END
+$$;
+
+-- Add comment
+COMMENT ON COLUMN orders."paymentAccountId" IS 'Reference to payment account used for this order';
+

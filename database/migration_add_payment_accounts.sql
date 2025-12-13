@@ -54,3 +54,18 @@ SET @sql = IF(@constraint_exists = 0,
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+  SELECT COUNT(*) 
+  FROM information_schema.table_constraints 
+  WHERE constraint_schema = DATABASE()
+    AND table_name = 'payment_accounts'
+    AND constraint_name = 'unique_default_per_store_type'
+);
+
+SET @sql = IF(@constraint_exists = 0,
+  'ALTER TABLE payment_accounts ADD CONSTRAINT unique_default_per_store_type UNIQUE (storeId, accountType, isDefault)',
+  'SELECT "Constraint already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

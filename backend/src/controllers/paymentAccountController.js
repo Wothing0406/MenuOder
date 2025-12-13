@@ -820,3 +820,411 @@ exports.getActivePaymentAccounts = async (req, res) => {
     });
   }
 };
+        isActive: newAccount.isActive,
+        ...(newAccount.accountType === 'bank_transfer' ? {
+          bankAccountNumber: newAccount.bankAccountNumber,
+          bankAccountNumberLength: newAccount.bankAccountNumber?.length
+        } : {})
+      });
+
+      // Verify account was actually saved to database
+      const verifyAccount = await PaymentAccount.findByPk(newAccount.id);
+      if (!verifyAccount) {
+        console.error('❌ CRITICAL: Account was created but not found in database!');
+        return res.status(500).json({
+          success: false,
+          message: 'Tài khoản đã được tạo nhưng không thể xác nhận trong database'
+        });
+      }
+      console.log(`✅ Verified: Account ${newAccount.id} exists in database with STK: ${verifyAccount.bankAccountNumber || 'N/A'}`);
+
+      // Return full account data to frontend
+      const accountData = {
+        id: newAccount.id,
+        accountType: newAccount.accountType,
+        accountName: newAccount.accountName,
+        isActive: newAccount.isActive,
+        isDefault: newAccount.isDefault,
+        isVerified: newAccount.isVerified,
+        verifiedAt: newAccount.verifiedAt,
+        verificationError: newAccount.verificationError,
+        ...(newAccount.accountType === 'bank_transfer' ? {
+          bankAccountNumber: newAccount.bankAccountNumber ? String(newAccount.bankAccountNumber) : null,
+          bankAccountName: newAccount.bankAccountName,
+          bankName: newAccount.bankName,
+          bankCode: newAccount.bankCode
+        } : {}),
+        createdAt: newAccount.createdAt,
+        updatedAt: newAccount.updatedAt
+      };
+
+      res.json({
+        success: true,
+        message: isVerified 
+          ? 'Tài khoản thanh toán đã được tạo và xác thực thành công'
+          : 'Tài khoản thanh toán đã được tạo nhưng chưa xác thực được',
+        data: accountData
+      });
+    } catch (createError) {
+      // Rollback transaction on error
+      await transaction.rollback();
+      console.error('❌ Error creating payment account (transaction rolled back):', createError);
+      throw createError; // Re-throw to be caught by outer catch
+    }
+  } catch (error) {
+    console.error('❌ Create payment account error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      ...(error.parent ? {
+        parentMessage: error.parent.message,
+        parentCode: error.parent.code,
+        parentErrno: error.parent.errno
+      } : {})
+    });
+    
+    // Check if it's a database constraint error
+    if (error.name === 'SequelizeUniqueConstraintError' || error.name === 'SequelizeDatabaseError') {
+      console.error('❌ Database constraint error - account may not have been saved');
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create payment account',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Update payment account
+ */
+exports.updatePaymentAccount = async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const updateData = req.body;
+
+    const account = await PaymentAccount.findByPk(accountId);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tài khoản thanh toán'
+      });
+    }
+
+    // If setting as default, unset other defaults of same type (but not this account)
+    if (updateData.isDefault) {
+      const { Op } = require('sequelize');
+      console.log(`🔄 Setting account ${accountId} as default. Unsetting other ${account.accountType} defaults for store ${account.storeId}...`);
+      const unsetResult = await PaymentAccount.update(
+        { isDefault: false },
+        { 
+          where: { 
+            storeId: account.storeId, 
+            accountType: account.accountType,
+            id: { [Op.ne]: accountId } // Don't unset the account being updated
+          } 
+        }
+      );
+      console.log(`✅ Unset ${unsetResult[0]} other ${account.accountType} accounts from default`);
+    }
+
+    // Re-verify bank account if bank details changed
+    if (account.accountType === 'bank_transfer' && 
+        (updateData.bankAccountNumber || updateData.bankAccountName || updateData.bankName || updateData.bankCode)) {
+      try {
+        // Ensure full account number is preserved
+        if (updateData.bankAccountNumber) {
+          updateData.bankAccountNumber = String(updateData.bankAccountNumber).trim();
+          console.log('Updating bank account number:', {
+            accountId,
+            bankAccountNumber: updateData.bankAccountNumber,
+            bankAccountNumberLength: updateData.bankAccountNumber.length
+          });
+        }
+        
+        const accountNumber = updateData.bankAccountNumber || account.bankAccountNumber;
+        const accountName = updateData.bankAccountName || account.bankAccountName;
+        const bankName = updateData.bankName || account.bankName;
+        let bankCodeToUse = updateData.bankCode || account.bankCode;
+        
+        if (!bankCodeToUse && bankName) {
+          bankCodeToUse = getBankCode(bankName);
+        }
+        
+        if (accountNumber && accountName && bankCodeToUse) {
+          const verification = await verifyBankAccount(
+            String(accountNumber).trim(),
+            bankCodeToUse,
+            String(accountName).trim()
+          );
+          
+          if (verification.verified) {
+            updateData.isVerified = true;
+            updateData.verifiedAt = new Date();
+            updateData.verificationError = null;
+          } else {
+            updateData.isVerified = false;
+            updateData.verificationError = verification.error || verification.warning || 'Tài khoản chưa được xác thực';
+          }
+        }
+      } catch (error) {
+        console.error('Bank account re-verification error:', error);
+        updateData.isVerified = false;
+        updateData.verificationError = 'Lỗi khi xác thực lại tài khoản';
+      }
+    }
+    
+    // Re-verify if credentials changed
+    if (account.accountType === 'zalopay' && 
+        (updateData.zaloPayAppId || updateData.zaloPayKey1 || updateData.zaloPayKey2)) {
+      try {
+        const verifyResult = await verifyZaloPayCredentials({
+          zaloPayAppId: updateData.zaloPayAppId || account.zaloPayAppId,
+          zaloPayKey1: updateData.zaloPayKey1 || account.zaloPayKey1,
+          zaloPayKey2: updateData.zaloPayKey2 || account.zaloPayKey2,
+          zaloPayMerchantId: updateData.zaloPayMerchantId || account.zaloPayMerchantId
+        });
+        
+        if (verifyResult.success) {
+          updateData.isVerified = true;
+          updateData.verifiedAt = new Date();
+          updateData.verificationError = null;
+        } else {
+          updateData.isVerified = false;
+          updateData.verificationError = verifyResult.return_message || 'Xác thực ZaloPay thất bại';
+        }
+      } catch (error) {
+        updateData.isVerified = false;
+        updateData.verificationError = error.message || 'Lỗi khi xác thực tài khoản';
+      }
+    }
+
+    await account.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'Cập nhật tài khoản thanh toán thành công',
+      data: { id: account.id }
+    });
+  } catch (error) {
+    console.error('Update payment account error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update payment account'
+    });
+  }
+};
+
+/**
+ * Delete payment account
+ */
+exports.deletePaymentAccount = async (req, res) => {
+  try {
+    const { accountId } = req.params;
+
+    const account = await PaymentAccount.findByPk(accountId);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tài khoản thanh toán'
+      });
+    }
+
+    await account.destroy();
+
+    res.json({
+      success: true,
+      message: 'Xóa tài khoản thanh toán thành công'
+    });
+  } catch (error) {
+    console.error('Delete payment account error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete payment account'
+    });
+  }
+};
+
+/**
+ * Verify payment account credentials
+ */
+exports.verifyPaymentAccount = async (req, res) => {
+  try {
+    const { accountId } = req.params;
+
+    const account = await PaymentAccount.findByPk(accountId);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tài khoản thanh toán'
+      });
+    }
+
+    let isVerified = false;
+    let verificationError = null;
+
+    try {
+      if (account.accountType === 'bank_transfer') {
+        // Verify bank account using API
+        if (!account.bankAccountNumber || !account.bankAccountName || !account.bankName) {
+          verificationError = 'Thông tin tài khoản ngân hàng không đầy đủ';
+        } else {
+          let bankCodeToUse = account.bankCode;
+          if (!bankCodeToUse && account.bankName) {
+            bankCodeToUse = getBankCode(account.bankName);
+          }
+          
+          if (bankCodeToUse) {
+            const verification = await verifyBankAccount(
+              account.bankAccountNumber.trim(),
+              bankCodeToUse,
+              account.bankAccountName.trim()
+            );
+            
+            if (verification.verified) {
+              isVerified = true;
+            } else {
+              verificationError = verification.error || verification.warning || 'Không thể xác thực tài khoản';
+            }
+          } else {
+            // Basic validation if no bank code
+            const basicCheck = basicBankAccountValidation(
+              account.bankAccountNumber.trim(),
+              '',
+              account.bankAccountName.trim()
+            );
+            if (basicCheck.success && !basicCheck.requiresManualVerification) {
+              isVerified = true;
+            } else {
+              verificationError = 'Mã ngân hàng không hợp lệ. Không thể xác thực tài khoản.';
+            }
+          }
+        }
+      } else if (account.accountType === 'zalopay') {
+        const verifyResult = await verifyZaloPayCredentials({
+          zaloPayAppId: account.zaloPayAppId,
+          zaloPayKey1: account.zaloPayKey1,
+          zaloPayKey2: account.zaloPayKey2,
+          zaloPayMerchantId: account.zaloPayMerchantId
+        });
+        
+        if (verifyResult.success) {
+          isVerified = true;
+        } else {
+          verificationError = verifyResult.return_message || 'Xác thực ZaloPay thất bại';
+        }
+      }
+    } catch (error) {
+      verificationError = error.message || 'Lỗi khi xác thực tài khoản';
+    }
+
+    // Update verification status
+    await account.update({
+      isVerified,
+      verifiedAt: isVerified ? new Date() : null,
+      verificationError
+    });
+
+    res.json({
+      success: isVerified,
+      message: isVerified ? 'Xác thực tài khoản thành công' : 'Xác thực tài khoản thất bại',
+      data: {
+        isVerified,
+        verificationError
+      }
+    });
+  } catch (error) {
+    console.error('Verify payment account error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to verify payment account'
+    });
+  }
+};
+
+/**
+ * Get active payment accounts for checkout (public endpoint)
+ */
+exports.getActivePaymentAccounts = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    // Get active accounts for checkout (allow unverified if store owner has set them as active)
+    // Only the default account (set by store owner) will be used for QR generation
+    // For bank_transfer: Return active accounts (verified preferred, but allow unverified if store owner enabled them)
+    const accounts = await PaymentAccount.findAll({
+      where: { 
+        storeId, 
+        isActive: true
+        // Return active accounts - store owner controls visibility via isActive
+        // Verification is preferred but not strictly required if store owner has enabled the account
+      },
+      order: [['accountType', 'ASC'], ['isVerified', 'DESC'], ['isDefault', 'DESC'], ['accountName', 'ASC']]
+    });
+    
+    console.log(`🔍 Found ${accounts.length} active and verified payment accounts for store ${storeId}`);
+    accounts.forEach(acc => {
+      if (acc.accountType === 'bank_transfer') {
+        console.log(`  💳 Bank Account ${acc.id}:`, {
+          accountName: acc.accountName,
+          bankName: acc.bankName,
+          bankAccountNumber: acc.bankAccountNumber,
+          bankAccountNumberLength: acc.bankAccountNumber?.length,
+          isActive: acc.isActive,
+          isVerified: acc.isVerified,
+          isDefault: acc.isDefault,
+          isDefaultString: acc.isDefault ? '✅ DEFAULT' : '❌ NOT DEFAULT'
+        });
+      }
+    });
+    
+    // Check if there's a default bank account
+    const defaultBankAccount = accounts.find(acc => 
+      acc.accountType === 'bank_transfer' && acc.isDefault
+    );
+    if (defaultBankAccount) {
+      console.log(`✅ Default bank account for QR: ${defaultBankAccount.accountName} (${defaultBankAccount.bankName} - ${defaultBankAccount.bankAccountNumber})`);
+    } else {
+      console.warn(`⚠️ No default bank account found for store ${storeId}! Checkout will use first available account.`);
+    }
+
+    // Group by account type for easier frontend handling
+    const groupedAccounts = {
+      bank_transfer: [],
+      zalopay: []
+    };
+
+    accounts.forEach(account => {
+      const accountData = {
+        id: account.id,
+        accountName: account.accountName,
+        isDefault: account.isDefault
+      };
+
+      if (account.accountType === 'bank_transfer') {
+        // For bank_transfer: Return all active accounts, but mark which one is default
+        accountData.bankName = account.bankName;
+        accountData.bankAccountNumber = account.bankAccountNumber;
+        accountData.bankAccountName = account.bankAccountName;
+        groupedAccounts.bank_transfer.push(accountData);
+      } else if (account.accountType === 'zalopay') {
+        // For ZaloPay: Return all accounts (can have multiple)
+        accountData.zaloPayAppId = account.zaloPayAppId;
+        groupedAccounts.zalopay.push(accountData);
+      }
+    });
+
+    res.json({
+      success: true,
+      data: groupedAccounts
+    });
+  } catch (error) {
+    console.error('Get active payment accounts error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get active payment accounts'
+    });
+  }
+};

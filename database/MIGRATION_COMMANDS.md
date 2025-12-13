@@ -67,3 +67,6 @@ Kiểm tra xem có cột `storeDetailedAddress` chưa.
 - Dùng `apply-migration` khi muốn giữ lại dữ liệu
 - Dùng `reset-db` khi muốn bắt đầu lại với dữ liệu mẫu
 
+
+- Dùng `reset-db` khi muốn bắt đầu lại với dữ liệu mẫu
+

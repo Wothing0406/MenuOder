@@ -1016,3 +1016,558 @@ export default function PaymentAccountManager({ storeId }) {
     </div>
   );
 }
+                      <CheckCircleIcon className="w-3 h-3" />
+                      Tài khoản QR mặc định
+                    </span>
+                  )}
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    account.isVerified 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {account.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    account.isActive 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {account.isActive ? 'Hiển thị' : 'Ẩn'}
+                  </span>
+                </div>
+                
+                {account.accountType === 'bank_transfer' ? (
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Ngân hàng:</strong> {account.bankName}</p>
+                    <p><strong>STK:</strong> {account.bankAccountNumber}</p>
+                    <p><strong>Chủ TK:</strong> {account.bankAccountName}</p>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>App ID:</strong> {account.zaloPayAppId}</p>
+                    <p><strong>Merchant ID:</strong> {account.zaloPayMerchantId || 'Không có'}</p>
+                    <p><strong>Key 1:</strong> {account.hasKey1 ? 'Đã cấu hình' : 'Chưa cấu hình'}</p>
+                  </div>
+                )}
+                
+                {account.verificationError && (
+                  <p className="text-sm text-red-600 mt-2">
+                    <strong>Lỗi xác thực:</strong> {account.verificationError}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex gap-2 items-center flex-wrap">
+                {/* Button to set as default for bank_transfer accounts - Allow even if not verified */}
+                {account.accountType === 'bank_transfer' && !account.isDefault && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        console.log(`Setting account ${account.id} (${account.accountName}) as default...`);
+                        const res = await api.put(`/payment-accounts/${account.id}`, {
+                          isDefault: true
+                        });
+                        if (res.data.success) {
+                          console.log(`Successfully set account ${account.id} as default`);
+                          toast.success(`Đã chọn "${account.accountName}" làm tài khoản mặc định cho QR code`);
+                          await fetchAccounts();
+                        } else {
+                          console.error('Failed to set default:', res.data);
+                          toast.error(res.data.message || 'Không thể cập nhật tài khoản mặc định');
+                        }
+                      } catch (error) {
+                        console.error('Error setting default account:', error);
+                        console.error('Error response:', error.response?.data);
+                        toast.error(error.response?.data?.message || 'Không thể cập nhật tài khoản mặc định');
+                      }
+                    }}
+                    className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  >
+                    <span className="absolute inset-0 bg-gradient-to-r from-blue-700 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                    <TargetIcon className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Đặt làm QR mặc định</span>
+                  </button>
+                )}
+                {/* Only show active toggle for verified accounts */}
+                {account.isVerified && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={account.isActive}
+                      onChange={async (e) => {
+                        try {
+                          const res = await api.put(`/payment-accounts/${account.id}`, {
+                            isActive: e.target.checked
+                          });
+                          if (res.data.success) {
+                            toast.success(e.target.checked ? 'Tài khoản đã được hiển thị' : 'Tài khoản đã được ẩn');
+                            await fetchAccounts();
+                          }
+                        } catch (error) {
+                          console.error('Error updating account active status:', error);
+                          toast.error(error.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
+                        }
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-xs text-gray-600">Hiển thị cho khách</span>
+                  </label>
+                )}
+                {!account.isVerified && (
+                  <button
+                    onClick={() => handleVerify(account.id)}
+                    disabled={verifying[account.id]}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {verifying[account.id] ? 'Đang xác thực...' : 'Xác thực'}
+                  </button>
+                )}
+                <button
+                  onClick={() => handleEdit(account)}
+                  className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-gray-700 to-gray-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                  <EditIcon className="w-4 h-4 relative z-10" />
+                  <span className="relative z-10">Sửa</span>
+                </button>
+                <button
+                  onClick={() => handleDelete(account.id)}
+                  className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                  <DeleteIcon className="w-4 h-4 relative z-10" />
+                  <span className="relative z-10">Xóa</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          );
+        })}
+        
+        {accounts.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            Chưa có tài khoản thanh toán nào. Thêm tài khoản để khách hàng có thể thanh toán online.
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Form Modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl max-w-2xl w-full min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-hidden flex flex-col animate-scaleIn m-0 sm:m-auto">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-5 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {formData.accountType === 'bank_transfer' ? (
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <BankIcon className="w-6 h-6 text-white" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <WalletIcon className="w-6 h-6 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-xl font-bold">
+                      {editingAccount ? 'Sửa tài khoản' : 'Thêm tài khoản thanh toán'}
+                    </h3>
+                    <p className="text-sm text-white/90 mt-0.5">
+                      {formData.accountType === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : 'ZaloPay'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditingAccount(null);
+                    setBankSearchQuery('');
+                    setBankSearchResults([]);
+                    setShowBankDropdown(false);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
+                >
+                  <CloseIcon className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Form Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Loại tài khoản</label>
+                <select
+                  value={formData.accountType}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountType: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none bg-white"
+                  disabled={editingAccount}
+                >
+                  <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                  <option value="zalopay">ZaloPay</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Tên hiển thị <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.accountName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                  placeholder="VD: Tài khoản chính, TK dự phòng..."
+                  required
+                />
+              </div>
+
+              <div className="space-y-4">
+                {/* For bank_transfer: Only allow 1 default account (radio button) */}
+                {formData.accountType === 'bank_transfer' ? (
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                    <label className="block text-sm font-bold mb-3 text-blue-900">
+                      Chọn tài khoản mặc định để hiển thị QR
+                    </label>
+                    <div className="space-y-2">
+                      {accounts
+                        .filter(acc => acc.accountType === 'bank_transfer')
+                        .map(acc => (
+                          <div key={acc.id} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="defaultBankAccount"
+                              id={`defaultBank_${acc.id}`}
+                              checked={
+                                editingAccount 
+                                  ? (editingAccount.id === acc.id && formData.isDefault)
+                                  : acc.isDefault
+                              }
+                              onChange={() => {
+                                if (editingAccount && editingAccount.id === acc.id) {
+                                  // If editing this account, set it as default
+                                  setFormData(prev => ({ ...prev, isDefault: true }));
+                                }
+                                // If not editing, can't change other accounts' default status
+                              }}
+                              disabled={editingAccount && editingAccount.id !== acc.id}
+                            />
+                            <label htmlFor={`defaultBank_${acc.id}`} className="text-sm text-gray-700">
+                              {acc.accountName} - {acc.bankName} ({acc.bankAccountNumber})
+                              {acc.isDefault && !editingAccount && <span className="text-green-600 ml-1">(Hiện tại)</span>}
+                            </label>
+                          </div>
+                        ))}
+                      {accounts.filter(acc => acc.accountType === 'bank_transfer').length === 0 && (
+                        <p className="text-xs text-gray-500">Chưa có tài khoản ngân hàng nào</p>
+                      )}
+                      {!editingAccount && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="defaultBankAccount"
+                            id="defaultBank_new"
+                            checked={formData.isDefault && !accounts.some(acc => acc.accountType === 'bank_transfer' && acc.isDefault)}
+                            onChange={() => setFormData(prev => ({ ...prev, isDefault: true }))}
+                          />
+                          <label htmlFor="defaultBank_new" className="text-sm text-gray-700">
+                            Đặt tài khoản này làm mặc định (chỉ 1 tài khoản được chọn)
+                          </label>
+                        </div>
+                      )}
+                      {editingAccount && editingAccount.accountType === 'bank_transfer' && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="defaultBankAccount"
+                            id="defaultBank_edit"
+                            checked={formData.isDefault}
+                            onChange={() => setFormData(prev => ({ ...prev, isDefault: true }))}
+                          />
+                          <label htmlFor="defaultBank_edit" className="text-sm text-gray-700">
+                            Đặt tài khoản này làm mặc định
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-2 mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <AlertCircleIcon className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-yellow-800">
+                        Chỉ có 1 tài khoản ngân hàng được chọn làm mặc định. QR code sẽ được tạo từ tài khoản mặc định này.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // For ZaloPay: Keep checkbox (can have multiple)
+                  <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="isDefault"
+                      checked={formData.isDefault}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
+                      className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                    />
+                    <label htmlFor="isDefault" className="text-sm font-semibold text-purple-900 cursor-pointer">
+                      Đặt làm tài khoản mặc định
+                    </label>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={formData.isActive !== undefined ? formData.isActive : true}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <label htmlFor="isActive" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                    Hiển thị cho khách hàng (tài khoản này sẽ xuất hiện trong trang thanh toán)
+                  </label>
+                </div>
+              </div>
+
+              {formData.accountType === 'bank_transfer' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Ngân hàng <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative" ref={bankDropdownRef}>
+                      <div className="relative">
+                        <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          ref={bankInputRef}
+                          type="text"
+                          value={bankSearchQuery || formData.bankName}
+                          onChange={(e) => {
+                            const query = e.target.value;
+                            setBankSearchQuery(query);
+                            if (query.trim()) {
+                              setShowBankDropdown(true);
+                              api.get(`/bank-transfer/banks?search=${encodeURIComponent(query)}`)
+                                .then(res => {
+                                  if (res.data.success) {
+                                    setBankSearchResults(res.data.data);
+                                  }
+                                })
+                                .catch(err => {
+                                  console.error('Search banks error:', err);
+                                  setBankSearchResults([]);
+                                });
+                            } else {
+                              setBankSearchResults([]);
+                              setShowBankDropdown(false);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (!bankSearchQuery.trim() && bankSearchResults.length === 0) {
+                              api.get('/bank-transfer/banks')
+                                .then(res => {
+                                  if (res.data.success) {
+                                    setBankSearchResults(res.data.data);
+                                    setShowBankDropdown(true);
+                                  }
+                                })
+                                .catch(err => {
+                                  console.error('Load banks error:', err);
+                                  setBankSearchResults([]);
+                                });
+                            } else if (bankSearchResults.length > 0) {
+                              setShowBankDropdown(true);
+                            }
+                          }}
+                          className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                          placeholder="Tìm kiếm ngân hàng (VD: Vietcombank, Techcombank, ACB, MB Bank...)"
+                          required
+                        />
+                      </div>
+                      {showBankDropdown && bankSearchResults.length > 0 && (
+                        <div
+                          className="absolute z-[100] w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto"
+                          onMouseDown={(e) => e.preventDefault()}
+                        >
+                          {bankSearchResults.map((bank) => (
+                            <div
+                              key={bank.code}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setBankSearchQuery(bank.shortName);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  bankName: bank.shortName,
+                                  bankCode: bank.code
+                                }));
+                                setShowBankDropdown(false);
+                              }}
+                              className="px-4 py-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all"
+                            >
+                              <div className="font-bold text-sm text-gray-800">{bank.shortName}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">{bank.name}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {formData.bankCode && (
+                      <div className="mt-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg flex items-center gap-2">
+                        <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                        <p className="text-sm font-semibold text-green-700">
+                          Đã chọn: <span className="font-bold">{formData.bankName}</span> (Mã: {formData.bankCode})
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Tìm kiếm và chọn ngân hàng từ danh sách được VietQR hỗ trợ. Hỗ trợ hơn 30 ngân hàng tại Việt Nam.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Số tài khoản <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formData.bankAccountNumber}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        let value = rawValue.replace(/\D/g, '');
+                        if (value.length <= 19) {
+                          setFormData(prev => ({ ...prev, bankAccountNumber: value }));
+                        }
+                      }}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono text-lg"
+                      placeholder="Nhập số tài khoản (chỉ số, tối đa 19 chữ số)"
+                      maxLength={19}
+                      required
+                    />
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-xs text-gray-500">
+                        Đã nhập: <span className="font-semibold">{formData.bankAccountNumber.length}/19</span> chữ số
+                      </p>
+                      {formData.bankAccountNumber && (
+                        <p className="text-xs font-mono text-green-600 font-semibold">
+                          {formData.bankAccountNumber}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Tên chủ tài khoản <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bankAccountName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none uppercase"
+                      placeholder="Tên chủ tài khoản (viết hoa, không dấu)"
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      ZaloPay App ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.zaloPayAppId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, zaloPayAppId: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                      placeholder="Nhập ZaloPay App ID"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      ZaloPay Key 1 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.zaloPayKey1}
+                      onChange={(e) => setFormData(prev => ({ ...prev, zaloPayKey1: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
+                      placeholder="Nhập ZaloPay Key 1"
+                      required={!editingAccount}
+                    />
+                    {editingAccount && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Để trống nếu không muốn thay đổi
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">ZaloPay Key 2 (Tùy chọn)</label>
+                    <input
+                      type="password"
+                      value={formData.zaloPayKey2}
+                      onChange={(e) => setFormData(prev => ({ ...prev, zaloPayKey2: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
+                      placeholder="Nhập ZaloPay Key 2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Merchant ID (Tùy chọn)</label>
+                    <input
+                      type="text"
+                      value={formData.zaloPayMerchantId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, zaloPayMerchantId: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                      placeholder="Nhập Merchant ID"
+                    />
+                  </div>
+                </>
+              )}
+              </form>
+            </div>
+
+            {/* Footer with buttons */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditingAccount(null);
+                    setBankSearchQuery('');
+                    setBankSearchResults([]);
+                    setShowBankDropdown(false);
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <RefreshIcon className="w-5 h-5 animate-spin" />
+                      Đang lưu...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <CheckCircleIcon className="w-5 h-5" />
+                      {editingAccount ? 'Cập nhật' : 'Thêm tài khoản'}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
