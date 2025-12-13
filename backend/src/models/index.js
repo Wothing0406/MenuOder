@@ -9,6 +9,7 @@ const Order = require('./Order');
 const OrderItem = require('./OrderItem');
 const Voucher = require('./Voucher');
 const Review = require('./Review');
+const PaymentAccount = require('./PaymentAccount');
 
 // Define associations
 Store.hasMany(Category, {
@@ -137,6 +138,25 @@ Review.belongsTo(Order, {
   as: 'order'
 });
 
+// PaymentAccount associations
+Store.hasMany(PaymentAccount, {
+  foreignKey: 'storeId',
+  as: 'paymentAccounts'
+});
+PaymentAccount.belongsTo(Store, {
+  foreignKey: 'storeId',
+  as: 'store'
+});
+
+Order.belongsTo(PaymentAccount, {
+  foreignKey: 'paymentAccountId',
+  as: 'paymentAccount'
+});
+PaymentAccount.hasMany(Order, {
+  foreignKey: 'paymentAccountId',
+  as: 'orders'
+});
+
 module.exports = {
   Store,
   Category,
@@ -147,5 +167,6 @@ module.exports = {
   Order,
   OrderItem,
   Voucher,
-  Review
+  Review,
+  PaymentAccount
 };

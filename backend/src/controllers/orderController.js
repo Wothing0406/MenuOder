@@ -515,7 +515,11 @@ exports.getOrderDetail = async (req, res) => {
     const order = await Order.findByPk(orderId, {
       include: [
         { association: 'items' },
-        { association: 'voucher', required: false }
+        { association: 'voucher', required: false },
+        { 
+          association: 'store',
+          attributes: ['id', 'storeName', 'storeAddress', 'storePhone']
+        }
       ]
     });
 

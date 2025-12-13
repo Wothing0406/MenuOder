@@ -47,14 +47,22 @@ const MIGRATIONS_MYSQL = [
   'migration_add_storeGoogleMapLink.sql',
   'migration_fix_item_deletion.sql',
   'migration_add_reviews.sql',
-  'migration_add_zalopay.sql'
+  'migration_add_zalopay.sql',
+  'migration_add_bank_transfer.sql',
+  'migration_add_bank_transfer_qr_code_to_orders.sql',
+  'migration_add_payment_accounts.sql',
+  'migration_add_payment_account_to_orders.sql',
+  'migration_verify_payment_accounts.sql' // Verify and add missing columns
 ];
 
 const MIGRATIONS_POSTGRES = [
   'migration_add_new_features_postgresql.sql',
   'migration_add_completed_status_postgresql.sql',
   'migration_fix_item_deletion_postgresql.sql',
-  'migration_add_reviews_postgresql.sql'
+  'migration_add_reviews_postgresql.sql',
+  'migration_add_payment_accounts_postgresql.sql',
+  'migration_add_payment_account_to_orders_postgresql.sql',
+  'migration_verify_payment_accounts_postgresql.sql' // Verify and add missing columns
 ];
 
 const SEED_FILE = 'seed.sql';
@@ -185,4 +193,5 @@ main().catch(err => {
   console.error('❌ Migration failed:', err.message);
   process.exit(1);
 });
+
 

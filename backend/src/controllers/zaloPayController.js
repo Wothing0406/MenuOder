@@ -1,36 +1,83 @@
-const { Order, Store } = require('../models');
+const { Order, Store, PaymentAccount } = require('../models');
 const { createQrPayment, checkPaymentStatus, verifyCredentials } = require('../utils/zaloPay');
 
 exports.createQrPayment = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const { paymentAccountId } = req.body; // Optional: specific payment account
 
-    const order = await Order.findByPk(orderId, { include: [{ association: 'store' }] });
+    const order = await Order.findByPk(orderId, { 
+      include: [
+        { association: 'store' },
+        { association: 'paymentAccount' }
+      ] 
+    });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const store = order.store || await Store.findByPk(order.storeId);
     if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
 
-    const missing = [];
-    if (!store.zaloPayIsActive) missing.push('Chưa bật ZaloPay');
-    if (!store.zaloPayAppId) missing.push('Thiếu App ID');
-    if (!store.zaloPayKey1) missing.push('Thiếu Key 1');
-    if (missing.length) {
-      return res.status(400).json({
-        success: false,
-        message: `ZaloPay chưa cấu hình đầy đủ: ${missing.join(', ')}`
-      });
-    }
-
     if (order.isPaid) {
       return res.status(400).json({ success: false, message: 'Đơn hàng đã được thanh toán' });
     }
 
+    let paymentAccount = null;
+
+    // Use specific payment account if provided
+    if (paymentAccountId) {
+      paymentAccount = await PaymentAccount.findOne({
+        where: { 
+          id: paymentAccountId, 
+          storeId: store.id, 
+          accountType: 'zalopay',
+          isActive: true,
+          isVerified: true
+        }
+      });
+      if (!paymentAccount) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tài khoản ZaloPay không hợp lệ hoặc chưa được xác thực'
+        });
+      }
+    } else {
+      // Use default ZaloPay account
+      paymentAccount = await PaymentAccount.findOne({
+        where: { 
+          storeId: store.id, 
+          accountType: 'zalopay',
+          isActive: true,
+          isVerified: true,
+          isDefault: true
+        }
+      });
+
+      // If no default, use first available
+      if (!paymentAccount) {
+        paymentAccount = await PaymentAccount.findOne({
+          where: { 
+            storeId: store.id, 
+            accountType: 'zalopay',
+            isActive: true,
+            isVerified: true
+          },
+          order: [['createdAt', 'ASC']]
+        });
+      }
+    }
+
+    if (!paymentAccount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cửa hàng chưa cấu hình tài khoản ZaloPay nào'
+      });
+    }
+
     const config = {
-      zaloPayAppId: store.zaloPayAppId,
-      zaloPayKey1: store.zaloPayKey1,
-      zaloPayKey2: store.zaloPayKey2,
-      zaloPayMerchantId: store.zaloPayMerchantId
+      zaloPayAppId: paymentAccount.zaloPayAppId,
+      zaloPayKey1: paymentAccount.zaloPayKey1,
+      zaloPayKey2: paymentAccount.zaloPayKey2,
+      zaloPayMerchantId: paymentAccount.zaloPayMerchantId
     };
 
     const qrResult = await createQrPayment(config, order);
@@ -38,19 +85,24 @@ exports.createQrPayment = async (req, res) => {
     await order.update({
       zaloPayTransactionId: qrResult.transactionId,
       zaloPayStatus: 'pending',
-      zaloPayQrCode: qrResult.qrCode
+      zaloPayQrCode: qrResult.qrCode,
+      paymentAccountId: paymentAccount.id
     });
 
     res.json({
       success: true,
-      message: 'QR code created successfully',
+      message: 'QR code ZaloPay đã được tạo',
       data: {
         qrCode: qrResult.qrCode,
         qrCodeImage: qrResult.qrCodeImage,
         transactionId: qrResult.transactionId,
         orderId: order.id,
         orderCode: order.orderCode,
-        amount: order.totalAmount
+        amount: order.totalAmount,
+        paymentAccount: {
+          id: paymentAccount.id,
+          accountName: paymentAccount.accountName
+        }
       }
     });
   } catch (error) {
@@ -88,7 +140,12 @@ exports.checkStatus = async (req, res) => {
     if (status.return_code < 0) statusText = 'failed';
 
     if (statusText === 'success') {
-      await order.update({ isPaid: true, zaloPayStatus: 'success' });
+      // Update order status to confirmed only when payment is successful
+      await order.update({ 
+        isPaid: true, 
+        zaloPayStatus: 'success',
+        status: order.status === 'pending' ? 'confirmed' : order.status
+      });
     } else if (statusText === 'failed') {
       await order.update({ zaloPayStatus: 'failed' });
     }
@@ -125,7 +182,12 @@ exports.webhookCallback = async (req, res) => {
       return res.status(400).json({ return_code: -1, return_message: 'Order not found' });
     }
 
-    await order.update({ isPaid: true, zaloPayStatus: 'success' });
+    // Update order status to confirmed only when payment is successful
+    await order.update({ 
+      isPaid: true, 
+      zaloPayStatus: 'success',
+      status: order.status === 'pending' ? 'confirmed' : order.status
+    });
     return res.json({ return_code: 1, return_message: 'OK' });
   } catch (error) {
     console.error('ZaloPay callback error:', error);

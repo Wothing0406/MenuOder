@@ -62,6 +62,24 @@ app.use(express.urlencoded({ extended: true }));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Health check route (before other routes for faster response)
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+app.get('/ping', (req, res) => {
+  res.json({
+    success: true,
+    message: 'pong',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/stores', require('./routes/storeRoutes'));
@@ -75,117 +93,65 @@ app.use('/api/utils', require('./routes/utilsRoutes'));
 app.use('/api/vouchers', require('./routes/voucherRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/zalopay', require('./routes/zaloPayRoutes'));
+app.use('/api/bank-transfer', require('./routes/bankTransferRoutes'));
+app.use('/api/payment-accounts', require('./routes/paymentAccountRoutes'));
+app.use('/api/payment', require('./routes/publicPaymentRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({
+  res.status(500).json({
     success: false,
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    message: 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { error: err.message })
   });
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: `Route ${req.originalUrl} not found`
   });
 });
 
-// Initialize database and start server (only if not on Vercel)
-const PORT = process.env.PORT || 5000;
-const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+// Server configuration
+const PORT = process.env.PORT || 5002;
+const HOST = process.env.HOST || '0.0.0.0';
+const isVercel = process.env.VERCEL === '1';
 
+// Database connection and server startup
 const startServer = async () => {
   try {
-    // Test database connection first với retry logic
-    console.log('🔌 Testing database connection...');
-    
-    let retries = 5;
-    let connected = false;
-    
-    while (retries > 0 && !connected) {
+    // Test database connection
+    await sequelize.authenticate();
+    console.log('✅ Database connection established');
+
+    // Run migrations automatically in production (Render)
+    if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE !== 'false') {
+      console.log('🔄 Running automatic migrations in production...');
       try {
-        await sequelize.authenticate();
-        console.log('✅ Database connection established');
-        connected = true;
-      } catch (error) {
-        retries--;
-        if (retries === 0) {
-          console.error('❌ Failed to connect to database after 5 attempts');
-          console.error('Error:', error.message);
-          
-          // Hướng dẫn cụ thể cho Render
-          if (error.message.includes('ECONNREFUSED') || error.message.includes('Connection refused')) {
-            console.error('\n💡 Render Database Connection Issue:');
-            console.error('   1. Check if database is "Running" in Render Dashboard');
-            console.error('   2. Ensure database is linked to this service:');
-            console.error('      - Go to Service → Connections → Link Database');
-            console.error('   3. Verify DATABASE_URL in Environment Variables');
-            console.error('   4. Wait a few minutes if database was just created');
-            console.error('   5. Try restarting the service');
-          }
-          
-          throw error;
-        } else {
-          console.log(`⚠️  Connection failed, retrying... (${retries} attempts left)`);
-          console.log(`   Error: ${error.message}`);
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 2000 * (6 - retries)));
-        }
+        const { runSequentialMigrations } = require('../scripts/deploy-migrations');
+        await runSequentialMigrations();
+        console.log('✅ Migrations completed');
+      } catch (migrationError) {
+        console.error('⚠️  Migration error (non-fatal):', migrationError.message);
+        // Continue even if migrations fail (columns might already exist)
       }
     }
 
-    // Sync database (create tables if not exist, but don't alter existing)
-    // Use { alter: false } to avoid modifying existing tables
-    // Use { force: false } to avoid dropping tables
-    console.log('🔄 Syncing database models...');
-    
-    // Detect if running on Render (or other cloud platforms)
-    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_NAME;
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isCloudPlatform = isRender || process.env.RAILWAY_ENVIRONMENT || process.env.HEROKU;
-    
-    // Check if we're on Render or production - use alter: true to add missing columns
-    const shouldAlter = isRender || isProduction;
-    
-    await sequelize.sync({ 
-      alter: shouldAlter, // Auto-add missing columns on Render/production
-      force: false // Never drop tables
-    });
-    console.log('✅ Database synchronized successfully');
+    // Sync database (don't force in production)
+    await sequelize.sync({ alter: false, force: false });
+    console.log('✅ Database synchronized');
 
-    // Only start HTTP server if not on Vercel (Vercel handles requests automatically)
     if (!isVercel) {
-      // Start server
-      
-      // Use 'localhost' for local development to avoid permission issues on Windows
-      // Use '0.0.0.0' for cloud platforms (Render, Railway, Heroku, etc.) or production
-      const HOST = process.env.HOST || (isCloudPlatform || isProduction ? '0.0.0.0' : 'localhost');
-      
+      // Start HTTP server
       const server = app.listen(PORT, HOST, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`🌐 Host: ${HOST}`);
-        
-        if (HOST === '0.0.0.0') {
-          console.log(`📡 Server accessible from all network interfaces`);
-          if (process.env.RENDER_EXTERNAL_URL) {
-            console.log(`📡 External URL: ${process.env.RENDER_EXTERNAL_URL}`);
-          }
-        } else {
-          console.log(`📡 API URL: http://localhost:${PORT}/api`);
-        }
-        
-        if (process.env.FRONTEND_URL) {
-          console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
-        } else {
-          console.log(`🔗 Frontend URL: http://localhost:3000`);
-        }
+        console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+        console.log(`📱 Frontend should connect to: http://localhost:${PORT}/api`);
+        console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       });
-      
+
       // Handle server errors
       server.on('error', (error) => {
         if (error.code === 'EADDRINUSE') {

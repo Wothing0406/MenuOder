@@ -46,6 +46,9 @@ Nếu bạn đã có database và muốn thêm tính năng mới:
 
 - `migration_add_vouchers.sql` - Thêm bảng `vouchers`, cột `role` cho `users` và các cột giảm giá trong `orders` để hỗ trợ quản lý mã khuyến mãi
 - `migration_add_detailed_address.sql` - Thêm trường `storeDetailedAddress` để chủ quán có thể thêm địa chỉ chi tiết
+- `migration_add_payment_accounts.sql` - Thêm bảng `payment_accounts` để quản lý nhiều tài khoản thanh toán (ngân hàng và ZaloPay) cho mỗi cửa hàng
+- `migration_add_payment_account_to_orders.sql` - Thêm cột `paymentAccountId` vào bảng `orders` để liên kết với tài khoản thanh toán được sử dụng
+- `migration_verify_payment_accounts.sql` - Kiểm tra và đảm bảo tất cả các cột cần thiết trong bảng `payment_accounts` đã được tạo (isActive, isVerified, verifiedAt, verificationError)
 
 ## 🔍 Kiểm tra database
 

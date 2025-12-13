@@ -104,6 +104,20 @@ export default function OrderSuccess() {
 
           {order && (
             <>
+              {/* Bill Header - Store Info */}
+              {order.store && (
+                <div className="bg-white p-4 md:p-6 rounded-xl mb-4 text-center border-2 border-gray-200">
+                  <h2 className="text-xl md:text-2xl font-bold mb-2">{order.store.storeName}</h2>
+                  {order.store.storeAddress && (
+                    <p className="text-sm text-gray-600 mb-1">{order.store.storeAddress}</p>
+                  )}
+                  {order.store.storePhone && (
+                    <p className="text-sm text-gray-600">📞 {order.store.storePhone}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Bill Content */}
               <div className="bg-gray-50 p-4 md:p-6 rounded-xl mb-6 text-left border-2 border-gray-200">
                 <div className="mb-4 pb-3 border-b border-gray-300">
                   <span className="text-xs md:text-sm text-gray-600 block mb-2">Mã đơn hàng:</span>
@@ -131,23 +145,76 @@ export default function OrderSuccess() {
                     </p>
                   )}
                 </div>
+
+                {/* Customer Info */}
+                {order.customerName && (
+                  <div className="mb-4 pb-3 border-b border-gray-300">
+                    <span className="text-xs md:text-sm text-gray-600 block mb-1">Khách hàng:</span>
+                    <p className="font-bold text-base md:text-lg">{order.customerName}</p>
+                  </div>
+                )}
+                {order.customerPhone && (
+                  <div className="mb-4 pb-3 border-b border-gray-300">
+                    <span className="text-xs md:text-sm text-gray-600 block mb-1">Số điện thoại:</span>
+                    <p className="font-medium text-base md:text-lg">{order.customerPhone}</p>
+                  </div>
+                )}
+                {order.deliveryAddress && (
+                  <div className="mb-4 pb-3 border-b border-gray-300">
+                    <span className="text-xs md:text-sm text-gray-600 block mb-1">Địa chỉ giao hàng:</span>
+                    <p className="font-medium text-base md:text-lg">{order.deliveryAddress}</p>
+                  </div>
+                )}
                 {order.tableNumber && (
                   <div className="mb-4 pb-3 border-b border-gray-300">
                     <span className="text-xs md:text-sm text-gray-600 block mb-1">Số bàn:</span>
                     <p className="font-bold text-base md:text-lg">{order.tableNumber}</p>
                   </div>
                 )}
+
+                {/* Payment Summary */}
                 <div className="mb-4 pb-3 border-b border-gray-300">
-                  <span className="text-xs md:text-sm text-gray-600 block mb-1">Tổng tiền:</span>
-                  <p className="font-bold text-xl md:text-2xl text-blue-600">{formatVND(order.totalAmount)}</p>
+                  <span className="text-xs md:text-sm text-gray-600 block mb-2">Tóm tắt thanh toán:</span>
+                  <div className="space-y-1 text-sm">
+                    {order.items && order.items.length > 0 && (
+                      <div className="flex justify-between">
+                        <span>Tạm tính:</span>
+                        <span>{formatVND(order.items.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0))}</span>
+                      </div>
+                    )}
+                    {order.shippingFee > 0 && (
+                      <div className="flex justify-between">
+                        <span>Phí ship:</span>
+                        <span>{formatVND(order.shippingFee)}</span>
+                      </div>
+                    )}
+                    {order.discountAmount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Giảm giá {order.voucherCode ? `(${order.voucherCode})` : ''}:</span>
+                        <span>-{formatVND(order.discountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-base md:text-lg pt-2 border-t border-gray-300 mt-2">
+                      <span>Tổng tiền:</span>
+                      <span className="text-blue-600">{formatVND(order.totalAmount)}</span>
+                    </div>
+                  </div>
                 </div>
+
                 <div className="mb-4 pb-3 border-b border-gray-300">
                   <span className="text-xs md:text-sm text-gray-600 block mb-1">Phương thức thanh toán:</span>
-                  <p className="capitalize font-medium text-base md:text-lg">
+                  <p className="font-medium text-base md:text-lg">
                     {order.paymentMethod === 'cash' ? 'Tiền mặt' : 
-                     order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' 
-                    : ''}
+                     order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản (thủ công)' :
+                     order.paymentMethod === 'bank_transfer_qr' ? 'Chuyển khoản QR' :
+                     order.paymentMethod === 'zalopay_qr' ? 'ZaloPay QR' :
+                     order.paymentMethod || 'Chưa xác định'}
                   </p>
+                  {order.isPaid && (
+                    <span className="inline-block mt-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                      ✓ Đã thanh toán
+                    </span>
+                  )}
                 </div>
                 <div>
                   <span className="text-xs md:text-sm text-gray-600 block mb-1">Thời gian đặt:</span>

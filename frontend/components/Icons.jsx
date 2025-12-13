@@ -60,6 +60,13 @@ import {
   MinusCircle,
   BarChart3,
   Star as LucideStar,
+  Wallet,
+  Building2,
+  Landmark,
+  Sparkles,
+  Power,
+  PowerOff,
+  Target,
 } from 'lucide-react';
 
 // Icon wrapper component for consistent styling
@@ -325,4 +332,33 @@ export const SaveIcon = ({ className = "w-6 h-6", ...props }) => (
 // Chart & Analytics Icons
 export const BarChartIcon = ({ className = "w-6 h-6", ...props }) => (
   <BarChart3 className={className} strokeWidth={2} {...props} />
+);
+
+// Payment & Finance Icons
+export const WalletIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Wallet className={className} strokeWidth={2} {...props} />
+);
+
+export const BuildingIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Building2 className={className} strokeWidth={2} {...props} />
+);
+
+export const BankIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Landmark className={className} strokeWidth={2} {...props} />
+);
+
+export const SparklesIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Sparkles className={className} strokeWidth={2} {...props} />
+);
+
+export const PowerIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Power className={className} strokeWidth={2} {...props} />
+);
+
+export const PowerOffIcon = ({ className = "w-6 h-6", ...props }) => (
+  <PowerOff className={className} strokeWidth={2} {...props} />
+);
+
+export const TargetIcon = ({ className = "w-6 h-6", ...props }) => (
+  <Target className={className} strokeWidth={2} {...props} />
 );

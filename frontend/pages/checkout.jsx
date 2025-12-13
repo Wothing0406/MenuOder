@@ -15,6 +15,8 @@ export default function Checkout() {
   const [storeId, setStoreId] = useState(null);
   const [storeAddress, setStoreAddress] = useState(null);
   const [storeInfo, setStoreInfo] = useState(null); // chứa cấu hình ZaloPay
+  const [paymentAccounts, setPaymentAccounts] = useState({ bank_transfer: [], zalopay: [] });
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
   const [orderType, setOrderType] = useState('dine_in'); // 'dine_in' or 'delivery'
   const [shippingFee, setShippingFee] = useState(0);
   const [shippingCalculated, setShippingCalculated] = useState(false);
@@ -39,6 +41,11 @@ export default function Checkout() {
   const [zaloPayQRCode, setZaloPayQRCode] = useState(null);
   const [zaloPayOrderId, setZaloPayOrderId] = useState(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  // Bank Transfer QR UI states
+  const [showBankTransferQR, setShowBankTransferQR] = useState(false);
+  const [bankTransferQRCode, setBankTransferQRCode] = useState(null);
+  const [bankTransferInfo, setBankTransferInfo] = useState(null);
+  const [bankTransferOrderId, setBankTransferOrderId] = useState(null);
 
   useEffect(() => {
     if (!router.query.store) return;
@@ -47,9 +54,61 @@ export default function Checkout() {
       try {
         const res = await api.get(`/stores/slug/${router.query.store}`);
         if (res.data.success) {
-          setStoreId(res.data.data.store.id);
-          setStoreAddress(res.data.data.store.storeAddress);
-          setStoreInfo(res.data.data.store);
+          const store = res.data.data.store;
+          setStoreId(store.id);
+          setStoreAddress(store.storeAddress);
+          setStoreInfo(store);
+          
+          // Fetch payment accounts
+          try {
+            const paymentRes = await api.get(`/payment/store/${store.id}/active`);
+            if (paymentRes.data.success) {
+              console.log('Fetched active payment accounts:', paymentRes.data.data);
+              // Log bank account numbers to verify they are complete
+              if (paymentRes.data.data.bank_transfer) {
+                paymentRes.data.data.bank_transfer.forEach(acc => {
+                  console.log(`Bank account ${acc.id}:`, {
+                    accountName: acc.accountName,
+                    bankAccountNumber: acc.bankAccountNumber,
+                    bankAccountNumberLength: acc.bankAccountNumber?.length,
+                    bankName: acc.bankName,
+                    isDefault: acc.isDefault
+                  });
+                });
+              }
+              // Ensure data structure is correct
+              const paymentData = paymentRes.data.data || {};
+              setPaymentAccounts({
+                bank_transfer: paymentData.bank_transfer || [],
+                zalopay: paymentData.zalopay || []
+              });
+              
+              console.log('📊 Payment accounts set:', {
+                bank_transfer: paymentData.bank_transfer?.length || 0,
+                zalopay: paymentData.zalopay?.length || 0,
+                bankAccounts: paymentData.bank_transfer,
+                zaloPayAccounts: paymentData.zalopay
+              });
+              
+              // Auto-select default accounts
+              const defaultBank = paymentData.bank_transfer?.find(acc => acc.isDefault);
+              const defaultZaloPay = paymentData.zalopay?.find(acc => acc.isDefault);
+              
+              if (defaultBank) {
+                console.log('✅ Auto-selected default bank account:', defaultBank.id);
+                setSelectedPaymentAccount(prev => ({ ...prev, bank_transfer: defaultBank.id }));
+              } else if (paymentData.bank_transfer?.length > 0) {
+                // If no default, use first account
+                console.log('⚠️ No default bank account, using first account:', paymentData.bank_transfer[0].id);
+                setSelectedPaymentAccount(prev => ({ ...prev, bank_transfer: paymentData.bank_transfer[0].id }));
+              }
+              if (defaultZaloPay) {
+                setSelectedPaymentAccount(prev => ({ ...prev, zalopay: defaultZaloPay.id }));
+              }
+            }
+          } catch (paymentError) {
+            console.error('Error fetching payment accounts:', paymentError);
+          }
         }
       } catch (error) {
         toast.error('Không tìm thấy cửa hàng');
@@ -99,7 +158,344 @@ export default function Checkout() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset QR codes when payment method changes
+      if (name === 'paymentMethod') {
+        if (value !== 'zalopay_qr' && value !== 'bank_transfer_qr') {
+          // Reset QR codes if switching to non-QR payment method
+          setZaloPayQRCode(null);
+          setZaloPayOrderId(null);
+          setBankTransferQRCode(null);
+          setBankTransferInfo(null);
+          setBankTransferOrderId(null);
+        } else if (value === 'zalopay_qr' && prev.paymentMethod === 'bank_transfer_qr') {
+          // Switch from bank transfer to ZaloPay - reset bank transfer QR
+          setBankTransferQRCode(null);
+          setBankTransferInfo(null);
+          setBankTransferOrderId(null);
+        } else if (value === 'bank_transfer_qr' && prev.paymentMethod === 'zalopay_qr') {
+          // Switch from ZaloPay to bank transfer - reset ZaloPay QR
+          setZaloPayQRCode(null);
+          setZaloPayOrderId(null);
+        }
+      }
+      
+      // Nếu chọn Bank Transfer QR: tạo preview QR ngay (không cần order)
+      if (name === 'paymentMethod' && value === 'bank_transfer_qr') {
+        // Delay để đảm bảo state đã cập nhật
+        setTimeout(() => {
+          handleGeneratePreviewQR();
+        }, 100);
+      }
+      
+      // Nếu chọn ZaloPay QR: tạo order và QR (vì ZaloPay cần order)
+      if (name === 'paymentMethod' && value === 'zalopay_qr') {
+        // Delay để đảm bảo state đã cập nhật
+        setTimeout(() => {
+          handleCreateQROrder(newData);
+        }, 100);
+      }
+      
+      return newData;
+    });
+  };
+
+  // Generate preview QR code for bank transfer (without creating order)
+  const handleGeneratePreviewQR = async () => {
+    if (!storeId || !paymentAccounts.bank_transfer || paymentAccounts.bank_transfer.length === 0) {
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    // Prevent duplicate QR generation
+    if (bankTransferQRCode) {
+      return;
+    }
+
+    try {
+      const defaultAccount = paymentAccounts.bank_transfer.find(acc => acc.isDefault) || paymentAccounts.bank_transfer[0];
+      
+      if (!defaultAccount) {
+        console.error('No bank account available');
+        return;
+      }
+
+      // Calculate total amount
+      const subtotal = total;
+      const finalTotal = subtotal + shippingFee - (voucherInfo?.discountAmount || 0);
+
+      const qrRes = await api.post('/bank-transfer/generate-preview-qr', {
+        storeId: parseInt(storeId),
+        amount: finalTotal,
+        paymentAccountId: defaultAccount.id
+      });
+
+      if (qrRes.data.success && (qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode)) {
+        const qrCode = qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode;
+        console.log('✅ Preview QR code generated:', { 
+          hasQRCode: !!qrCode, 
+          qrCodeUrl: typeof qrCode === 'string' ? qrCode.substring(0, 100) : 'base64 image',
+          bankInfo: qrRes.data.data.bankInfo
+        });
+        
+        setBankTransferQRCode(qrCode);
+        setBankTransferInfo(qrRes.data.data.bankInfo);
+        
+        // Scroll to QR code after render
+        setTimeout(() => {
+          const qrElement = document.querySelector('[data-qr-code="bank_transfer"]');
+          if (qrElement) {
+            qrElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      } else {
+        console.error('Preview QR generation failed:', qrRes.data);
+      }
+    } catch (error) {
+      console.error('Error generating preview QR:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error response:', error.response?.data);
+      }
+    }
+  };
+
+  // Validate form before creating order
+  const validateFormForOrder = (formData) => {
+    if (orderType === 'dine_in') {
+      if (!formData.tableNumber || formData.tableNumber.trim() === '') {
+        return { valid: false, message: 'Vui lòng nhập số bàn' };
+      }
+      const tableNum = parseInt(formData.tableNumber.trim());
+      if (isNaN(tableNum) || tableNum < 1) {
+        return { valid: false, message: 'Số bàn phải là số nguyên dương' };
+      }
+    } else if (orderType === 'delivery') {
+      if (!formData.customerName || formData.customerName.trim() === '') {
+        return { valid: false, message: 'Vui lòng nhập tên khách hàng' };
+      }
+      if (!formData.customerPhone || formData.customerPhone.trim() === '') {
+        return { valid: false, message: 'Vui lòng nhập số điện thoại' };
+      }
+      if (!formData.deliveryAddress || formData.deliveryAddress.trim() === '') {
+        return { valid: false, message: 'Vui lòng nhập địa chỉ giao hàng' };
+      }
+      if (!addressConfirmed || !validatedAddress) {
+        return { valid: false, message: 'Vui lòng xác nhận địa chỉ giao hàng trước khi đặt hàng' };
+      }
+    }
+    return { valid: true };
+  };
+
+  // Create order and QR code when QR payment method is selected
+  const handleCreateQROrder = async (currentFormData) => {
+    const formDataToUse = currentFormData || formData;
+    
+    // Validate form
+    const validation = validateFormForOrder(formDataToUse);
+    if (!validation.valid) {
+      // Don't show error, just wait for user to fill form
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    // Prevent duplicate order creation
+    if (zaloPayOrderId || bankTransferOrderId) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const orderItems = cartItems.map((item) => ({
+        itemId: item.itemId,
+        quantity: item.quantity,
+        selectedOptions: item.selectedOptions || {},
+        selectedAccompaniments: item.selectedAccompaniments || [],
+        notes: item.notes || '',
+      }));
+
+      if (!storeId) {
+        return;
+      }
+
+      const orderPayload = {
+        storeId: parseInt(storeId),
+        orderType: orderType,
+        customerNote: formDataToUse.customerNote?.trim() || null,
+        paymentMethod: formDataToUse.paymentMethod || 'cash',
+        items: orderItems,
+      };
+
+      if (voucherInfo?.code) {
+        orderPayload.voucherCode = voucherInfo.code;
+      }
+
+      if (orderType === 'dine_in') {
+        orderPayload.tableNumber = parseInt(formDataToUse.tableNumber.trim());
+        if (formDataToUse.customerPhone && formDataToUse.customerPhone.trim()) {
+          orderPayload.customerPhone = formDataToUse.customerPhone.trim();
+        }
+      } else {
+        orderPayload.customerName = formDataToUse.customerName.trim();
+        orderPayload.customerPhone = formDataToUse.customerPhone.trim();
+        orderPayload.deliveryAddress = addressConfirmed && validatedAddress 
+          ? validatedAddress.validatedAddress 
+          : formDataToUse.deliveryAddress.trim();
+      }
+
+      const res = await api.post('/orders', orderPayload);
+
+      if (res.data.success) {
+        const newOrderId = res.data.data.id;
+
+        // Nếu chọn ZaloPay QR: tạo QR sau khi tạo order
+        if (formDataToUse.paymentMethod === 'zalopay_qr') {
+          try {
+            // Reset old QR codes first
+            setBankTransferQRCode(null);
+            setBankTransferInfo(null);
+            setBankTransferOrderId(null);
+            
+            const paymentAccountId = selectedPaymentAccount?.zalopay || 
+              paymentAccounts.zalopay.find(acc => acc.isDefault)?.id ||
+              paymentAccounts.zalopay[0]?.id;
+            
+            if (!paymentAccountId) {
+              toast.error('Không tìm thấy tài khoản ZaloPay. Vui lòng thử lại.');
+              return;
+            }
+              
+            const qrRes = await api.post(`/zalopay/create-qr/${newOrderId}`, {
+              paymentAccountId
+            });
+            
+            if (qrRes.data.success && (qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode)) {
+              const qrCode = qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode;
+              console.log('ZaloPay QR created successfully:', { orderId: newOrderId, hasQRCode: !!qrCode, qrCodeUrl: qrCode?.substring(0, 100) });
+              setZaloPayQRCode(qrCode);
+              setZaloPayOrderId(newOrderId);
+              
+              // Scroll to QR code sau khi đã render
+              setTimeout(() => {
+                const qrElement = document.querySelector('[data-qr-code="zalopay"]');
+                if (qrElement) {
+                  qrElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                  console.warn('QR code element not found for scrolling');
+                }
+              }, 300);
+              
+              toast.success('Đã tạo QR ZaloPay. Quét mã để thanh toán.');
+            } else {
+              toast.error(qrRes.data?.message || 'Không thể tạo QR ZaloPay. Vui lòng thanh toán bằng phương thức khác.');
+              console.error('ZaloPay QR creation failed:', qrRes.data);
+              // Reset QR state on failure
+              setZaloPayQRCode(null);
+              setZaloPayOrderId(null);
+            }
+          } catch (error) {
+            console.error('Error creating ZaloPay QR:', error);
+            console.error('Error response:', error.response?.data);
+            toast.error(error.response?.data?.message || 'Không thể tạo QR ZaloPay. Vui lòng thử lại.');
+            // Reset QR state on error
+            setZaloPayQRCode(null);
+            setZaloPayOrderId(null);
+          }
+        }
+
+        // Nếu chọn Bank Transfer QR: tạo QR sau khi tạo order (chỉ dùng tài khoản mặc định do chủ quán cài đặt)
+        if (formDataToUse.paymentMethod === 'bank_transfer_qr') {
+          try {
+            // Reset old QR codes first
+            setZaloPayQRCode(null);
+            setZaloPayOrderId(null);
+            
+            // Chỉ sử dụng tài khoản mặc định (do chủ quán đã chọn trong cài đặt)
+            console.log('🔍 Available bank accounts:', paymentAccounts.bank_transfer);
+            const defaultAccount = paymentAccounts.bank_transfer.find(acc => acc.isDefault);
+            console.log('🎯 Default account found:', defaultAccount);
+            
+            if (!defaultAccount) {
+              console.error('❌ No default bank account found! Available accounts:', paymentAccounts.bank_transfer);
+              toast.error('Cửa hàng chưa cấu hình tài khoản ngân hàng mặc định. Vui lòng liên hệ cửa hàng.');
+              return;
+            }
+            
+            console.log('✅ Using default bank account for QR (set by store owner):', {
+              accountId: defaultAccount.id,
+              accountName: defaultAccount.accountName,
+              bankAccountNumber: defaultAccount.bankAccountNumber,
+              bankAccountNumberLength: defaultAccount.bankAccountNumber?.length,
+              bankName: defaultAccount.bankName,
+              isDefault: defaultAccount.isDefault
+            });
+              
+            const qrRes = await api.post(`/bank-transfer/create-qr/${newOrderId}`, {
+              paymentAccountId: defaultAccount.id
+            });
+            
+            if (qrRes.data.success && (qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode)) {
+              const qrCode = qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode;
+              console.log('Bank Transfer QR created successfully:', { 
+                orderId: newOrderId, 
+                hasQRCode: !!qrCode, 
+                qrCodeUrl: typeof qrCode === 'string' ? qrCode.substring(0, 100) : 'base64 image',
+                bankInfo: qrRes.data.data.bankInfo,
+                accountNumber: qrRes.data.data.bankInfo?.accountNumber,
+                accountNumberLength: qrRes.data.data.bankInfo?.accountNumber?.length
+              });
+              
+              // Set new QR code
+              setBankTransferQRCode(qrCode);
+              setBankTransferInfo(qrRes.data.data.bankInfo);
+              setBankTransferOrderId(newOrderId);
+              
+              // Scroll to QR code sau khi đã render
+              setTimeout(() => {
+                const qrElement = document.querySelector('[data-qr-code="bank_transfer"]');
+                if (qrElement) {
+                  qrElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                  console.warn('QR code element not found for scrolling');
+                }
+              }, 300);
+              
+              toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
+            } else {
+              toast.error(qrRes.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thanh toán bằng phương thức khác.');
+              console.error('Bank Transfer QR creation failed:', qrRes.data);
+              // Reset QR state on failure
+              setBankTransferQRCode(null);
+              setBankTransferInfo(null);
+              setBankTransferOrderId(null);
+            }
+          } catch (error) {
+            console.error('Error creating Bank Transfer QR:', error);
+            console.error('Error response:', error.response?.data);
+            toast.error(error.response?.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thử lại.');
+            // Reset QR state on error
+            setBankTransferQRCode(null);
+            setBankTransferInfo(null);
+            setBankTransferOrderId(null);
+          }
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Order creation error:', error);
+      }
+      toast.error(error.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOrderTypeChange = (type) => {
@@ -243,21 +639,23 @@ export default function Checkout() {
     if (!zaloPayOrderId) return;
     setCheckingPayment(true);
     try {
-      const res = await api.get(`/zalopay/check-status/${zaloPayOrderId}`);
-      if (res.data.success) {
-        const status = res.data.data.status;
-        if (status === 'success') {
+      // Check order status to verify payment
+      const orderRes = await api.get(`/orders/${zaloPayOrderId}`);
+      if (orderRes.data.success) {
+        const order = orderRes.data.data;
+        // Only redirect if payment is confirmed
+        if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
           toast.success('Thanh toán ZaloPay thành công!');
           const storeSlug = router.query.store;
           router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
           return;
-        } else if (status === 'failed') {
-          toast.error('Thanh toán ZaloPay thất bại. Vui lòng thử lại hoặc chọn phương thức khác.');
-        } else {
+        } else if (order.isPaid === false) {
           toast('Thanh toán đang chờ. Vui lòng thử lại sau vài giây.', { icon: '⏳' });
+        } else {
+          toast('Đang xử lý thanh toán...', { icon: '⏳' });
         }
       } else {
-        toast.error(res.data?.message || 'Không kiểm tra được trạng thái ZaloPay.');
+        toast.error('Không kiểm tra được trạng thái đơn hàng.');
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -269,6 +667,65 @@ export default function Checkout() {
       setCheckingPayment(false);
     }
   };
+
+  // Auto-check payment status when QR is displayed
+  useEffect(() => {
+    if (!zaloPayOrderId || !zaloPayQRCode) return;
+    
+    const checkInterval = setInterval(async () => {
+      try {
+        // Check order status to verify payment
+        const orderRes = await api.get(`/orders/${zaloPayOrderId}`);
+        if (orderRes.data.success) {
+          const order = orderRes.data.data;
+          // Only redirect if payment is confirmed (isPaid: true and status is confirmed or higher)
+          if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
+            clearInterval(checkInterval);
+            toast.success('Thanh toán ZaloPay thành công!');
+            const storeSlug = router.query.store;
+            // Giỏ hàng sẽ được xóa trong order-success page
+            router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+          }
+        }
+      } catch (error) {
+        // Silent fail, continue polling
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Auto-check ZaloPay status error:', error);
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [zaloPayOrderId, zaloPayQRCode, router]);
+
+  // Auto-check bank transfer payment status when QR is displayed
+  useEffect(() => {
+    if (!bankTransferOrderId || !bankTransferQRCode) return;
+    
+    const checkInterval = setInterval(async () => {
+      try {
+        const res = await api.get(`/orders/${bankTransferOrderId}`);
+        if (res.data.success) {
+          const order = res.data.data;
+          // Only redirect if payment is confirmed (isPaid: true and status is confirmed or higher)
+          if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
+            clearInterval(checkInterval);
+            toast.success('Thanh toán thành công!');
+            const storeSlug = router.query.store;
+            // Giỏ hàng sẽ được xóa trong order-success page
+            router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+          }
+        }
+      } catch (error) {
+        // Silent fail, continue polling
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Auto-check bank transfer status error:', error);
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [bankTransferOrderId, bankTransferQRCode, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -360,14 +817,21 @@ export default function Checkout() {
         // Nếu chọn ZaloPay QR: tạo QR sau khi tạo order
         if (formData.paymentMethod === 'zalopay_qr') {
           try {
-            const qrRes = await api.post(`/zalopay/create-qr/${newOrderId}`);
+            const paymentAccountId = selectedPaymentAccount?.zalopay || 
+              paymentAccounts.zalopay.find(acc => acc.isDefault)?.id ||
+              paymentAccounts.zalopay[0]?.id;
+              
+            const qrRes = await api.post(`/zalopay/create-qr/${newOrderId}`, {
+              paymentAccountId
+            });
             if (qrRes.data.success) {
               setZaloPayQRCode(qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode);
               setZaloPayOrderId(newOrderId);
-              setShowZaloPayQR(true);
+              // Don't show modal, QR will be displayed inline below form
               clearCart();
               toast.success('Đã tạo QR ZaloPay. Quét mã để thanh toán.');
-              return; // giữ lại modal, không redirect ngay
+              // Auto-check payment status will start via useEffect
+              return; // Don't redirect, show QR inline
             } else {
               toast.error(qrRes.data?.message || 'Không thể tạo QR ZaloPay. Vui lòng thanh toán bằng phương thức khác.');
             }
@@ -380,11 +844,45 @@ export default function Checkout() {
           }
         }
 
-        // Default flow cho các phương thức khác
+        // Nếu chọn Bank Transfer QR: tạo QR sau khi tạo order
+        if (formData.paymentMethod === 'bank_transfer_qr') {
+          try {
+            const paymentAccountId = selectedPaymentAccount?.bank_transfer || 
+              paymentAccounts.bank_transfer.find(acc => acc.isDefault)?.id ||
+              paymentAccounts.bank_transfer[0]?.id;
+              
+            const qrRes = await api.post(`/bank-transfer/create-qr/${newOrderId}`, {
+              paymentAccountId
+            });
+            if (qrRes.data.success) {
+              setBankTransferQRCode(qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode);
+              setBankTransferInfo(qrRes.data.data.bankInfo);
+              setBankTransferOrderId(newOrderId);
+              // Don't show modal, QR will be displayed inline below form
+              clearCart();
+              toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
+              // Auto-check payment status will start via useEffect
+              return; // Don't redirect, show QR inline
+            } else {
+              toast.error(qrRes.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thanh toán bằng phương thức khác.');
+            }
+          } catch (error) {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error creating Bank Transfer QR:', error);
+              console.error('Error response:', error.response?.data);
+            }
+            toast.error(error.response?.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thử lại hoặc chọn phương thức khác.');
+          }
+        }
+
+        // Default flow cho các phương thức khác (cash, bank_transfer manual)
+        // Chỉ redirect nếu không phải QR payment (vì QR payment đã được xử lý ở trên)
+        if (formData.paymentMethod !== 'zalopay_qr' && formData.paymentMethod !== 'bank_transfer_qr') {
         toast.success('Đặt hàng thành công!');
         clearCart();
         const storeSlug = router.query.store;
         router.push(`/order-success/${newOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+        }
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -777,13 +1275,169 @@ export default function Checkout() {
                   className="input-field w-full text-sm py-2.5"
                 >
                   <option value="cash">Tiền mặt</option>
-                  <option value="bank_transfer">Chuyển khoản</option>
-                {storeInfo?.zaloPayConfig?.isActive && storeInfo?.zaloPayConfig?.appId && storeInfo?.zaloPayConfig?.hasKey1 && (
-                  <option value="zalopay_qr">ZaloPay QR (tự điền số tiền)</option>
-                )}
+                  {paymentAccounts?.bank_transfer && Array.isArray(paymentAccounts.bank_transfer) && paymentAccounts.bank_transfer.length > 0 && (
+                    <option value="bank_transfer_qr">Chuyển khoản</option>
+                  )}
                 </select>
-              </div>
+                
+                {/* Show message if no bank account available */}
+                {(!paymentAccounts?.bank_transfer || paymentAccounts.bank_transfer.length === 0) && (
+                  <p className="mt-2 text-xs text-orange-600 bg-orange-50 p-2 rounded">
+                    ⚠️ Cửa hàng chưa cấu hình tài khoản ngân hàng. Vui lòng chọn "Tiền mặt".
+                  </p>
+                )}
+                
+                {/* Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-1 text-xs text-gray-400">
+                    Debug: Bank: {paymentAccounts?.bank_transfer?.length || 0}
+                    {paymentAccounts?.bank_transfer && paymentAccounts.bank_transfer.length > 0 && (
+                      <span className="ml-2">
+                        Accounts: {paymentAccounts.bank_transfer.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                {/* Account selection for ZaloPay - Only show if QR not yet created */}
+                {formData.paymentMethod === 'zalopay_qr' && paymentAccounts.zalopay && paymentAccounts.zalopay.length > 0 && !zaloPayQRCode && (
+                  <div className="mt-2">
+                    <label className="block mb-1.5 text-xs font-semibold text-gray-700">Chọn tài khoản ZaloPay</label>
+                    <select
+                      value={selectedPaymentAccount?.zalopay || paymentAccounts.zalopay.find(acc => acc.isDefault)?.id || paymentAccounts.zalopay[0]?.id || ''}
+                      onChange={(e) => setSelectedPaymentAccount(prev => ({ ...prev, zalopay: parseInt(e.target.value) }))}
+                      className="input-field w-full text-sm py-2"
+                    >
+                      {paymentAccounts.zalopay.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.accountName} {acc.isDefault ? '(Mặc định)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
+                {/* Info about bank transfer account - Show when selected but QR not yet created */}
+                {formData.paymentMethod === 'bank_transfer_qr' && paymentAccounts.bank_transfer && paymentAccounts.bank_transfer.length > 0 && !bankTransferQRCode && (
+                  <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                    <p className="font-bold text-sm text-blue-900 mb-2">💳 Thông tin tài khoản thanh toán:</p>
+                    {(() => {
+                      const defaultAccount = paymentAccounts.bank_transfer.find(acc => acc.isDefault);
+                      const accountToUse = defaultAccount || paymentAccounts.bank_transfer[0];
+                      if (accountToUse) {
+                        return (
+                          <div className="space-y-1 text-sm">
+                            <p><strong>Ngân hàng:</strong> <span className="font-semibold text-gray-800">{accountToUse.bankName}</span></p>
+                            <p><strong>Số tài khoản:</strong> <span className="font-mono font-bold text-gray-800">{accountToUse.bankAccountNumber}</span></p>
+                            <p><strong>Chủ tài khoản:</strong> <span className="font-semibold text-gray-800">{accountToUse.bankAccountName}</span></p>
+                            <p className="text-xs text-blue-700 mt-2">
+                              📱 Đang tạo mã QR...
+                            </p>
+                          </div>
+                        );
+                      }
+                      return <p className="text-red-600">Cửa hàng chưa cấu hình tài khoản ngân hàng</p>;
+                    })()}
+                  </div>
+                )}
+
+                {/* Display QR Code - Show right after account info */}
+                {formData.paymentMethod === 'bank_transfer_qr' && bankTransferQRCode && (
+                  <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl" data-qr-code="bank_transfer">
+                    <h4 className="text-sm font-bold text-blue-700 mb-2 text-center">📱 Mã QR Chuyển khoản</h4>
+                    <p className="text-xs text-gray-600 text-center mb-3">
+                      Quét mã bằng app ngân hàng. Số tiền và nội dung sẽ tự động điền.
+                    </p>
+                    <div className="flex flex-col items-center mb-3">
+                      <div className="bg-white p-3 rounded-lg border-2 border-blue-300 shadow-lg">
+                        <img
+                          src={bankTransferQRCode}
+                          alt="Bank Transfer QR Code"
+                          className="w-56 h-56 mx-auto object-contain"
+                        />
+                      </div>
+                      {bankTransferInfo && (
+                        <div className="text-xs text-gray-700 space-y-1 text-center mt-3 bg-white/50 px-3 py-2 rounded-lg">
+                          <p><strong>STK:</strong> <span className="font-mono">{bankTransferInfo.accountNumber}</span></p>
+                          <p><strong>CTK:</strong> {bankTransferInfo.accountName}</p>
+                          <p><strong>NH:</strong> {bankTransferInfo.bankName}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Show confirm payment button only if order has been created */}
+                    {bankTransferOrderId && (
+                      <div className="text-center mt-4 pt-4 border-t border-blue-200">
+                        <p className="text-xs text-gray-600 mb-2">
+                          Đã quét mã và chuyển khoản? Vui lòng xác nhận để đơn hàng được xử lý.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await api.post(`/bank-transfer/confirm-payment/${bankTransferOrderId}`);
+                              if (res.data.success) {
+                                toast.success('Đã xác nhận thanh toán thành công!');
+                                // Always redirect to order success page after confirming payment
+                                const storeSlug = router.query.store;
+                                router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+                              } else {
+                                toast.error(res.data.message || 'Xác nhận thanh toán thất bại');
+                              }
+                            } catch (error) {
+                              console.error('Confirm payment error:', error);
+                              toast.error(error.response?.data?.message || 'Xác nhận thanh toán thất bại. Vui lòng thử lại.');
+                            }
+                          }}
+                          className="btn btn-primary text-sm py-2 px-6 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
+                        >
+                          ✅ Tôi đã thanh toán
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+
+                {/* Display QR Code inline when available */}
+                {formData.paymentMethod === 'zalopay_qr' && zaloPayQRCode && (
+                  <div className="mt-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-xl" data-qr-code="zalopay">
+                    <h4 className="text-sm font-bold text-purple-700 mb-2 text-center">Mã QR ZaloPay</h4>
+                    <p className="text-xs text-gray-600 text-center mb-3">
+                      Quét mã bằng ZaloPay. Số tiền sẽ tự động điền.
+                    </p>
+                    <div className="flex justify-center mb-3">
+                <img
+                  src={zaloPayQRCode}
+                        alt="ZaloPay QR Code"
+                        className="w-48 h-48 object-contain border-2 border-purple-300 rounded-lg bg-white p-2"
+                />
+              </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600 mb-2">
+                        {checkingPayment ? 'Đang kiểm tra thanh toán...' : 'Đang chờ thanh toán...'}
+                      </p>
+              <button
+                        type="button"
+                onClick={handleCheckZaloPayStatus}
+                disabled={checkingPayment}
+                        className="btn btn-primary text-sm py-2 px-4"
+              >
+                {checkingPayment ? 'Đang kiểm tra...' : 'Tôi đã thanh toán'}
+              </button>
+          </div>
+        </div>
+      )}
+
+                          </div>
+
+              {/* Show order button if:
+                  1. Not using QR payment method, OR
+                  2. Using QR payment but QR code hasn't been created yet (allow retry), OR
+                  3. Using bank_transfer_qr but order hasn't been created yet (preview QR only) */}
+              {((formData.paymentMethod !== 'zalopay_qr' && formData.paymentMethod !== 'bank_transfer_qr') ||
+                (formData.paymentMethod === 'zalopay_qr' && !zaloPayQRCode) ||
+                (formData.paymentMethod === 'bank_transfer_qr' && (!bankTransferQRCode || !bankTransferOrderId))) && (
               <button
                 type="submit"
                 disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && (!addressConfirmed || !shippingCalculated))}
@@ -791,6 +1445,7 @@ export default function Checkout() {
               >
                 {loading ? 'Đang đặt hàng...' : 'Đặt hàng ngay'}
               </button>
+              )}
               {orderType === 'delivery' && (!addressConfirmed || !shippingCalculated) && (
                 <p className="text-xs text-red-600 mt-1.5 text-center">
                   ⚠️ Vui lòng xác nhận địa chỉ giao hàng
@@ -801,49 +1456,6 @@ export default function Checkout() {
         </div>
       </div>
 
-      {/* Modal ZaloPay QR */}
-      {showZaloPayQR && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4 relative">
-            <button
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-              onClick={() => setShowZaloPayQR(false)}
-            >
-              ✕
-            </button>
-            <h3 className="text-lg font-bold text-center text-purple-700">Quét mã ZaloPay</h3>
-            <p className="text-sm text-gray-600 text-center">
-              Vui lòng mở ZaloPay và quét mã bên dưới. Số tiền sẽ tự điền.
-            </p>
-            {zaloPayQRCode ? (
-              <div className="flex justify-center">
-                <img
-                  src={zaloPayQRCode}
-                  alt="ZaloPay QR"
-                  className="w-64 h-64 object-contain border border-gray-200 rounded-xl shadow-sm"
-                />
-              </div>
-            ) : (
-              <p className="text-center text-sm text-gray-500">Đang tải QR...</p>
-            )}
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleCheckZaloPayStatus}
-                disabled={checkingPayment}
-                className="btn btn-primary w-full"
-              >
-                {checkingPayment ? 'Đang kiểm tra...' : 'Tôi đã thanh toán'}
-              </button>
-              <button
-                onClick={() => setShowZaloPayQR(false)}
-                className="btn btn-secondary w-full"
-              >
-                Đóng (thanh toán sau)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

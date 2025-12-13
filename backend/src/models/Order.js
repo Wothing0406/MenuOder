@@ -74,8 +74,17 @@ const Order = sequelize.define('Order', {
     comment: 'Order status: pending, confirmed, preparing, ready, delivered, completed (paid), cancelled'
   },
   paymentMethod: {
-    type: Sequelize.ENUM('cash', 'bank_transfer', 'credit_card', 'zalopay_qr'),
+    type: Sequelize.ENUM('cash', 'bank_transfer', 'credit_card', 'zalopay_qr', 'bank_transfer_qr'),
     defaultValue: 'cash'
+  },
+  paymentAccountId: {
+    type: Sequelize.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'payment_accounts',
+      key: 'id'
+    },
+    comment: 'Reference to payment account used for this order'
   },
   isPaid: {
     type: Sequelize.BOOLEAN,
@@ -96,6 +105,11 @@ const Order = sequelize.define('Order', {
     type: Sequelize.TEXT,
     allowNull: true,
     comment: 'ZaloPay QR code data (URL or image data)'
+  },
+  bankTransferQRCode: {
+    type: Sequelize.TEXT,
+    allowNull: true,
+    comment: 'Bank Transfer QR code data (image data)'
   },
   voucherId: {
     type: Sequelize.INTEGER,

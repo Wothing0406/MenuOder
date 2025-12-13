@@ -50,6 +50,14 @@ async function resetDatabase() {
     console.log('   Password: password123');
     console.log('   Store Slug: nha-hang-mau');
     console.log('   URL: http://localhost:3000/store/nha-hang-mau');
+    
+    // Thông báo cần chạy migration
+    console.log('\n⚠️  LƯU Ý: Sau khi reset database, bạn cần chạy migration để thêm các cột mới:');
+    console.log('   npm run migrate');
+    console.log('   hoặc chạy thủ công:');
+    console.log('   node scripts/add-missing-store-columns.js');
+    console.log('   node scripts/add-paymentAccountId-to-orders.js');
+    
     console.log('\n✨ Hoàn tất!');
     
   } catch (error) {
