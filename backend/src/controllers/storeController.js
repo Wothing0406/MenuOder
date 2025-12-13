@@ -187,13 +187,14 @@ exports.getMyStore = async (req, res) => {
       link: storeData.zaloPayLink || null
     };
 
-    // Bank Transfer QR config
+    // Bank Transfer QR config - moved to payment_accounts table
+    // This is kept for backward compatibility but will be empty
     storeData.bankTransferConfig = {
-      isActive: storeData.bankTransferQRIsActive || false,
-      accountNumber: storeData.bankAccountNumber || null,
-      accountName: storeData.bankAccountName || null,
-      bankName: storeData.bankName || null,
-      bankCode: storeData.bankCode || null
+      isActive: false,
+      accountNumber: null,
+      accountName: null,
+      bankName: null,
+      bankCode: null
     };
 
     res.json({
@@ -213,7 +214,7 @@ exports.getMyStore = async (req, res) => {
 // Update store
 exports.updateStore = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, storeDetailedAddress, storeDescription, zaloPayAppId, zaloPayKey1, zaloPayKey2, zaloPayMerchantId, zaloPayIsActive, zaloPayLink, bankAccountNumber, bankAccountName, bankName, bankCode, bankTransferQRIsActive } = req.body;
+    const { storeName, storePhone, storeAddress, storeDetailedAddress, storeDescription, zaloPayAppId, zaloPayKey1, zaloPayKey2, zaloPayMerchantId, zaloPayIsActive, zaloPayLink } = req.body;
     const logoFile = req.file; // File từ multer
 
     const store = await Store.findOne({
@@ -272,12 +273,8 @@ exports.updateStore = async (req, res) => {
     if (zaloPayIsActive !== undefined) updateData.zaloPayIsActive = !!zaloPayIsActive;
     if (zaloPayLink !== undefined) updateData.zaloPayLink = zaloPayLink || null;
     
-    // Bank Transfer QR config updates (optional)
-    if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
-    if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName || null;
-    if (bankName !== undefined) updateData.bankName = bankName || null;
-    if (bankCode !== undefined) updateData.bankCode = bankCode || null;
-    if (bankTransferQRIsActive !== undefined) updateData.bankTransferQRIsActive = !!bankTransferQRIsActive;
+    // Note: Bank Transfer QR config has been moved to payment_accounts table
+    // Use /api/payment-accounts endpoints to manage bank transfer accounts
     
     // Nếu có logo mới, cập nhật
     if (logoPath) {

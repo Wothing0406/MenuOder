@@ -84,32 +84,8 @@ const Store = sequelize.define('Store', {
     allowNull: true,
     comment: 'ZaloPay payment link (optional/manual)'
   },
-  // Bank Transfer QR configuration
-  bankAccountNumber: {
-    type: Sequelize.STRING(50),
-    allowNull: true,
-    comment: 'Bank account number for QR transfer'
-  },
-  bankAccountName: {
-    type: Sequelize.STRING(200),
-    allowNull: true,
-    comment: 'Bank account holder name'
-  },
-  bankName: {
-    type: Sequelize.STRING(100),
-    allowNull: true,
-    comment: 'Bank name (e.g., Vietcombank, Techcombank, etc.)'
-  },
-  bankCode: {
-    type: Sequelize.STRING(10),
-    allowNull: true,
-    comment: 'VietQR bank code (BIN)'
-  },
-  bankTransferQRIsActive: {
-    type: Sequelize.BOOLEAN,
-    defaultValue: false,
-    comment: 'Enable Bank Transfer QR for this store'
-  },
+  // Note: Bank transfer fields have been moved to payment_accounts table
+  // Do not add bank transfer fields here anymore
   isActive: {
     type: Sequelize.BOOLEAN,
     defaultValue: true
