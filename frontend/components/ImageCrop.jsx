@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { getCroppedImg } from '../lib/imageUtils';
 import toast from 'react-hot-toast';
-import 'react-easy-crop/react-easy-crop.css';
 
 export default function ImageCrop({ imageSrc, onClose, onCropComplete }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
