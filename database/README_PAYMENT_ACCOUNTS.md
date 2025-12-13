@@ -286,3 +286,4 @@ DESCRIBE orders; -- Kiểm tra cột paymentAccountId
 - Chạy migration tạo bảng trước
 - Kiểm tra tên database có đúng không
 
+

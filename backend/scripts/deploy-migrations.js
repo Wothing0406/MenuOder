@@ -180,3 +180,4 @@ if (require.main === module) {
 
 module.exports = { runDeployMigrations, runSequentialMigrations };
 
+

@@ -95,3 +95,4 @@ Nếu bạn set Root Directory = `frontend`, chỉ cần file `frontend/vercel.j
 - Chỉ cần `vercel.json` nếu cần cron jobs, rewrites, hoặc config đặc biệt
 - Nếu có conflict, ưu tiên cấu hình trên Dashboard
 
+

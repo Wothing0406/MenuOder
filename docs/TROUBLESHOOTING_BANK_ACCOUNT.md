@@ -246,3 +246,4 @@ Nếu vẫn gặp vấn đề sau khi thử các giải pháp trên, vui lòng:
 2. Ghi lại thông báo lỗi chi tiết
 3. Kiểm tra file `.env` có đúng cấu hình không
 
+

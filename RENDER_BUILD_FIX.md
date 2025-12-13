@@ -138,3 +138,4 @@ backend
 - ✅ **AUTO_MIGRATE:** `true` (tự động chạy migrations khi start)
 - ❌ **KHÔNG** chạy migrations trong build command
 
+
