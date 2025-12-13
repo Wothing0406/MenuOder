@@ -131,13 +131,73 @@ async function runPostgres() {
   });
 
   const execSql = async (sql) => {
-    // Simple splitter by semicolon; suitable for current migration files
-    const statements = sql
-      .split(';')
-      .map(s => s.trim())
-      .filter(Boolean);
+    // Handle dollar-quoted strings properly
+    // PostgreSQL uses $$ or $tag$ for dollar-quoting
+    // We need to preserve these blocks when splitting by semicolon
+    const statements = [];
+    let current = '';
+    let inDollarQuote = false;
+    let dollarTag = '';
+    let i = 0;
+    
+    while (i < sql.length) {
+      const char = sql[i];
+      
+      // Check for start of dollar quote: $$ or $tag$
+      if (!inDollarQuote && char === '$') {
+        // Match $$ (empty tag) or $tag$ (with identifier tag)
+        const dollarMatch = sql.substring(i).match(/^\$\$|\$[a-zA-Z_][a-zA-Z0-9_]*\$/);
+        if (dollarMatch) {
+          dollarTag = dollarMatch[0];
+          inDollarQuote = true;
+          current += dollarTag;
+          i += dollarTag.length;
+          continue;
+        }
+      }
+      
+      // Check for end of dollar quote (must match the opening tag exactly)
+      if (inDollarQuote && sql.substring(i).startsWith(dollarTag)) {
+        current += dollarTag;
+        i += dollarTag.length;
+        inDollarQuote = false;
+        dollarTag = '';
+        continue;
+      }
+      
+      // Check for semicolon (only if not inside dollar quote)
+      if (!inDollarQuote && char === ';') {
+        const stmt = current.trim();
+        if (stmt) {
+          statements.push(stmt);
+        }
+        current = '';
+        i++;
+        continue;
+      }
+      
+      current += char;
+      i++;
+    }
+    
+    // Add remaining statement (if any)
+    const lastStmt = current.trim();
+    if (lastStmt) {
+      statements.push(lastStmt);
+    }
+    
+    // Execute each statement
     for (const stmt of statements) {
-      await client.query(stmt);
+      const trimmed = stmt.trim();
+      if (trimmed && !trimmed.startsWith('--')) {
+        try {
+          await client.query(trimmed);
+        } catch (err) {
+          // Log the statement that failed for debugging
+          console.error(`Failed statement: ${trimmed.substring(0, 100)}...`);
+          throw err;
+        }
+      }
     }
   };
 
