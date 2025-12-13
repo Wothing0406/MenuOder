@@ -359,12 +359,6 @@ export const PowerOffIcon = ({ className = "w-6 h-6", ...props }) => (
   <PowerOff className={className} strokeWidth={2} {...props} />
 );
 
-export const TargetIcon = ({ className = "w-6 h-6", ...props }) => (
-  <Target className={className} strokeWidth={2} {...props} />
-);
-
-);
-
 // Chart & Analytics Icons
 export const BarChartIcon = ({ className = "w-6 h-6", ...props }) => (
   <BarChart3 className={className} strokeWidth={2} {...props} />
