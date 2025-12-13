@@ -306,9 +306,32 @@ export default function Checkout() {
       return;
     }
 
-    // Prevent duplicate order creation
-    if (zaloPayOrderId || bankTransferOrderId) {
-      return;
+    // Prevent duplicate order creation only if order exists and is already paid
+    // Allow retry if order exists but payment not confirmed
+    if (formDataToUse.paymentMethod === 'zalopay_qr' && zaloPayOrderId) {
+      // Check if order is already paid
+      try {
+        const checkRes = await api.get(`/orders/${zaloPayOrderId}`);
+        if (checkRes.data.success && checkRes.data.data.isPaid) {
+          return; // Order already paid, don't create duplicate
+        }
+      } catch (error) {
+        // If check fails, allow retry
+        console.error('Error checking order status:', error);
+      }
+    }
+    
+    if (formDataToUse.paymentMethod === 'bank_transfer_qr' && bankTransferOrderId) {
+      // Check if order is already paid
+      try {
+        const checkRes = await api.get(`/orders/${bankTransferOrderId}`);
+        if (checkRes.data.success && checkRes.data.data.isPaid) {
+          return; // Order already paid, don't create duplicate
+        }
+      } catch (error) {
+        // If check fails, allow retry
+        console.error('Error checking order status:', error);
+      }
     }
 
     try {
@@ -643,16 +666,20 @@ export default function Checkout() {
       const orderRes = await api.get(`/orders/${zaloPayOrderId}`);
       if (orderRes.data.success) {
         const order = orderRes.data.data;
-        // Only redirect if payment is confirmed
-        if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
-          toast.success('Thanh toán ZaloPay thành công!');
-          const storeSlug = router.query.store;
-          router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
-          return;
-        } else if (order.isPaid === false) {
-          toast('Thanh toán đang chờ. Vui lòng thử lại sau vài giây.', { icon: '⏳' });
+        // Check if order is paid - this is the key check
+        if (order.isPaid) {
+          // Only redirect if status is confirmed or higher
+          if (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed') {
+            toast.success('Thanh toán ZaloPay thành công!');
+            const storeSlug = router.query.store;
+            clearCart();
+            router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+            return;
+          } else {
+            toast('Thanh toán đã được xác nhận, đang chờ xử lý đơn hàng...', { icon: '✅' });
+          }
         } else {
-          toast('Đang xử lý thanh toán...', { icon: '⏳' });
+          toast('Thanh toán đang chờ. Vui lòng thử lại sau vài giây.', { icon: '⏳' });
         }
       } else {
         toast.error('Không kiểm tra được trạng thái đơn hàng.');
@@ -678,13 +705,19 @@ export default function Checkout() {
         const orderRes = await api.get(`/orders/${zaloPayOrderId}`);
         if (orderRes.data.success) {
           const order = orderRes.data.data;
-          // Only redirect if payment is confirmed (isPaid: true and status is confirmed or higher)
-          if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
+          // Check if order is paid - this is the key check
+          if (order.isPaid) {
             clearInterval(checkInterval);
-            toast.success('Thanh toán ZaloPay thành công!');
-            const storeSlug = router.query.store;
-            // Giỏ hàng sẽ được xóa trong order-success page
-            router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+            // Only redirect if status is confirmed or higher
+            if (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed') {
+              toast.success('Thanh toán ZaloPay thành công!');
+              const storeSlug = router.query.store;
+              clearCart();
+              router.push(`/order-success/${zaloPayOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+            } else {
+              // Payment confirmed but status not updated yet, wait a bit
+              console.log('Payment confirmed but status not updated yet:', order.status);
+            }
           }
         }
       } catch (error) {
@@ -696,7 +729,7 @@ export default function Checkout() {
     }, 3000); // Check every 3 seconds
 
     return () => clearInterval(checkInterval);
-  }, [zaloPayOrderId, zaloPayQRCode, router]);
+  }, [zaloPayOrderId, zaloPayQRCode, router, clearCart]);
 
   // Auto-check bank transfer payment status when QR is displayed
   useEffect(() => {
@@ -707,13 +740,19 @@ export default function Checkout() {
         const res = await api.get(`/orders/${bankTransferOrderId}`);
         if (res.data.success) {
           const order = res.data.data;
-          // Only redirect if payment is confirmed (isPaid: true and status is confirmed or higher)
-          if (order.isPaid && (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed')) {
+          // Check if order is paid - this is the key check
+          if (order.isPaid) {
             clearInterval(checkInterval);
-            toast.success('Thanh toán thành công!');
-            const storeSlug = router.query.store;
-            // Giỏ hàng sẽ được xóa trong order-success page
-            router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+            // Only redirect if status is confirmed or higher
+            if (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed') {
+              toast.success('Thanh toán thành công!');
+              const storeSlug = router.query.store;
+              clearCart();
+              router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+            } else {
+              // Payment confirmed but status not updated yet, wait a bit
+              console.log('Payment confirmed but status not updated yet:', order.status);
+            }
           }
         }
       } catch (error) {
@@ -725,7 +764,7 @@ export default function Checkout() {
     }, 3000); // Check every 3 seconds
 
     return () => clearInterval(checkInterval);
-  }, [bankTransferOrderId, bankTransferQRCode, router]);
+  }, [bankTransferOrderId, bankTransferQRCode, router, clearCart]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1371,13 +1410,18 @@ export default function Checkout() {
                         <p className="text-xs text-gray-600 mb-2">
                           Đã quét mã và chuyển khoản? Vui lòng xác nhận để đơn hàng được xử lý.
                         </p>
+                        <p className="text-xs text-blue-600 mb-3">
+                          💡 Hệ thống đang tự động kiểm tra thanh toán. Bạn cũng có thể bấm nút bên dưới để xác nhận thủ công.
+                        </p>
               <button
                           type="button"
                 onClick={async () => {
                   try {
+                    setCheckingPayment(true);
                     const res = await api.post(`/bank-transfer/confirm-payment/${bankTransferOrderId}`);
                     if (res.data.success) {
                                 toast.success('Đã xác nhận thanh toán thành công!');
+                                clearCart();
                                 // Always redirect to order success page after confirming payment
                       const storeSlug = router.query.store;
                         router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
@@ -1387,11 +1431,14 @@ export default function Checkout() {
                   } catch (error) {
                               console.error('Confirm payment error:', error);
                               toast.error(error.response?.data?.message || 'Xác nhận thanh toán thất bại. Vui lòng thử lại.');
+                            } finally {
+                              setCheckingPayment(false);
                             }
                           }}
-                          className="btn btn-primary text-sm py-2 px-6 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
+                          disabled={checkingPayment}
+                          className="btn btn-primary text-sm py-2 px-6 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          ✅ Tôi đã thanh toán
+                          {checkingPayment ? 'Đang xác nhận...' : '✅ Tôi đã thanh toán'}
               </button>
             </div>
                     )}
@@ -1433,11 +1480,11 @@ export default function Checkout() {
 
               {/* Show order button if:
                   1. Not using QR payment method, OR
-                  2. Using QR payment but QR code hasn't been created yet (allow retry), OR
+                  2. Using QR payment but order hasn't been created yet (allow creating order), OR
                   3. Using bank_transfer_qr but order hasn't been created yet (preview QR only) */}
               {((formData.paymentMethod !== 'zalopay_qr' && formData.paymentMethod !== 'bank_transfer_qr') ||
-                (formData.paymentMethod === 'zalopay_qr' && !zaloPayQRCode) ||
-                (formData.paymentMethod === 'bank_transfer_qr' && (!bankTransferQRCode || !bankTransferOrderId))) && (
+                (formData.paymentMethod === 'zalopay_qr' && !zaloPayOrderId) ||
+                (formData.paymentMethod === 'bank_transfer_qr' && !bankTransferOrderId)) && (
               <button
                 type="submit"
                 disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && (!addressConfirmed || !shippingCalculated))}

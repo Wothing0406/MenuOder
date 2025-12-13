@@ -139,3 +139,4 @@ backend
 - ❌ **KHÔNG** chạy migrations trong build command
 
 
+

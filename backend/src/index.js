@@ -135,7 +135,17 @@ const startServer = async () => {
         await runSequentialMigrations();
         console.log('✅ Migrations completed');
       } catch (migrationError) {
-        console.error('⚠️  Migration error (non-fatal):', migrationError.message);
+        // Check if it's a non-fatal error (column already exists)
+        const errorMsg = migrationError.message || '';
+        const isNonFatal = errorMsg.includes('đã tồn tại') || 
+                          errorMsg.includes('already exists') ||
+                          errorMsg.includes('Duplicate column');
+        
+        if (isNonFatal) {
+          console.log('⚠️  Some migrations skipped (columns may already exist)');
+        } else {
+          console.error('⚠️  Migration error (non-fatal):', migrationError.message);
+        }
         // Continue even if migrations fail (columns might already exist)
       }
     }
