@@ -294,25 +294,6 @@ export default function OrderSuccess() {
   );
 }
 
-                      <div key={item.id} className="flex justify-between items-start p-3 md:p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                        <div className="flex-1 min-w-0 pr-2">
-                          <p className="font-bold text-base md:text-lg mb-1">{item.itemName}</p>
-                          <p className="text-sm md:text-base text-gray-600 mb-1">Số lượng: {item.quantity}</p>
-                          {item.selectedAccompaniments && 
-                           Array.isArray(item.selectedAccompaniments) && 
-                           item.selectedAccompaniments.length > 0 && (
-                            <p className="text-xs md:text-sm text-gray-500 mt-1">
-                              Món kèm: {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-bold text-blue-600 text-base md:text-lg whitespace-nowrap">{formatVND(item.subtotal)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="bg-blue-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-blue-200">
                 <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
                   Cửa hàng sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Vui lòng chờ!
