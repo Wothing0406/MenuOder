@@ -3,8 +3,25 @@ const { sequelize } = require('../src/config/database');
 async function addPaymentAccountIdToOrders() {
   try {
     console.log('🔌 Đang kết nối đến database...');
-    await sequelize.authenticate();
-    console.log('✅ Kết nối database thành công!\n');
+    
+    // Retry connection với timeout dài hơn cho Render PostgreSQL
+    let retries = 3;
+    let connected = false;
+    
+    while (retries > 0 && !connected) {
+      try {
+        await sequelize.authenticate();
+        connected = true;
+        console.log('✅ Kết nối database thành công!\n');
+      } catch (connError) {
+        retries--;
+        if (retries === 0) {
+          throw connError;
+        }
+        console.log(`⚠️  Kết nối thất bại, thử lại... (${3 - retries}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Đợi 2 giây
+      }
+    }
 
     // Detect database type
     const dialect = sequelize.getDialect();
@@ -49,14 +66,48 @@ async function addPaymentAccountIdToOrders() {
     
     if (isPostgres) {
       // PostgreSQL: Add column (PostgreSQL doesn't support AFTER clause)
-      await sequelize.query(`
-        ALTER TABLE orders 
-        ADD COLUMN "paymentAccountId" INTEGER NULL
-      `);
-      // Add comment separately for PostgreSQL
-      await sequelize.query(`
-        COMMENT ON COLUMN orders."paymentAccountId" IS 'ID of payment account used for this order (for QR payments)'
-      `);
+      // Use IF NOT EXISTS for PostgreSQL 9.5+ (safe to run multiple times)
+      try {
+        await sequelize.query(`
+          ALTER TABLE orders 
+          ADD COLUMN IF NOT EXISTS "paymentAccountId" INTEGER NULL
+        `);
+        console.log('✅ Đã thêm cột paymentAccountId thành công!');
+      } catch (error) {
+        // Check if column already exists
+        if (error.message.includes('already exists') || 
+            error.message.includes('duplicate column') ||
+            error.message.includes('column "paymentAccountId" already exists')) {
+          console.log('⏭️  Cột paymentAccountId đã tồn tại. Bỏ qua...');
+        } else if (error.message.includes('syntax error') || error.message.includes('IF NOT EXISTS')) {
+          // If IF NOT EXISTS not supported (PostgreSQL < 9.5), try without it
+          try {
+            await sequelize.query(`
+              ALTER TABLE orders 
+              ADD COLUMN "paymentAccountId" INTEGER NULL
+            `);
+            console.log('✅ Đã thêm cột paymentAccountId thành công!');
+          } catch (addError) {
+            if (addError.message.includes('already exists') || 
+                addError.message.includes('duplicate column')) {
+              console.log('⏭️  Cột paymentAccountId đã tồn tại. Bỏ qua...');
+            } else {
+              throw addError;
+            }
+          }
+        } else {
+          throw error;
+        }
+      }
+      // Add comment separately for PostgreSQL (optional, may fail if no permission)
+      try {
+        await sequelize.query(`
+          COMMENT ON COLUMN orders."paymentAccountId" IS 'ID of payment account used for this order (for QR payments)'
+        `);
+      } catch (commentError) {
+        // Comment is optional, continue if it fails
+        console.log('⚠️  Không thể thêm comment (không ảnh hưởng):', commentError.message);
+      }
     } else if (isMySQL) {
       // MySQL: Add column with AFTER clause
       await sequelize.query(`

@@ -731,7 +731,8 @@ export default function Checkout() {
     return () => clearInterval(checkInterval);
   }, [zaloPayOrderId, zaloPayQRCode, router, clearCart]);
 
-  // Auto-check bank transfer payment status when QR is displayed
+  // Auto-check bank transfer payment status when QR is displayed (chỉ để hiển thị trạng thái, KHÔNG tự động redirect)
+  // User PHẢI click "Tôi đã thanh toán" để xác nhận và redirect
   useEffect(() => {
     if (!bankTransferOrderId || !bankTransferQRCode) return;
     
@@ -740,19 +741,16 @@ export default function Checkout() {
         const res = await api.get(`/orders/${bankTransferOrderId}`);
         if (res.data.success) {
           const order = res.data.data;
-          // Check if order is paid - this is the key check
+          // Chỉ kiểm tra và hiển thị trạng thái, KHÔNG tự động redirect
+          // User phải click "Tôi đã thanh toán" để xác nhận và redirect
           if (order.isPaid) {
+            // Chỉ dừng polling, không redirect tự động
             clearInterval(checkInterval);
-            // Only redirect if status is confirmed or higher
-            if (order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready' || order.status === 'delivered' || order.status === 'completed') {
-              toast.success('Thanh toán thành công!');
-              const storeSlug = router.query.store;
-              clearCart();
-              router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
-            } else {
-              // Payment confirmed but status not updated yet, wait a bit
-              console.log('Payment confirmed but status not updated yet:', order.status);
-            }
+            // Hiển thị thông báo nhưng không redirect - user phải click nút
+            toast('Thanh toán đã được xác nhận. Vui lòng bấm "Tôi đã thanh toán" để hoàn tất đơn hàng.', { 
+              icon: '✅',
+              duration: 5000 
+            });
           }
         }
       } catch (error) {
@@ -761,10 +759,10 @@ export default function Checkout() {
           console.error('Auto-check bank transfer status error:', error);
         }
       }
-    }, 3000); // Check every 3 seconds
+    }, 5000); // Check every 5 seconds (ít thường xuyên hơn)
 
     return () => clearInterval(checkInterval);
-  }, [bankTransferOrderId, bankTransferQRCode, router, clearCart]);
+  }, [bankTransferOrderId, bankTransferQRCode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1407,11 +1405,11 @@ export default function Checkout() {
                     {/* Show confirm payment button only if order has been created */}
                     {bankTransferOrderId && (
                       <div className="text-center mt-4 pt-4 border-t border-blue-200">
-                        <p className="text-xs text-gray-600 mb-2">
-                          Đã quét mã và chuyển khoản? Vui lòng xác nhận để đơn hàng được xử lý.
+                        <p className="text-xs text-gray-600 mb-2 font-semibold">
+                          ⚠️ QUAN TRỌNG: Sau khi chuyển khoản, vui lòng bấm nút bên dưới để xác nhận thanh toán.
                         </p>
                         <p className="text-xs text-blue-600 mb-3">
-                          💡 Hệ thống đang tự động kiểm tra thanh toán. Bạn cũng có thể bấm nút bên dưới để xác nhận thủ công.
+                          💡 Hệ thống đang tự động kiểm tra thanh toán. Sau khi chuyển khoản thành công, vui lòng bấm "Tôi đã thanh toán" để hoàn tất đơn hàng.
                         </p>
               <button
                           type="button"
