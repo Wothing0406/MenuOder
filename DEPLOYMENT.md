@@ -10,16 +10,22 @@ Hướng dẫn này sẽ giúp bạn deploy ứng dụng lên:
 
 ---
 
-## 🔄 Bước 1: Backup Database Hiện Tại
+## 🔄 Bước 1: Backup Database Hiện Tại (QUAN TRỌNG!)
 
 ### 1.1 Backup Database Local
 
+**⚠️ BẮT BUỘC:** Backup database trước khi deploy để không mất dữ liệu!
+
 ```bash
 cd backend
+npm run backup
+# hoặc
 node scripts/backup-database.js
 ```
 
 File backup sẽ được lưu tại: `backend/backups/backup-YYYY-MM-DD.sql`
+
+**Lưu file này cẩn thận!** Bạn sẽ cần nó để restore dữ liệu lên Render.
 
 ### 1.2 Export Database Manual (Nếu cần)
 
@@ -69,6 +75,9 @@ CLOUDINARY_API_SECRET=your-api-secret
 # Backend URL
 BACKEND_URL=https://your-backend.onrender.com
 
+# Frontend URL (cho CORS)
+FRONTEND_URL=https://your-frontend.vercel.app
+
 # Node Environment
 NODE_ENV=production
 
@@ -91,20 +100,28 @@ AUTO_MIGRATE=true
 - Migrations sẽ tự động thêm các cột còn thiếu vào database
 - An toàn: Nếu cột đã tồn tại, sẽ tự động skip (không gây lỗi)
 
-**Environment Variable cần thêm trên Render:**
-```env
-AUTO_MIGRATE=true
-```
+**Nếu bạn đã deploy trước đó và chưa có AUTO_MIGRATE:**
 
-**Nếu muốn tắt auto migration:**
-```env
-AUTO_MIGRATE=false
+**Option 1: Thêm Environment Variable trên Render**
+1. Vào Render Dashboard → Your Service → Environment
+2. Thêm: `AUTO_MIGRATE` = `true`
+3. Manual Deploy lại (hoặc đợi auto deploy khi push code mới)
+
+**Option 2: Chạy Migrations Manual (Nếu cần ngay)**
+```bash
+# Vào Render Dashboard → Shell
+cd backend
+npm run deploy:migrate
+# hoặc chạy từng script:
+node scripts/add-missing-store-columns.js
+node scripts/add-paymentAccountId-to-orders.js
+node scripts/add-missing-order-columns.js
 ```
 
 **Lưu ý:** 
 - Migrations sẽ tự động skip nếu cột đã tồn tại, nên an toàn để chạy nhiều lần
 - Nếu có lỗi migration, server vẫn sẽ start (non-fatal error)
-- Có thể chạy manual trong Render Shell nếu cần: `npm run deploy:migrate`
+- Sau khi push code mới có auto migration, lần deploy tiếp theo sẽ tự động chạy
 
 ### 2.5 Import Dữ Liệu Cũ (QUAN TRỌNG!)
 
@@ -162,31 +179,30 @@ Vercel sẽ tự động build và deploy khi bạn push code lên GitHub.
 
 ---
 
-## 🔧 Bước 4: Cập Nhật Code Cho Production
+## 🔧 Bước 4: Kiểm Tra Sau Khi Deploy
 
-### 4.1 Backend - Thêm Auto Migration
+### 4.1 Kiểm Tra Backend
 
-Tạo file `backend/src/index.js` với logic chạy migrations tự động:
+1. Vào Render Dashboard → Logs
+2. Tìm dòng: `🔄 Running automatic migrations in production...`
+3. Kiểm tra: `✅ Migrations completed`
+4. Test API: `https://your-backend.onrender.com/health`
 
-```javascript
-// Thêm vào cuối file index.js (sau khi connect database)
-if (process.env.NODE_ENV === 'production' && process.env.RUN_MIGRATIONS === 'true') {
-  const { runSequentialMigrations } = require('../scripts/deploy-migrations');
-  runSequentialMigrations().then(() => {
-    console.log('✅ Migrations completed');
-  }).catch(err => {
-    console.error('❌ Migration error:', err);
-  });
-}
+### 4.2 Kiểm Tra Database
+
+Nếu muốn kiểm tra xem các cột đã được thêm chưa:
+
+```bash
+# Vào Render Shell
+cd backend
+node scripts/check-stores-table.js
 ```
 
-### 4.2 Frontend - Cập Nhật API URL
+### 4.3 Kiểm Tra Frontend
 
-Đảm bảo file `frontend/lib/api.js` sử dụng `NEXT_PUBLIC_API_URL`:
-
-```javascript
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
-```
+1. Vào Vercel Dashboard → Deployments
+2. Kiểm tra build logs
+3. Test website: `https://your-frontend.vercel.app`
 
 ---
 
@@ -195,15 +211,35 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
 - [ ] Backup database local
 - [ ] Tạo Render Web Service cho backend
 - [ ] Tạo Render PostgreSQL database (hoặc dùng MySQL external)
-- [ ] Cấu hình Environment Variables trên Render
+- [ ] Cấu hình Environment Variables trên Render (bao gồm `AUTO_MIGRATE=true`)
 - [ ] Deploy backend
-- [ ] Chạy migrations trên Render
+- [ ] Kiểm tra logs xem migrations đã chạy chưa
 - [ ] Import dữ liệu cũ (nếu có)
 - [ ] Tạo Vercel project cho frontend
 - [ ] Cấu hình Environment Variables trên Vercel
 - [ ] Deploy frontend
 - [ ] Test API endpoints
 - [ ] Test frontend connection với backend
+
+---
+
+## 🔄 Cập Nhật Code Mới (Nếu Đã Deploy Trước Đó)
+
+### Nếu bạn đã deploy trước đó và muốn cập nhật:
+
+1. **Push code mới lên GitHub** (có auto migration)
+2. **Thêm Environment Variable trên Render:**
+   - `AUTO_MIGRATE` = `true`
+3. **Manual Deploy** hoặc đợi auto deploy
+4. **Kiểm tra logs** để xem migrations đã chạy chưa
+
+### Hoặc chạy migrations manual ngay:
+
+```bash
+# Vào Render Dashboard → Shell
+cd backend
+npm run deploy:migrate
+```
 
 ---
 
@@ -214,14 +250,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
 - Kiểm tra database connection string
 - Kiểm tra firewall rules
 
-### Migrations không chạy
-- Chạy manual trong Render Shell
+### Migrations không chạy tự động
+- Kiểm tra `AUTO_MIGRATE=true` trong Environment Variables
 - Kiểm tra logs trên Render Dashboard
+- Chạy manual: `npm run deploy:migrate` trong Render Shell
 
 ### Frontend không kết nối được backend
 - Kiểm tra `NEXT_PUBLIC_API_URL` trên Vercel
 - Kiểm tra CORS settings trên backend
 - Kiểm tra backend URL có đúng không
+
+### Thiếu cột trong database
+- Chạy migrations manual: `npm run deploy:migrate`
+- Kiểm tra logs để xem có lỗi gì không
+- Đảm bảo `AUTO_MIGRATE=true` đã được set
 
 ---
 
@@ -244,4 +286,3 @@ Nếu gặp vấn đề, kiểm tra:
 ---
 
 **Chúc bạn deploy thành công! 🎉**
-

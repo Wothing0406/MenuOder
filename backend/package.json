@@ -20,7 +20,8 @@
     "migrate:payment-data": "node scripts/migrate-existing-payment-data.js",
     "migrate": "node scripts/add-missing-store-columns.js && node scripts/add-paymentAccountId-to-orders.js && node scripts/add-missing-order-columns.js",
     "backup": "node scripts/backup-database.js",
-    "deploy:migrate": "node scripts/deploy-migrations.js"
+    "deploy:migrate": "node scripts/deploy-migrations.js",
+    "check:schema": "node scripts/check-database-schema.js"
   },
   "dependencies": {
     "express": "^4.18.2",
