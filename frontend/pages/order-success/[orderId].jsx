@@ -220,15 +220,19 @@ export default function OrderSuccess() {
                   <p className="font-medium text-base md:text-lg">
                     {(() => {
                       const method = order.paymentMethod;
+                      const hasPaymentAccount = !!order.paymentAccount || !!order.paymentAccountId;
+
+                      // Nếu có payment account mà method rỗng/cash => suy ra chuyển khoản
+                      if ((!method || method === 'cash') && hasPaymentAccount) return 'Chuyển khoản';
+
                       if (method === 'cash') return 'Tiền mặt';
-                      if (method === 'bank_transfer') return 'Chuyển khoản (thủ công)';
-                      if (method === 'bank_transfer_qr') return 'Chuyển khoản QR';
+                      if (method === 'bank_transfer') return 'Chuyển khoản ';
                       if (method === 'zalopay_qr') return 'ZaloPay QR';
-                      if (method === 'credit_card') return 'Thẻ tín dụng';
+  
                       // Fallback: nếu có giá trị nhưng không khớp, hiển thị giá trị đó
                       if (method) return method;
-                      // Nếu không có giá trị, mặc định là 'Tiền mặt' (vì đây là default trong database)
-                      return 'Tiền mặt';
+                      // Nếu vẫn không xác định
+                      return 'Chưa xác định';
                     })()}
                   </p>
                   {order.isPaid ? (

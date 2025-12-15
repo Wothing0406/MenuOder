@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useStore } from '../../lib/store';
 import Navbar from '../../components/Navbar';
@@ -13,7 +13,7 @@ import PaymentAccountManager from '../../components/PaymentAccountManager';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { token, user, store } = useStore();
+  const { token, user, store, setToken } = useStore();
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +27,9 @@ export default function Dashboard() {
   const [uploadingStoreImage, setUploadingStoreImage] = useState(false);
   const [storeImagePreview, setStoreImagePreview] = useState(null);
   const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
+  const [hydrated, setHydrated] = useState(false);
+  const prevOrderIdsRef = useRef(new Set());
+  const hasInitializedOrdersRef = useRef(false);
   const [bankTransferConfig, setBankTransferConfig] = useState({
     bankAccountNumber: '',
     bankAccountName: '',
@@ -89,8 +92,23 @@ export default function Dashboard() {
   const [editingAccount, setEditingAccount] = useState(null); // {type: 'zalopay'|'bank', data: {...}}
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
+  // Đánh dấu đã hydrate để tránh redirect sớm khi F5
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    // Nếu token chưa có, thử lấy từ localStorage trước khi redirect
     if (!token) {
+      if (typeof window !== 'undefined') {
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) {
+          setToken(storedToken);
+          return;
+        }
+      }
       router.push('/login');
       return;
     }
@@ -102,7 +120,72 @@ export default function Dashboard() {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user]);
+  }, [hydrated, token, user]);
+
+  const speak = (text) => {
+    try {
+      if (typeof window === 'undefined') return;
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'vi-VN';
+      utter.rate = 1;
+      synth.speak(utter);
+    } catch (err) {
+      // silent
+    }
+  };
+
+  const handleNewOrderNotification = (newOrdersList) => {
+    if (!newOrdersList || newOrdersList.length === 0) return;
+    const dineIn = newOrdersList.filter(o => o.orderType === 'dine_in').length;
+    const delivery = newOrdersList.filter(o => o.orderType === 'delivery').length;
+    const msg =
+      `Bạn có ${newOrdersList.length} đơn hàng mới` +
+      (delivery ? ` (${delivery} giao hàng)` : '') +
+      (dineIn ? ` (${dineIn} tại bàn)` : '');
+    toast.success(msg, { duration: 4000 });
+
+    // Voice: luôn nói "Bạn có một đơn hàng mới" để dễ nghe, kèm loại đơn
+    if (delivery && dineIn) {
+      speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
+    } else if (delivery) {
+      speak('Bạn có một đơn hàng mới. Đơn giao hàng.');
+    } else if (dineIn) {
+      speak('Bạn có một đơn hàng mới. Đơn tại bàn.');
+    } else {
+      speak('Bạn có một đơn hàng mới.');
+    }
+  };
+
+  const refreshOrders = async (silent = false) => {
+    try {
+      const ordersRes = await api.get('/orders/my-store/list?limit=50');
+      if (ordersRes.data.success) {
+        const list = ordersRes.data.data.orders || [];
+
+        if (hasInitializedOrdersRef.current) {
+          const newOnes = list.filter(o => !prevOrderIdsRef.current.has(o.id));
+          if (newOnes.length > 0) {
+            handleNewOrderNotification(newOnes);
+          }
+        } else {
+          hasInitializedOrdersRef.current = true;
+        }
+
+        prevOrderIdsRef.current = new Set(list.map(o => o.id));
+        setOrders(list);
+        if (!silent) toast.success('Đã làm mới đơn hàng');
+      }
+    } catch (err) {
+      if (!silent) {
+        toast.error('Không thể làm mới đơn hàng');
+      }
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Orders refresh error:', err);
+      }
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -153,17 +236,8 @@ export default function Dashboard() {
         }
       }
       
-      // Fetch orders
-      try {
-        const ordersRes = await api.get('/orders/my-store/list?limit=50');
-        if (ordersRes.data.success) {
-          setOrders(ordersRes.data.data.orders);
-        }
-      } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Orders fetch error:', err);
-        }
-      }
+      // Fetch orders (silent to tránh toast)
+      await refreshOrders(true);
 
       // Fetch stats
       try {
@@ -207,6 +281,15 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Polling đơn hàng mới mỗi 10s (silent) để hiện thông báo nếu có đơn mới
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      refreshOrders(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const fetchStoreVouchers = async () => {
     try {
@@ -405,8 +488,14 @@ export default function Dashboard() {
       return;
     }
     
+    // Payload: khi chuyển sang "Đã xác nhận" => coi như đã nhận tiền
+    const payload = { status: newStatus };
+    if (newStatus === 'confirmed') {
+      payload.isPaid = true;
+    }
+    
     try {
-      const res = await api.put(`/orders/${orderId}/status`, { status: newStatus });
+      const res = await api.put(`/orders/${orderId}/status`, payload);
       if (res.data.success) {
         toast.success('Cập nhật trạng thái đơn hàng thành công');
         fetchData();
@@ -944,7 +1033,16 @@ export default function Dashboard() {
         {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="card">
-            <h2 className="text-2xl font-bold mb-4">Đơn hàng gần đây</h2>
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <h2 className="text-2xl font-bold">Đơn hàng gần đây</h2>
+              <button
+                onClick={() => refreshOrders()}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                <RefreshIcon className="w-4 h-4" />
+                Làm mới đơn
+              </button>
+            </div>
             {orders.length === 0 ? (
               <p className="text-gray-600">Chưa có đơn hàng nào</p>
             ) : (

@@ -124,6 +124,7 @@ const isVercel = process.env.VERCEL === '1';
 const startServer = async () => {
   try {
     // Test database connection
+    console.log('🔌 Attempting to connect to database...');
     await sequelize.authenticate();
     console.log('✅ Database connection established');
 

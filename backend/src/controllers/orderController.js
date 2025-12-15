@@ -535,10 +535,10 @@ exports.getOrderDetail = async (req, res) => {
       });
     }
 
-    // Ensure paymentMethod has a valid value (default to 'cash' if null/undefined)
+    // Giữ nguyên paymentMethod; nếu thiếu nhưng có paymentAccount -> suy ra chuyển khoản
     const orderData = order.toJSON();
-    if (!orderData.paymentMethod) {
-      orderData.paymentMethod = 'cash';
+    if (!orderData.paymentMethod && orderData.paymentAccountId) {
+      orderData.paymentMethod = 'bank_transfer';
     }
 
     res.json({
@@ -657,6 +657,12 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Auto mark as paid when completed if not explicitly provided
     if (nextStatus === 'completed' && isPaid === undefined) {
+      nextIsPaid = true;
+    }
+
+    // Khi chủ quán chuyển trạng thái sang "confirmed" => coi như đã nhận tiền
+    // (áp dụng cho mọi phương thức, vì đây là hành động xác nhận của cửa hàng)
+    if (nextStatus === 'confirmed' && isPaid === undefined) {
       nextIsPaid = true;
     }
 

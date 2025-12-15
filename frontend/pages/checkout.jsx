@@ -581,7 +581,7 @@ export default function Checkout() {
                 }
               }, 300);
               
-              toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
+              toast.success('Đã tạo đơn thành công, vui lòng đợi chủ cửa hàng xác nhận thanh toán.');
               // Note: Không clear cart ở đây, chỉ clear khi thanh toán thành công
             } else {
               toast.error(qrRes.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thanh toán bằng phương thức khác.');
@@ -822,8 +822,8 @@ export default function Checkout() {
     return () => clearInterval(checkInterval);
   }, [zaloPayOrderId, zaloPayQRCode, router, clearCart]);
 
-  // Auto-check bank transfer payment status when QR is displayed (chỉ để hiển thị trạng thái, KHÔNG tự động redirect)
-  // User PHẢI click "Tôi đã thanh toán" để xác nhận và redirect
+  // Auto-check bank transfer payment status khi QR đang hiển thị
+  // Khi cửa hàng đổi trạng thái đơn sang ĐÃ XÁC NHẬN (hoặc cao hơn) -> tự động chuyển sang trang bill
   useEffect(() => {
     if (!bankTransferOrderId || !bankTransferQRCode) return;
     
@@ -832,15 +832,27 @@ export default function Checkout() {
         const res = await api.get(`/orders/${bankTransferOrderId}`);
         if (res.data.success) {
           const order = res.data.data;
-          // Chỉ kiểm tra và hiển thị trạng thái, KHÔNG tự động redirect
-          // User phải click "Tôi đã thanh toán" để xác nhận và redirect
-          if (order.isPaid) {
-            // Chỉ dừng polling, không redirect tự động
+
+          // Điều kiện để xem là đã xác nhận thanh toán từ phía cửa hàng:
+          // Trạng thái từ "Đã xác nhận" trở lên (confirmed / preparing / ready / delivered / completed)
+          const isStatusConfirmedOrHigher =
+            order.status === 'confirmed' ||
+            order.status === 'preparing' ||
+            order.status === 'ready' ||
+            order.status === 'delivered' ||
+            order.status === 'completed';
+
+          if (isStatusConfirmedOrHigher) {
             clearInterval(checkInterval);
-            // Hiển thị thông báo nhưng không redirect - user phải click nút
-            toast('Thanh toán đã được xác nhận. Vui lòng bấm "Tôi đã thanh toán" để hoàn tất đơn hàng.', { 
+            toast.success('Cửa hàng đã xác nhận thanh toán. Đang chuyển đến hóa đơn...');
+            const storeSlug = router.query.store;
+            clearCart();
+            router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+          } else if (order.isPaid) {
+            // Trường hợp hiếm: isPaid=true nhưng status chưa được đẩy lên confirmed
+            toast('Thanh toán đã được xác nhận, đơn hàng đang được xử lý...', {
               icon: '✅',
-              duration: 5000 
+              duration: 5000,
             });
           }
         }
@@ -850,10 +862,10 @@ export default function Checkout() {
           console.error('Auto-check bank transfer status error:', error);
         }
       }
-    }, 5000); // Check every 5 seconds (ít thường xuyên hơn)
+    }, 5000); // Check every 5 seconds
 
     return () => clearInterval(checkInterval);
-  }, [bankTransferOrderId, bankTransferQRCode]);
+  }, [bankTransferOrderId, bankTransferQRCode, router, clearCart]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -993,7 +1005,7 @@ export default function Checkout() {
               
               // Don't show modal, QR will be displayed inline below form
               // Note: Không clear cart ở đây, chỉ clear khi thanh toán thành công
-              toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
+              toast.success('Đã tạo đơn thành công, vui lòng đợi chủ cửa hàng xác nhận thanh toán.');
               // Auto-check payment status will start via useEffect
               return; // Don't redirect, show QR inline
             } else {
