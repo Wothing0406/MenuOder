@@ -122,7 +122,7 @@ users (1:1) stores
 Nền tảng đáp ứng mục tiêu: quét QR → xem menu → đặt món nhanh (~10 giây), giảm sai sót, minh bạch giá, quản lý đơn & doanh thu thời gian thực, sẵn sàng triển khai cho quán nhỏ và vừa.
 
 ### Hướng phát triển
-- Tích hợp thanh toán online (Momo, VNPay).  
+- Tư vấn món theo nhu cầu và sức khoẻ
 - Thông báo email/SMS.  
 - Thống kê nâng cao bằng biểu đồ.  
 - Hệ thống đánh giá – xếp hạng.  

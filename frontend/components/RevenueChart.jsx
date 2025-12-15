@@ -19,6 +19,13 @@ export default function RevenueChart({ data, period = 'month' }) {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
+  const formatRevenueTick = (value) => {
+    if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${(value / 1000).toFixed(0)}k`;
+    return value;
+  };
+
   const chartData = data.map(item => ({
     ...item,
     dateFormatted: formatDate(item.date)
@@ -35,13 +42,23 @@ export default function RevenueChart({ data, period = 'month' }) {
           tick={{ fill: '#333' }}
         />
         <YAxis 
+          yAxisId="revenue"
           stroke="#333"
           style={{ fontSize: '14px', fontWeight: '500', fill: '#333' }}
           tick={{ fill: '#333' }}
-          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+          tickFormatter={formatRevenueTick}
+        />
+        <YAxis 
+          yAxisId="orders"
+          orientation="right"
+          stroke="#0ea5e9"
+          style={{ fontSize: '14px', fontWeight: '500', fill: '#0ea5e9' }}
+          tick={{ fill: '#0ea5e9' }}
+          allowDecimals={false}
         />
         <Tooltip 
-          formatter={(value, name) => {
+          formatter={(value, name, props) => {
+            const dataKey = props?.dataKey;
             const mapping = {
               revenue: 'Tổng doanh thu',
               cashRevenue: 'Tiền mặt',
@@ -51,8 +68,8 @@ export default function RevenueChart({ data, period = 'month' }) {
               orderCount: 'Số đơn',
               otherRevenue: 'Khác'
             };
-            const label = mapping[name] || name;
-            if (name === 'orderCount') {
+            const label = mapping[dataKey] || mapping[name] || name;
+            if (dataKey === 'orderCount') {
               return [value, label];
             }
             return [formatVND(value), label];
@@ -73,6 +90,7 @@ export default function RevenueChart({ data, period = 'month' }) {
           iconType="line"
         />
         <Line 
+          yAxisId="revenue"
           type="monotone" 
           dataKey="revenue" 
           stroke="#10b981" 
@@ -82,6 +100,7 @@ export default function RevenueChart({ data, period = 'month' }) {
           activeDot={{ r: 6 }}
         />
         <Line 
+          yAxisId="revenue"
           type="monotone" 
           dataKey="cashRevenue" 
           stroke="#f59e0b" 
@@ -91,6 +110,7 @@ export default function RevenueChart({ data, period = 'month' }) {
           activeDot={{ r: 5 }}
         />
         <Line 
+          yAxisId="revenue"
           type="monotone" 
           dataKey="bankTransferRevenue" 
           stroke="#3b82f6" 
@@ -100,6 +120,7 @@ export default function RevenueChart({ data, period = 'month' }) {
           activeDot={{ r: 5 }}
         />
         <Line 
+          yAxisId="revenue"
           type="monotone" 
           dataKey="zaloPayRevenue" 
           stroke="#8b5cf6" 
@@ -109,6 +130,7 @@ export default function RevenueChart({ data, period = 'month' }) {
           activeDot={{ r: 5 }}
         />
         <Line 
+          yAxisId="orders"
           type="monotone" 
           dataKey="orderCount" 
           stroke="#0ea5e9" 

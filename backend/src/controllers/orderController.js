@@ -721,9 +721,19 @@ exports.getOrderStats = async (req, res) => {
       where: { storeId: store.id, status: 'completed' }
     });
 
-    // Calculate total revenue (all completed orders - paid)
+    // Calculate total revenue (all completed orders - paid) + breakdown theo phương thức
     const totalRevenueResult = await Order.findAll({
-      attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN paymentMethod = 'cash' THEN totalAmount ELSE 0 END`)), 'cashTotal'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN paymentMethod = 'bank_transfer' OR paymentMethod = 'bank_transfer_qr' THEN totalAmount ELSE 0 END`)), 'bankTotal'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN paymentMethod = 'zalopay_qr' THEN totalAmount ELSE 0 END`)), 'zaloTotal'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN paymentMethod NOT IN ('cash', 'bank_transfer', 'bank_transfer_qr', 'zalopay_qr') OR paymentMethod IS NULL THEN totalAmount ELSE 0 END`)), 'otherTotal']
+      ],
       where: { 
         storeId: store.id, 
         status: 'completed' 
@@ -785,7 +795,17 @@ exports.getOrderStats = async (req, res) => {
         : 0,
       yearlyRevenue: yearlyRevenueResult && yearlyRevenueResult[0] && yearlyRevenueResult[0].total 
         ? parseFloat(yearlyRevenueResult[0].total) 
-        : 0
+        : 0,
+      breakdown: {
+        cash: totalRevenueResult && totalRevenueResult[0] && totalRevenueResult[0].cashTotal
+          ? parseFloat(totalRevenueResult[0].cashTotal) : 0,
+        bank: totalRevenueResult && totalRevenueResult[0] && totalRevenueResult[0].bankTotal
+          ? parseFloat(totalRevenueResult[0].bankTotal) : 0,
+        zalopay: totalRevenueResult && totalRevenueResult[0] && totalRevenueResult[0].zaloTotal
+          ? parseFloat(totalRevenueResult[0].zaloTotal) : 0,
+        other: totalRevenueResult && totalRevenueResult[0] && totalRevenueResult[0].otherTotal
+          ? parseFloat(totalRevenueResult[0].otherTotal) : 0,
+      }
     };
 
     res.json({
@@ -844,22 +864,44 @@ exports.getRevenueChartData = async (req, res) => {
       startDate.setHours(0, 0, 0, 0);
     }
 
+    // Normalize payment method to make sure new bank methods are grouped correctly
+    const normalizePaymentMethod = (methodRaw, paymentAccountId) => {
+      // Ưu tiên nhận diện có paymentAccountId (chỉ có ở chuyển khoản)
+      if (paymentAccountId) return 'bank_transfer';
+
+      if (!methodRaw) return 'cash';
+      const method = String(methodRaw).toLowerCase();
+      if (method === 'cash') return 'cash';
+      if (method.includes('zalo')) return 'zalopay_qr';
+      // Gom tất cả biến thể chuyển khoản: bank_transfer, bank_transfer_qr, vietqr, qr_bank...
+      if (
+        method.includes('bank') ||
+        method.includes('transfer') ||
+        method.includes('qr')
+      ) {
+        return 'bank_transfer';
+      }
+      return 'other';
+    };
+
     // Get orders grouped by date & payment method to build breakdown by channel
     const orders = await Order.findAll({
       where: {
         storeId: store.id,
-        status: 'completed',
         createdAt: {
           [Op.between]: [startDate, endDate]
-        }
+        },
+        // Chỉ tính doanh thu đơn đã hoàn tất để tránh cộng nháp
+        status: 'completed'
       },
       attributes: [
         [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'date'],
         'paymentMethod',
+        'paymentAccountId',
         [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'revenue'],
         [Sequelize.fn('COUNT', Sequelize.col('id')), 'orderCount']
       ],
-      group: [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'paymentMethod'],
+      group: [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'paymentMethod', 'paymentAccountId'],
       order: [
         [Sequelize.fn('DATE', Sequelize.col('createdAt')), 'ASC']
       ],
@@ -887,7 +929,7 @@ exports.getRevenueChartData = async (req, res) => {
       aggregatedByDate[dateKey].revenue += revenue;
       aggregatedByDate[dateKey].orderCount += count;
 
-      const method = item.paymentMethod || 'cash';
+      const method = normalizePaymentMethod(item.paymentMethod, item.paymentAccountId);
       if (method === 'cash') {
         aggregatedByDate[dateKey].cashRevenue += revenue;
       } else if (method === 'bank_transfer') {
