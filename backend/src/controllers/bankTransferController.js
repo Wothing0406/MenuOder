@@ -376,15 +376,64 @@ exports.confirmPayment = async (req, res) => {
       });
     }
 
-    // Check if order was created recently (less than 1 minute ago)
+    // Check if order was created recently (less than 10 seconds ago)
     // This prevents users from confirming payment immediately after creating order
-    const orderAge = Date.now() - new Date(order.createdAt).getTime();
-    const minWaitTime = 60 * 1000; // 1 minute in milliseconds
+    // Reduced to 10 seconds for better UX while still preventing immediate confirmation
+    // On production, we use a shorter time to account for network latency and timezone differences
+    const now = new Date();
+    let createdAt;
     
-    if (orderAge < minWaitTime) {
+    // Handle different date formats from database (Date object, string, or Sequelize date)
+    if (order.createdAt instanceof Date) {
+      createdAt = order.createdAt;
+    } else if (typeof order.createdAt === 'string') {
+      createdAt = new Date(order.createdAt);
+    } else {
+      // Sequelize model might return date in different format
+      createdAt = new Date(order.createdAt);
+    }
+    
+    // Calculate age in milliseconds
+    // Both dates are converted to UTC timestamps for accurate comparison
+    const nowUtc = now.getTime();
+    const createdAtUtc = createdAt.getTime();
+    const orderAge = nowUtc - createdAtUtc;
+    
+    // Use shorter wait time on production (10 seconds) vs development (30 seconds)
+    // This accounts for potential timezone and network latency issues
+    const minWaitTime = process.env.NODE_ENV === 'production' 
+      ? 10 * 1000  // 10 seconds on production
+      : 30 * 1000; // 30 seconds on development
+    
+    // Log for debugging
+    console.log('Payment confirmation check:', {
+      orderId: order.id,
+      orderCode: order.orderCode,
+      createdAt: createdAt.toISOString(),
+      now: now.toISOString(),
+      orderAgeMs: orderAge,
+      orderAgeSeconds: Math.floor(orderAge / 1000),
+      minWaitTimeSeconds: minWaitTime / 1000,
+      environment: process.env.NODE_ENV
+    });
+    
+    // Only check if orderAge is positive (order was created in the past)
+    // If orderAge is negative, it means there's a timezone issue - allow it
+    if (orderAge > 0 && orderAge < minWaitTime) {
+      const remainingSeconds = Math.ceil((minWaitTime - orderAge) / 1000);
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng đợi ít nhất 1 phút sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.'
+        message: `Vui lòng đợi thêm ${remainingSeconds} giây sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.`
+      });
+    }
+    
+    // If orderAge is negative (timezone issue), log warning but allow
+    if (orderAge < 0) {
+      console.warn('⚠️ Timezone mismatch detected in payment confirmation:', {
+        orderId: order.id,
+        orderAgeMs: orderAge,
+        createdAt: createdAt.toISOString(),
+        now: now.toISOString()
       });
     }
 
@@ -797,15 +846,64 @@ exports.confirmPayment = async (req, res) => {
       });
     }
 
-    // Check if order was created recently (less than 1 minute ago)
+    // Check if order was created recently (less than 10 seconds ago)
     // This prevents users from confirming payment immediately after creating order
-    const orderAge = Date.now() - new Date(order.createdAt).getTime();
-    const minWaitTime = 60 * 1000; // 1 minute in milliseconds
+    // Reduced to 10 seconds for better UX while still preventing immediate confirmation
+    // On production, we use a shorter time to account for network latency and timezone differences
+    const now = new Date();
+    let createdAt;
     
-    if (orderAge < minWaitTime) {
+    // Handle different date formats from database (Date object, string, or Sequelize date)
+    if (order.createdAt instanceof Date) {
+      createdAt = order.createdAt;
+    } else if (typeof order.createdAt === 'string') {
+      createdAt = new Date(order.createdAt);
+    } else {
+      // Sequelize model might return date in different format
+      createdAt = new Date(order.createdAt);
+    }
+    
+    // Calculate age in milliseconds
+    // Both dates are converted to UTC timestamps for accurate comparison
+    const nowUtc = now.getTime();
+    const createdAtUtc = createdAt.getTime();
+    const orderAge = nowUtc - createdAtUtc;
+    
+    // Use shorter wait time on production (10 seconds) vs development (30 seconds)
+    // This accounts for potential timezone and network latency issues
+    const minWaitTime = process.env.NODE_ENV === 'production' 
+      ? 10 * 1000  // 10 seconds on production
+      : 30 * 1000; // 30 seconds on development
+    
+    // Log for debugging
+    console.log('Payment confirmation check:', {
+      orderId: order.id,
+      orderCode: order.orderCode,
+      createdAt: createdAt.toISOString(),
+      now: now.toISOString(),
+      orderAgeMs: orderAge,
+      orderAgeSeconds: Math.floor(orderAge / 1000),
+      minWaitTimeSeconds: minWaitTime / 1000,
+      environment: process.env.NODE_ENV
+    });
+    
+    // Only check if orderAge is positive (order was created in the past)
+    // If orderAge is negative, it means there's a timezone issue - allow it
+    if (orderAge > 0 && orderAge < minWaitTime) {
+      const remainingSeconds = Math.ceil((minWaitTime - orderAge) / 1000);
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng đợi ít nhất 1 phút sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.'
+        message: `Vui lòng đợi thêm ${remainingSeconds} giây sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.`
+      });
+    }
+    
+    // If orderAge is negative (timezone issue), log warning but allow
+    if (orderAge < 0) {
+      console.warn('⚠️ Timezone mismatch detected in payment confirmation:', {
+        orderId: order.id,
+        orderAgeMs: orderAge,
+        createdAt: createdAt.toISOString(),
+        now: now.toISOString()
       });
     }
 

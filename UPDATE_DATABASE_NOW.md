@@ -165,3 +165,4 @@ node -e "const {sequelize} = require('./src/config/database'); sequelize.query(\
 **Sau khi cập nhật xong, database sẽ có đầy đủ các cột và bảng cần thiết! 🎉**
 
 
+

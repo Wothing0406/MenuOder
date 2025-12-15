@@ -69,3 +69,4 @@ Trên production server (Render, Heroku, etc.):
 Hoặc thêm vào deployment script để tự động chạy migration khi deploy.
 
 
+
