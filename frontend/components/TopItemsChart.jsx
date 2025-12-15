@@ -42,9 +42,10 @@ export default function TopItemsChart({ data, type = 'quantity' }) {
             tickFormatter={(value) => type === 'quantity' ? value : `${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip 
-            formatter={(value, name) => {
-              if (name === 'quantity') {
-                return [value, 'Số lượng'];
+            formatter={(value, name, props) => {
+              // Use dataKey instead of the display name to avoid formatting quantity as currency
+              if (props?.dataKey === 'quantity') {
+                return [value, 'Số lượng bán ra:'];
               }
               return [formatVND(value), 'Doanh thu'];
             }}
