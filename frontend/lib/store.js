@@ -3,19 +3,60 @@ import { persist } from 'zustand/middleware';
 
 export const useStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       store: null,
+      deviceId: null, // Device identifier for session management
 
-      setToken: (token) => set({ token }),
+      setToken: (token) => {
+        set({ token });
+        // Sync với localStorage để đảm bảo consistency
+        if (typeof window !== 'undefined') {
+          if (token) {
+            localStorage.setItem('token', token);
+          } else {
+            localStorage.removeItem('token');
+          }
+        }
+      },
       setUser: (user) => set({ user }),
       setStore: (store) => set({ store }),
+      
+      // Initialize device ID if not exists
+      initDeviceId: () => {
+        const { deviceId } = get();
+        if (!deviceId && typeof window !== 'undefined') {
+          // Generate or retrieve device ID
+          let storedDeviceId = localStorage.getItem('deviceId');
+          if (!storedDeviceId) {
+            storedDeviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('deviceId', storedDeviceId);
+          }
+          set({ deviceId: storedDeviceId });
+          return storedDeviceId;
+        }
+        return deviceId;
+      },
 
-      logout: () => set({ token: null, user: null, store: null }),
+      logout: () => {
+        set({ token: null, user: null, store: null });
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          // Keep deviceId for future logins
+        }
+      },
     }),
     {
       name: 'auth-store',
+      // Only persist these fields
+      partialize: (state) => ({
+        token: state.token,
+        user: state.user,
+        store: state.store,
+        deviceId: state.deviceId,
+      }),
     }
   )
 );

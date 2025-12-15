@@ -49,10 +49,26 @@ export default function MenuManagement() {
       setLoading(true);
       const categoriesRes = await api.get('/categories/my-categories');
       if (categoriesRes.data.success) {
-        setCategories(categoriesRes.data.data);
-        if (categoriesRes.data.data.length > 0 && !selectedCategory) {
-          setSelectedCategory(categoriesRes.data.data[0]);
-          fetchItems(categoriesRes.data.data[0].id);
+        const newCategories = categoriesRes.data.data;
+        setCategories(newCategories);
+        
+        // Nếu có categories và chưa có selectedCategory, chọn category đầu tiên
+        if (newCategories.length > 0 && !selectedCategory) {
+          setSelectedCategory(newCategories[0]);
+          await fetchItems(Number(newCategories[0].id));
+        } 
+        // Nếu đã có selectedCategory, cập nhật lại object để đảm bảo dữ liệu mới nhất
+        else if (newCategories.length > 0 && selectedCategory) {
+          const selectedId = Number(selectedCategory.id);
+          const updatedCategory = newCategories.find(cat => Number(cat.id) === selectedId);
+          if (updatedCategory) {
+            setSelectedCategory(updatedCategory);
+            await fetchItems(Number(updatedCategory.id));
+          } else {
+            // Nếu selectedCategory không còn tồn tại, chọn category đầu tiên
+            setSelectedCategory(newCategories[0]);
+            await fetchItems(Number(newCategories[0].id));
+          }
         }
       }
     } catch (error) {
@@ -64,12 +80,20 @@ export default function MenuManagement() {
 
   const fetchItems = async (categoryId) => {
     try {
+      if (!categoryId) {
+        setItems([]);
+        return;
+      }
       const itemsRes = await api.get(`/items/category/${categoryId}`);
       if (itemsRes.data.success) {
-        setItems(itemsRes.data.data);
+        setItems(itemsRes.data.data || []);
+      } else {
+        setItems([]);
       }
     } catch (error) {
+      console.error('Error fetching items:', error);
       toast.error('Không thể tải danh sách món');
+      setItems([]);
     }
   };
 
@@ -94,7 +118,8 @@ export default function MenuManagement() {
         toast.success('Đã tạo danh mục thành công');
         setFormData({ ...formData, categoryName: '' });
         setShowModal(false);
-        fetchData();
+        // Fetch lại dữ liệu và đảm bảo selectedCategory được cập nhật
+        await fetchData();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể tạo danh mục');
@@ -133,7 +158,10 @@ export default function MenuManagement() {
         setItemImage(null);
         setItemImagePreview(null);
         setShowModal(false);
-        fetchItems(selectedCategory.id);
+        // Đảm bảo fetch lại items với đúng categoryId
+        if (selectedCategory && selectedCategory.id) {
+          await fetchItems(Number(selectedCategory.id));
+        }
       }
     } catch (error) {
       console.error('Error creating item:', error);
@@ -180,7 +208,10 @@ export default function MenuManagement() {
         setItemImagePreview(null);
         setEditingItem(null);
         setShowModal(false);
-        fetchItems(selectedCategory.id);
+        // Đảm bảo fetch lại items với đúng categoryId
+        if (selectedCategory && selectedCategory.id) {
+          await fetchItems(Number(selectedCategory.id));
+        }
       }
     } catch (error) {
       console.error('Error updating item:', error);
@@ -214,7 +245,9 @@ export default function MenuManagement() {
       const res = await api.delete(`/items/${itemId}/image`);
       if (res.data.success) {
         toast.success('Đã xóa ảnh thành công');
-        fetchItems(selectedCategory.id);
+        if (selectedCategory && selectedCategory.id) {
+          await fetchItems(Number(selectedCategory.id));
+        }
         if (editingItem && editingItem.id === itemId) {
           setItemImagePreview(null);
         }
@@ -470,7 +503,7 @@ export default function MenuManagement() {
 
             <div className="space-y-3">
               {categories.map((category, index) => (
-                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift stagger-item animate-fadeIn">
+                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift animate-fadeIn">
                   <div className="flex items-center gap-3">
                     {/* Order Controls */}
                     <div className="flex flex-col gap-1">
@@ -546,9 +579,14 @@ export default function MenuManagement() {
                   <select
                     value={selectedCategory?.id || ''}
                     onChange={e => {
-                      const cat = categories.find(c => c.id === Number(e.target.value));
+                      const selectedId = e.target.value ? Number(e.target.value) : null;
+                      const cat = selectedId ? categories.find(c => Number(c.id) === selectedId) : null;
                       setSelectedCategory(cat);
-                      if (cat) fetchItems(cat.id);
+                      if (cat) {
+                        fetchItems(Number(cat.id));
+                      } else {
+                        setItems([]);
+                      }
                     }}
                     className="input-field"
                   >
@@ -577,7 +615,7 @@ export default function MenuManagement() {
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                       {items.map(item => (
-                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift stagger-item animate-fadeIn">
+                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift animate-fadeIn">
                           {/* Image Square */}
                           {item.itemImage ? (
                             <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">

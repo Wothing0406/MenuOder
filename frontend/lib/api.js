@@ -48,6 +48,16 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle 401 Unauthorized - token expired or invalid
+    if (error.response?.status === 401) {
+      // Clear authentication if token is invalid
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        // Dispatch custom event to notify components
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+      }
+    }
+
     // Handle network errors
     if (!error.response) {
       // Network error - backend server is not running or not reachable

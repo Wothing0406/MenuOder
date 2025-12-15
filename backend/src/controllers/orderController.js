@@ -519,6 +519,11 @@ exports.getOrderDetail = async (req, res) => {
         { 
           association: 'store',
           attributes: ['id', 'storeName', 'storeAddress', 'storePhone']
+        },
+        {
+          association: 'paymentAccount',
+          required: false,
+          attributes: ['id', 'accountName', 'bankAccountNumber', 'bankAccountName', 'bankName', 'bankCode']
         }
       ]
     });
@@ -530,9 +535,15 @@ exports.getOrderDetail = async (req, res) => {
       });
     }
 
+    // Ensure paymentMethod has a valid value (default to 'cash' if null/undefined)
+    const orderData = order.toJSON();
+    if (!orderData.paymentMethod) {
+      orderData.paymentMethod = 'cash';
+    }
+
     res.json({
       success: true,
-      data: order
+      data: orderData
     });
   } catch (error) {
     console.error('Get order detail error:', error);

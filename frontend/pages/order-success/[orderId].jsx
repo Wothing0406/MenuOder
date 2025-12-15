@@ -6,6 +6,15 @@ import { useCart } from '../../lib/store';
 import Layout from '../../components/Layout';
 import { formatVND } from '../../lib/utils';
 import toast from 'react-hot-toast';
+import { 
+  CheckCircleIcon, 
+  PhoneIcon, 
+  ClipboardIcon, 
+  InfoIcon, 
+  AlertCircleIcon, 
+  ClockIcon, 
+  PackageIcon 
+} from '../../components/Icons';
 
 export default function OrderSuccess() {
   const router = useRouter();
@@ -96,7 +105,7 @@ export default function OrderSuccess() {
         <div className="max-w-md mx-auto card text-center">
           <div className="mb-6">
             <div className="w-24 h-24 md:w-28 md:h-28 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-fadeIn">
-              <span className="text-6xl md:text-7xl text-green-600">✓</span>
+              <CheckCircleIcon className="w-16 h-16 md:w-20 md:h-20 text-green-600" />
             </div>
             <h1 className="text-2xl md:text-3xl font-bold mb-2 text-green-600">Đặt hàng thành công!</h1>
             <p className="text-gray-600 text-base md:text-lg">Cảm ơn bạn đã đặt hàng!</p>
@@ -112,7 +121,10 @@ export default function OrderSuccess() {
                     <p className="text-sm text-gray-600 mb-1">{order.store.storeAddress}</p>
                   )}
                   {order.store.storePhone && (
-                    <p className="text-sm text-gray-600">📞 {order.store.storePhone}</p>
+                    <p className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                      <PhoneIcon className="w-4 h-4" />
+                      {order.store.storePhone}
+                    </p>
                   )}
                 </div>
               )}
@@ -129,19 +141,21 @@ export default function OrderSuccess() {
                         className="flex-shrink-0 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow-sm hover:shadow-md active:scale-95"
                         title="Sao chép mã đơn hàng"
                       >
-                        <span>📋</span>
+                        <ClipboardIcon className="w-4 h-4" />
                         <span>Sao chép</span>
                       </button>
                     </div>
                   </div>
                   {order.customerPhone && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      💡 Bạn có thể theo dõi đơn hàng bằng mã này hoặc số điện thoại: {order.customerPhone}
+                    <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
+                      <InfoIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>Bạn có thể theo dõi đơn hàng bằng mã này hoặc số điện thoại: {order.customerPhone}</span>
                     </p>
                   )}
                   {!order.customerPhone && order.orderType === 'dine_in' && (
-                    <p className="text-xs text-orange-600 mt-2 font-semibold">
-                      ⚠️ Lưu mã đơn hàng này để theo dõi đơn hàng của bạn!
+                    <p className="text-xs text-orange-600 mt-2 font-semibold flex items-start gap-1">
+                      <AlertCircleIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>Lưu mã đơn hàng này để theo dõi đơn hàng của bạn!</span>
                     </p>
                   )}
                 </div>
@@ -204,16 +218,39 @@ export default function OrderSuccess() {
                 <div className="mb-4 pb-3 border-b border-gray-300">
                   <span className="text-xs md:text-sm text-gray-600 block mb-1">Phương thức thanh toán:</span>
                   <p className="font-medium text-base md:text-lg">
-                    {order.paymentMethod === 'cash' ? 'Tiền mặt' : 
-                     order.paymentMethod === 'bank_transfer' ? 'Chuyển khoản (thủ công)' :
-                     order.paymentMethod === 'bank_transfer_qr' ? 'Chuyển khoản QR' :
-                     order.paymentMethod === 'zalopay_qr' ? 'ZaloPay QR' :
-                     order.paymentMethod || 'Chưa xác định'}
+                    {(() => {
+                      const method = order.paymentMethod;
+                      if (method === 'cash') return 'Tiền mặt';
+                      if (method === 'bank_transfer') return 'Chuyển khoản (thủ công)';
+                      if (method === 'bank_transfer_qr') return 'Chuyển khoản QR';
+                      if (method === 'zalopay_qr') return 'ZaloPay QR';
+                      if (method === 'credit_card') return 'Thẻ tín dụng';
+                      // Fallback: nếu có giá trị nhưng không khớp, hiển thị giá trị đó
+                      if (method) return method;
+                      // Nếu không có giá trị, mặc định là 'Tiền mặt' (vì đây là default trong database)
+                      return 'Tiền mặt';
+                    })()}
                   </p>
-                  {order.isPaid && (
-                    <span className="inline-block mt-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
-                      ✓ Đã thanh toán
+                  {order.isPaid ? (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                      <CheckCircleIcon className="w-3 h-3" />
+                      Đã thanh toán
                     </span>
+                  ) : (
+                    <>
+                      {order.paymentMethod === 'bank_transfer_qr' && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">
+                          <ClockIcon className="w-3 h-3" />
+                          Chờ xác minh thanh toán
+                        </span>
+                      )}
+                      {order.paymentMethod === 'cash' && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-semibold">
+                          <ClockIcon className="w-3 h-3" />
+                          Chưa thanh toán
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
@@ -246,34 +283,81 @@ export default function OrderSuccess() {
                 </div>
               )}
 
-              <div className="bg-blue-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-blue-200">
-                <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
-                  Cửa hàng sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Vui lòng chờ!
-                </p>
-                <div className="bg-white p-3 rounded-lg border border-blue-300 mt-3">
-                  <p className="text-xs md:text-sm text-gray-700 font-semibold mb-2">
-                    📱 Cách theo dõi đơn hàng:
+              {!order.isPaid && order.paymentMethod === 'bank_transfer_qr' && (
+                <div className="bg-yellow-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-yellow-300">
+                  <p className="text-yellow-800 text-sm md:text-base leading-relaxed mb-3 font-semibold flex items-start gap-2">
+                    <AlertCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <span>Đơn hàng của bạn đang chờ cửa hàng xác minh thanh toán. Vui lòng chờ cửa hàng kiểm tra và xác nhận.</span>
                   </p>
-                  <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-                    <li>Nhấn nút "Theo dõi đơn hàng" bên dưới</li>
-                    {order.customerPhone ? (
-                      <li>Hoặc nhập số điện thoại: <strong>{order.customerPhone}</strong></li>
-                    ) : (
-                      <li>Hoặc nhập mã đơn hàng: <strong>{order.orderCode}</strong></li>
-                    )}
-                    <li>Hoặc vào menu "Theo dõi đơn hàng" trên thanh điều hướng</li>
-                  </ul>
+                  <div className="bg-white p-3 rounded-lg border border-yellow-300 mt-3">
+                    <p className="text-xs md:text-sm text-gray-700 font-semibold mb-2 flex items-center gap-1">
+                      <InfoIcon className="w-4 h-4" />
+                      Lưu ý:
+                    </p>
+                    <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                      <li>Đơn hàng chỉ được xử lý sau khi cửa hàng xác nhận đã nhận được thanh toán</li>
+                      <li>Bạn có thể theo dõi trạng thái đơn hàng bằng nút bên dưới</li>
+                      <li>Nếu đã chuyển khoản, vui lòng đợi cửa hàng kiểm tra tài khoản</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
+              )}
+              
+              {order.isPaid && (
+                <div className="bg-blue-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-blue-200">
+                  <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
+                    Cửa hàng sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Vui lòng chờ!
+                  </p>
+                  <div className="bg-white p-3 rounded-lg border border-blue-300 mt-3">
+                    <p className="text-xs md:text-sm text-gray-700 font-semibold mb-2 flex items-center gap-1">
+                      <PhoneIcon className="w-4 h-4" />
+                      Cách theo dõi đơn hàng:
+                    </p>
+                    <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                      <li>Nhấn nút "Theo dõi đơn hàng" bên dưới</li>
+                      {order.customerPhone ? (
+                        <li>Hoặc nhập số điện thoại: <strong>{order.customerPhone}</strong></li>
+                      ) : (
+                        <li>Hoặc nhập mã đơn hàng: <strong>{order.orderCode}</strong></li>
+                      )}
+                      <li>Hoặc vào menu "Theo dõi đơn hàng" trên thanh điều hướng</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+              
+              {order.isPaid === false && order.paymentMethod !== 'bank_transfer_qr' && (
+                <div className="bg-blue-50 p-4 md:p-5 rounded-xl mb-6 border-2 border-blue-200">
+                  <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
+                    Cửa hàng sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Vui lòng chờ!
+                  </p>
+                  <div className="bg-white p-3 rounded-lg border border-blue-300 mt-3">
+                    <p className="text-xs md:text-sm text-gray-700 font-semibold mb-2 flex items-center gap-1">
+                      <PhoneIcon className="w-4 h-4" />
+                      Cách theo dõi đơn hàng:
+                    </p>
+                    <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                      <li>Nhấn nút "Theo dõi đơn hàng" bên dưới</li>
+                      {order.customerPhone ? (
+                        <li>Hoặc nhập số điện thoại: <strong>{order.customerPhone}</strong></li>
+                      ) : (
+                        <li>Hoặc nhập mã đơn hàng: <strong>{order.orderCode}</strong></li>
+                      )}
+                      <li>Hoặc vào menu "Theo dõi đơn hàng" trên thanh điều hướng</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
           <div className="mt-6 space-y-3">
             <button
               onClick={goToTrackWithOrderCode}
-              className="btn bg-purple-600 hover:bg-purple-700 text-white w-full py-4 text-base md:text-lg font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+              className="btn bg-purple-600 hover:bg-purple-700 text-white w-full py-4 text-base md:text-lg font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center justify-center gap-2"
             >
-              📦 Theo dõi đơn hàng ngay
+              <PackageIcon className="w-5 h-5" />
+              Theo dõi đơn hàng ngay
             </button>
             <button
               onClick={() => {

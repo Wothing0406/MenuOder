@@ -99,3 +99,4 @@ Sau khi chạy `node scripts/add-paymentAccountId-to-orders.js`, bạn sẽ th�
 - Nếu shell đóng, mở lại và chạy lại lệnh
 - Sau khi chạy migration, **restart service** để áp dụng thay đổi
 
+

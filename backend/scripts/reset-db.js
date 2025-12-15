@@ -73,11 +73,3 @@ async function resetDatabase() {
 // Chạy script
 resetDatabase();
 
-
-    }
-  }
-}
-
-// Chạy script
-resetDatabase();
-

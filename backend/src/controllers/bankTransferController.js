@@ -356,6 +356,8 @@ exports.lookupAccountName = async (req, res) => {
 
 /**
  * Confirm payment - Customer confirms they have transferred money
+ * NOTE: This is just a customer confirmation. The store owner should verify the payment manually.
+ * The order status will remain 'pending' until store owner verifies and confirms payment.
  */
 exports.confirmPayment = async (req, res) => {
   try {
@@ -374,23 +376,41 @@ exports.confirmPayment = async (req, res) => {
       });
     }
 
-    // Mark order as paid
+    // Check if order was created recently (less than 1 minute ago)
+    // This prevents users from confirming payment immediately after creating order
+    const orderAge = Date.now() - new Date(order.createdAt).getTime();
+    const minWaitTime = 60 * 1000; // 1 minute in milliseconds
+    
+    if (orderAge < minWaitTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng đợi ít nhất 1 phút sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.'
+      });
+    }
+
+    // Instead of marking as paid immediately, add a note that customer has confirmed payment
+    // The store owner will need to verify the payment manually before confirming the order
     await order.update({
-      isPaid: true,
-      status: order.status === 'pending' ? 'confirmed' : order.status
+      // Keep isPaid as false - store owner needs to verify
+      // Keep status as 'pending' - store owner will change to 'confirmed' after verifying payment
+      customerNote: order.customerNote 
+        ? `${order.customerNote}\n\n[KHÁCH HÀNG ĐÃ XÁC NHẬN CHUYỂN KHOẢN - CẦN KIỂM TRA]`
+        : '[KHÁCH HÀNG ĐÃ XÁC NHẬN CHUYỂN KHOẢN - CẦN KIỂM TRA]'
     });
 
-    // Log for revenue tracking
-    console.log(`✅ Payment confirmed for Order #${order.orderCode} - Amount: ${order.totalAmount} VND`);
+    // Log for tracking
+    console.log(`⚠️ Customer confirmed payment for Order #${order.orderCode} - Amount: ${order.totalAmount} VND`);
+    console.log(`   ⚠️ IMPORTANT: Store owner needs to verify payment before confirming order!`);
 
     res.json({
       success: true,
-      message: 'Đã xác nhận thanh toán thành công. Đơn hàng sẽ được xử lý sớm nhất.',
+      message: 'Đã gửi xác nhận thanh toán. Cửa hàng sẽ kiểm tra và xác nhận đơn hàng của bạn trong thời gian sớm nhất.',
       data: {
         orderId: order.id,
         orderCode: order.orderCode,
-        isPaid: true,
-        amount: order.totalAmount
+        isPaid: false, // Still false - needs store owner verification
+        status: order.status,
+        message: 'Đơn hàng đang chờ cửa hàng xác minh thanh toán. Bạn sẽ nhận được thông báo khi đơn hàng được xác nhận.'
       }
     });
   } catch (error) {
@@ -757,6 +777,8 @@ exports.lookupAccountName = async (req, res) => {
 
 /**
  * Confirm payment - Customer confirms they have transferred money
+ * NOTE: This is just a customer confirmation. The store owner should verify the payment manually.
+ * The order status will remain 'pending' until store owner verifies and confirms payment.
  */
 exports.confirmPayment = async (req, res) => {
   try {
@@ -775,23 +797,41 @@ exports.confirmPayment = async (req, res) => {
       });
     }
 
-    // Mark order as paid
+    // Check if order was created recently (less than 1 minute ago)
+    // This prevents users from confirming payment immediately after creating order
+    const orderAge = Date.now() - new Date(order.createdAt).getTime();
+    const minWaitTime = 60 * 1000; // 1 minute in milliseconds
+    
+    if (orderAge < minWaitTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng đợi ít nhất 1 phút sau khi tạo đơn hàng trước khi xác nhận thanh toán. Điều này giúp đảm bảo bạn đã có thời gian thực hiện chuyển khoản.'
+      });
+    }
+
+    // Instead of marking as paid immediately, add a note that customer has confirmed payment
+    // The store owner will need to verify the payment manually before confirming the order
     await order.update({
-      isPaid: true,
-      status: order.status === 'pending' ? 'confirmed' : order.status
+      // Keep isPaid as false - store owner needs to verify
+      // Keep status as 'pending' - store owner will change to 'confirmed' after verifying payment
+      customerNote: order.customerNote 
+        ? `${order.customerNote}\n\n[KHÁCH HÀNG ĐÃ XÁC NHẬN CHUYỂN KHOẢN - CẦN KIỂM TRA]`
+        : '[KHÁCH HÀNG ĐÃ XÁC NHẬN CHUYỂN KHOẢN - CẦN KIỂM TRA]'
     });
 
-    // Log for revenue tracking
-    console.log(`✅ Payment confirmed for Order #${order.orderCode} - Amount: ${order.totalAmount} VND`);
+    // Log for tracking
+    console.log(`⚠️ Customer confirmed payment for Order #${order.orderCode} - Amount: ${order.totalAmount} VND`);
+    console.log(`   ⚠️ IMPORTANT: Store owner needs to verify payment before confirming order!`);
 
     res.json({
       success: true,
-      message: 'Đã xác nhận thanh toán thành công. Đơn hàng sẽ được xử lý sớm nhất.',
+      message: 'Đã gửi xác nhận thanh toán. Cửa hàng sẽ kiểm tra và xác nhận đơn hàng của bạn trong thời gian sớm nhất.',
       data: {
         orderId: order.id,
         orderCode: order.orderCode,
-        isPaid: true,
-        amount: order.totalAmount
+        isPaid: false, // Still false - needs store owner verification
+        status: order.status,
+        message: 'Đơn hàng đang chờ cửa hàng xác minh thanh toán. Bạn sẽ nhận được thông báo khi đơn hàng được xác nhận.'
       }
     });
   } catch (error) {

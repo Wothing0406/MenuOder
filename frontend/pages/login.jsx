@@ -10,7 +10,7 @@ import Navbar from '../components/Navbar';
 
 export default function Login() {
   const router = useRouter();
-  const { setToken, setUser, setStore } = useStore();
+  const { setToken, setUser, setStore, initDeviceId } = useStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -38,10 +38,21 @@ export default function Login() {
       });
 
       if (res.data.success) {
-        localStorage.setItem('token', res.data.data.token);
-        setToken(res.data.data.token);
+        // Initialize device ID
+        const deviceId = initDeviceId();
+        
+        // Save token to both localStorage and zustand store
+        const token = res.data.data.token;
+        localStorage.setItem('token', token);
+        setToken(token);
         setUser(res.data.data.user);
         setStore(res.data.data.store);
+        
+        // Log device info for session management
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Login successful - Device ID:', deviceId);
+        }
+        
         toast.success('Đăng nhập thành công!');
         const targetPath = res.data.data.user?.role === 'admin' ? '/admin' : '/dashboard';
         router.push(targetPath);

@@ -4,7 +4,20 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import Layout from '../components/Layout';
 import Navbar from '../components/Navbar';
-import { MenuIcon, CartIcon, QRIcon, SettingsIcon, FoodIcon, CategoryIcon } from '../components/Icons';
+import { 
+  MenuIcon, 
+  CartIcon, 
+  QRIcon, 
+  SettingsIcon, 
+  FoodIcon, 
+  CategoryIcon,
+  CreditCardIcon,
+  StarIcon,
+  BarChartIcon,
+  MapPinIcon,
+  PackageIcon,
+  WalletIcon
+} from '../components/Icons';
 import ScrollReveal from '../components/ScrollReveal';
 
 export default function Home() {
@@ -180,6 +193,108 @@ export default function Home() {
                 <h3 className="text-xl font-bold mb-3 text-gray-800">Tùy chỉnh</h3>
                 <p className="text-gray-600 leading-relaxed">
                   Thêm tùy chọn tùy chỉnh như kích cỡ, topping và yêu cầu đặc biệt cho từng món
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={600}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-emerald-600">
+                    <CreditCardIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Thanh toán Online</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Hỗ trợ thanh toán qua VietQR, ZaloPay QR và nhiều phương thức thanh toán khác
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={700}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-amber-600">
+                    <WalletIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Voucher & Giảm giá</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Tạo và quản lý mã giảm giá, voucher để thu hút khách hàng và tăng doanh số
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={800}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-orange-600">
+                    <StarIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Đánh giá & Phản hồi</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Khách hàng có thể đánh giá món ăn và dịch vụ, giúp bạn cải thiện chất lượng
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={900}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-indigo-600">
+                    <BarChartIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Thống kê Doanh thu</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Theo dõi doanh thu chi tiết theo ngày, tháng, năm và phân tích xu hướng bán hàng
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={1000}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-teal-600">
+                    <MapPinIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Giao hàng Thông minh</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Tự động xác thực địa chỉ và tính phí ship dựa trên khoảng cách thực tế
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={1100}>
+            <div className="card text-center group relative overflow-hidden card-glow hover-lift">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex justify-center mb-4">
+                  <div className="icon-wrapper text-cyan-600">
+                    <PackageIcon className="w-8 h-8" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Theo dõi Đơn hàng</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Khách hàng có thể theo dõi trạng thái đơn hàng bằng mã đơn hoặc số điện thoại
                 </p>
               </div>
             </div>

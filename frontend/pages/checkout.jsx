@@ -120,6 +120,92 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.store]);
 
+  // Restore order state if orderId is in URL (for bank transfer payment)
+  useEffect(() => {
+    const orderId = router.query.orderId;
+    if (!orderId || !storeId) return;
+
+    const restoreOrderState = async () => {
+      try {
+        const orderRes = await api.get(`/orders/${orderId}`);
+        if (orderRes.data.success) {
+          const order = orderRes.data.data;
+          
+          // Only restore if order is not paid and payment method is bank_transfer_qr
+          if (!order.isPaid && order.paymentMethod === 'bank_transfer_qr') {
+            // Restore order state
+            setBankTransferOrderId(order.id);
+            setFormData(prev => ({
+              ...prev,
+              paymentMethod: 'bank_transfer_qr'
+            }));
+            
+            // Get bank info from order's payment account first, then fallback to store's payment accounts
+            let paymentAccountToUse = null;
+            if (order.paymentAccount) {
+              paymentAccountToUse = order.paymentAccount;
+              setBankTransferInfo({
+                accountNumber: order.paymentAccount.bankAccountNumber,
+                accountName: order.paymentAccount.bankAccountName,
+                bankName: order.paymentAccount.bankName
+              });
+            } else {
+              // Fallback to store's payment accounts
+              try {
+                const paymentRes = await api.get(`/payment/store/${storeId}/active`);
+                if (paymentRes.data.success) {
+                  const paymentData = paymentRes.data.data || {};
+                  paymentAccountToUse = paymentData.bank_transfer?.find(acc => acc.isDefault) || paymentData.bank_transfer?.[0];
+                  
+                  if (paymentAccountToUse && !bankTransferInfo) {
+                    setBankTransferInfo({
+                      accountNumber: paymentAccountToUse.bankAccountNumber,
+                      accountName: paymentAccountToUse.bankAccountName,
+                      bankName: paymentAccountToUse.bankName
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching bank info:', error);
+              }
+            }
+            
+            // Try to get QR code from order
+            if (order.bankTransferQRCode) {
+              setBankTransferQRCode(order.bankTransferQRCode);
+            } else if (paymentAccountToUse) {
+              // If QR code not in order, try to regenerate it using the payment account
+              try {
+                const qrRes = await api.post(`/bank-transfer/create-qr/${order.id}`, {
+                  paymentAccountId: paymentAccountToUse.id
+                });
+                
+                if (qrRes.data.success && (qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode)) {
+                  const qrCode = qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode;
+                  setBankTransferQRCode(qrCode);
+                  if (qrRes.data.data.bankInfo && !bankTransferInfo) {
+                    setBankTransferInfo(qrRes.data.data.bankInfo);
+                  }
+                }
+              } catch (qrError) {
+                console.error('Error regenerating QR code:', qrError);
+              }
+            }
+          } else if (order.isPaid) {
+            // Order already paid, redirect to success page
+            const storeSlug = router.query.store;
+            router.push(`/order-success/${order.id}${storeSlug ? `?store=${storeSlug}` : ''}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring order state:', error);
+      }
+    };
+
+    restoreOrderState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.orderId, storeId]);
+
   // Reset voucher when giỏ hàng thay đổi
   useEffect(() => {
     setVoucherInfo(null);
@@ -481,6 +567,10 @@ export default function Checkout() {
               setBankTransferInfo(qrRes.data.data.bankInfo);
               setBankTransferOrderId(newOrderId);
               
+              // Update URL to include orderId for restoration on refresh
+              const storeSlug = router.query.store;
+              router.replace(`/checkout?store=${storeSlug}&orderId=${newOrderId}`, undefined, { shallow: true });
+              
               // Scroll to QR code sau khi đã render
               setTimeout(() => {
                 const qrElement = document.querySelector('[data-qr-code="bank_transfer"]');
@@ -492,6 +582,7 @@ export default function Checkout() {
               }, 300);
               
               toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
+              // Note: Không clear cart ở đây, chỉ clear khi thanh toán thành công
             } else {
               toast.error(qrRes.data?.message || 'Không thể tạo QR chuyển khoản. Vui lòng thanh toán bằng phương thức khác.');
               console.error('Bank Transfer QR creation failed:', qrRes.data);
@@ -895,8 +986,13 @@ export default function Checkout() {
               setBankTransferQRCode(qrRes.data.data.qrCodeImage || qrRes.data.data.qrCode);
               setBankTransferInfo(qrRes.data.data.bankInfo);
               setBankTransferOrderId(newOrderId);
+              
+              // Update URL to include orderId for restoration on refresh
+              const storeSlug = router.query.store;
+              router.replace(`/checkout?store=${storeSlug}&orderId=${newOrderId}`, undefined, { shallow: true });
+              
               // Don't show modal, QR will be displayed inline below form
-              clearCart();
+              // Note: Không clear cart ở đây, chỉ clear khi thanh toán thành công
               toast.success('Đã tạo QR chuyển khoản. Quét mã để thanh toán.');
               // Auto-check payment status will start via useEffect
               return; // Don't redirect, show QR inline
@@ -951,7 +1047,10 @@ export default function Checkout() {
   const discountAmount = voucherInfo?.discountAmount ? Number(voucherInfo.discountAmount) : 0;
   const finalTotal = Math.max(0, total - discountAmount) + shippingFee;
 
-  if (cartItems.length === 0) {
+  // Don't show empty cart message if there's an active order waiting for payment
+  const hasActiveOrder = bankTransferOrderId || zaloPayOrderId;
+  
+  if (cartItems.length === 0 && !hasActiveOrder) {
     return (
       <Layout>
         <Head>
@@ -1414,21 +1513,88 @@ export default function Checkout() {
               <button
                           type="button"
                 onClick={async () => {
+                  // Kiểm tra lại trạng thái đơn hàng trước khi xác nhận
+                  try {
+                    const checkRes = await api.get(`/orders/${bankTransferOrderId}`);
+                    if (checkRes.data.success) {
+                      const order = checkRes.data.data;
+                      
+                      // Kiểm tra xem đơn hàng đã được thanh toán chưa (từ hệ thống tự động hoặc admin)
+                      if (order.isPaid) {
+                        toast.success('Đơn hàng đã được xác nhận thanh toán!');
+                        clearCart();
+                        const storeSlug = router.query.store;
+                        router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+                        return;
+                      }
+                      
+                      // Nếu chưa thanh toán, hiển thị cảnh báo và yêu cầu xác nhận
+                      const confirmed = window.confirm(
+                        '⚠️ XÁC NHẬN QUAN TRỌNG:\n\n' +
+                        'Bạn đã thực sự chuyển khoản thành công chưa?\n\n' +
+                        'Vui lòng đảm bảo:\n' +
+                        '1. Bạn đã quét mã QR và chuyển khoản đúng số tiền\n' +
+                        '2. Bạn đã nhập đúng nội dung chuyển khoản\n' +
+                        '3. Giao dịch đã thành công trên app ngân hàng\n\n' +
+                        'Nếu bạn chưa chuyển khoản, vui lòng bấm "Hủy" và thực hiện chuyển khoản trước.\n\n' +
+                        'Nếu bạn đã chuyển khoản, bấm "OK" để xác nhận.'
+                      );
+                      
+                      if (!confirmed) {
+                        return;
+                      }
+                      
+                      // Xác nhận lần 2 để chắc chắn
+                      const confirmed2 = window.confirm(
+                        'Xác nhận lần cuối:\n\n' +
+                        'Bạn CHẮC CHẮN đã chuyển khoản thành công?\n\n' +
+                        'Lưu ý: Đơn hàng sẽ được gửi đến cửa hàng và cửa hàng sẽ kiểm tra lại thanh toán.\n' +
+                        'Nếu không có thanh toán, đơn hàng có thể bị hủy.'
+                      );
+                      
+                      if (!confirmed2) {
+                        return;
+                      }
+                    }
+                  } catch (checkError) {
+                    console.error('Error checking order status:', checkError);
+                    toast.error('Không thể kiểm tra trạng thái đơn hàng. Vui lòng thử lại.');
+                    return;
+                  }
+                  
                   try {
                     setCheckingPayment(true);
                     const res = await api.post(`/bank-transfer/confirm-payment/${bankTransferOrderId}`);
                     if (res.data.success) {
-                                toast.success('Đã xác nhận thanh toán thành công!');
-                                clearCart();
-                                // Always redirect to order success page after confirming payment
-                      const storeSlug = router.query.store;
-                        router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+                                // Check if order was actually paid or just confirmed by customer
+                                if (res.data.data.isPaid) {
+                                  // Order already paid (from previous confirmation or admin)
+                                  toast.success('Đơn hàng đã được xác nhận thanh toán!');
+                                  clearCart();
+                                  const storeSlug = router.query.store;
+                                  router.push(`/order-success/${bankTransferOrderId}${storeSlug ? `?store=${storeSlug}` : ''}`);
+                                } else {
+                                  // Customer confirmation sent, waiting for store verification
+                                  // KHÔNG redirect đến order-success, chỉ hiển thị thông báo
+                                  toast.success(res.data.message || 'Đã gửi xác nhận thanh toán! Cửa hàng sẽ kiểm tra và xác nhận đơn hàng của bạn.', {
+                                    duration: 5000
+                                  });
+                                  // Hiển thị thông báo rõ ràng rằng đơn hàng chưa được xác nhận
+                                  toast('⚠️ Lưu ý: Đơn hàng của bạn đang chờ cửa hàng xác minh thanh toán. Bạn có thể theo dõi trạng thái đơn hàng sau.', {
+                                    icon: 'ℹ️',
+                                    duration: 6000
+                                  });
+                                  // KHÔNG clear cart và KHÔNG redirect - để người dùng có thể theo dõi
+                                  // clearCart(); // Comment out - không clear cart khi chưa thanh toán thực sự
+                                  // router.push(...); // Comment out - không redirect khi chưa thanh toán thực sự
+                                }
                               } else {
                                 toast.error(res.data.message || 'Xác nhận thanh toán thất bại');
                     }
                   } catch (error) {
                               console.error('Confirm payment error:', error);
-                              toast.error(error.response?.data?.message || 'Xác nhận thanh toán thất bại. Vui lòng thử lại.');
+                              const errorMessage = error.response?.data?.message || 'Xác nhận thanh toán thất bại. Vui lòng thử lại.';
+                              toast.error(errorMessage);
                             } finally {
                               setCheckingPayment(false);
                             }
