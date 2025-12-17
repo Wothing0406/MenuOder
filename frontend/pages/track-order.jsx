@@ -5,7 +5,15 @@ import api from '../lib/api';
 import Layout from '../components/Layout';
 import { formatVND } from '../lib/utils';
 import toast from 'react-hot-toast';
-import { DeliveryTruckIcon, TableIcon } from '../components/Icons';
+import { 
+  DeliveryTruckIcon, 
+  TableIcon, 
+  SearchIcon, 
+  ClockIcon, 
+  MapPinIcon, 
+  PhoneIcon, 
+  CheckIcon 
+} from '../components/Icons';
 
 const getStatusLabel = (status) => {
   const statusMap = {
@@ -196,11 +204,14 @@ export default function TrackOrder() {
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin">⏳</span>
+                    <ClockIcon className="w-5 h-5 animate-spin" />
                     Đang tìm kiếm...
                   </span>
                 ) : (
-                  '🔍 Tìm kiếm đơn hàng'
+                  <span className="flex items-center justify-center gap-2">
+                    <SearchIcon className="w-5 h-5" />
+                    Tìm kiếm đơn hàng
+                  </span>
                 )}
               </button>
             </form>
@@ -233,11 +244,17 @@ export default function TrackOrder() {
                       <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                         <p className="text-xs text-purple-600 mb-1 font-semibold">Cửa hàng</p>
                         <p className="text-sm font-bold text-purple-800">{order.store.storeName}</p>
-                        {order.store.storeAddress && (
-                          <p className="text-xs text-purple-700 mt-1">📍 {order.store.storeAddress}</p>
+                        {(order.store.storeDetailedAddress || order.store.storeAddress) && (
+                          <p className="text-xs text-purple-700 mt-1">
+                            <MapPinIcon className="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                            {order.store.storeDetailedAddress || order.store.storeAddress}
+                          </p>
                         )}
                         {order.store.storePhone && (
-                          <p className="text-xs text-purple-700 mt-1">📞 {order.store.storePhone}</p>
+                          <p className="text-xs text-purple-700 mt-1">
+                            <PhoneIcon className="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                            {order.store.storePhone}
+                          </p>
                         )}
                       </div>
                     )}
@@ -315,7 +332,17 @@ export default function TrackOrder() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Trạng thái thanh toán</p>
                         <p className={`text-sm font-semibold ${order.isPaid ? 'text-green-600' : 'text-orange-600'}`}>
-                          {order.isPaid ? '✓ Đã thanh toán' : '⏳ Chưa thanh toán'}
+                          {order.isPaid ? (
+                            <span className="inline-flex items-center gap-1">
+                              <CheckIcon className="w-4 h-4" />
+                              Đã thanh toán
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <ClockIcon className="w-4 h-4" />
+                              Chưa thanh toán
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -450,7 +477,9 @@ export default function TrackOrder() {
           {/* No Results Message */}
           {orders && orders.length === 0 && (
             <div className="card text-center py-8">
-              <div className="text-6xl mb-4">🔍</div>
+              <div className="flex justify-center mb-4">
+                <SearchIcon className="w-16 h-16 text-gray-400" />
+              </div>
               <p className="text-gray-600 text-lg">Không tìm thấy đơn hàng</p>
               <p className="text-gray-500 text-sm mt-2">
                 Vui lòng kiểm tra lại mã đơn hàng hoặc số điện thoại

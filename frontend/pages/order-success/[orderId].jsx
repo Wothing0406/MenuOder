@@ -117,8 +117,10 @@ export default function OrderSuccess() {
               {order.store && (
                 <div className="bg-white p-4 md:p-6 rounded-xl mb-4 text-center border-2 border-gray-200">
                   <h2 className="text-xl md:text-2xl font-bold mb-2">{order.store.storeName}</h2>
-                  {order.store.storeAddress && (
-                    <p className="text-sm text-gray-600 mb-1">{order.store.storeAddress}</p>
+                  {(order.store.storeDetailedAddress || order.store.storeAddress) && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      {order.store.storeDetailedAddress || order.store.storeAddress}
+                    </p>
                   )}
                   {order.store.storePhone && (
                     <p className="text-sm text-gray-600 flex items-center justify-center gap-1">
