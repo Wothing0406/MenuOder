@@ -10,6 +10,13 @@ if (API_URL && !API_URL.endsWith('/api') && !API_URL.endsWith('/api/')) {
   API_URL = API_URL.endsWith('/') ? API_URL + 'api' : API_URL + '/api';
 }
 
+// Warning nếu đang dùng localhost trong production
+if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
+  console.error('⚠️ WARNING: API URL đang trỏ đến localhost trong production!');
+  console.error('Vui lòng set NEXT_PUBLIC_API_URL trong Vercel Environment Variables');
+  console.error('Current API URL:', API_URL);
+}
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -17,9 +24,11 @@ const api = axios.create({
   },
 });
 
-// Debug: Log API URL (chỉ trong development)
-if (process.env.NODE_ENV === 'development') {
+// Debug: Log API URL (cả development và production để debug)
+if (typeof window !== 'undefined') {
   console.log('🔗 API Base URL:', API_URL);
+  // Store API URL globally for debugging
+  window.__API_URL__ = API_URL;
 }
 
 // Add token or admin secret to requests
@@ -63,9 +72,14 @@ api.interceptors.response.use(
       // Network error - backend server is not running or not reachable
       if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error') || error.message?.includes('ERR_NETWORK')) {
         error.networkError = true;
-        error.userMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra backend server có đang chạy không.';
+        const apiUrl = typeof window !== 'undefined' ? window.__API_URL__ || API_URL : API_URL;
+        console.error('❌ Network Error - Cannot connect to API:', apiUrl);
+        console.error('Error details:', error.message, error.code);
+        error.userMessage = `Không thể kết nối đến server (${apiUrl}). Vui lòng kiểm tra cấu hình NEXT_PUBLIC_API_URL trên Vercel.`;
       } else if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
         error.networkError = true;
+        const apiUrl = typeof window !== 'undefined' ? window.__API_URL__ || API_URL : API_URL;
+        console.error('⏱️ Timeout Error - API:', apiUrl);
         error.userMessage = 'Yêu cầu quá thời gian. Vui lòng thử lại.';
       }
     }

@@ -244,10 +244,37 @@ export default function Dashboard() {
         const statsRes = await api.get('/orders/my-store/stats');
         if (statsRes.data.success) {
           setStats(statsRes.data.data);
+        } else {
+          console.error('Stats API returned unsuccessful:', statsRes.data);
+          // Set default stats if API returns unsuccessful
+          setStats({ 
+            totalOrders: 0, 
+            pendingOrders: 0, 
+            completedOrders: 0, 
+            totalRevenue: 0,
+            todayRevenue: 0,
+            monthlyRevenue: 0,
+            yearlyRevenue: 0
+          });
         }
       } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Stats fetch error:', err);
+        console.error('Stats fetch error:', err);
+        if (err.response) {
+          console.error('Stats API Error Response:', err.response.status, err.response.data);
+          // Show error toast for non-401 errors (401 will redirect to login)
+          if (err.response.status !== 401) {
+            toast.error('Không thể tải thống kê: ' + (err.response.data?.message || 'Lỗi không xác định'));
+          }
+        } else if (err.request) {
+          console.error('Stats API Request Error:', err.request);
+          const apiUrl = api.defaults.baseURL || (typeof window !== 'undefined' ? window.__API_URL__ : 'Unknown');
+          console.error('API URL:', apiUrl);
+          console.error('Request URL:', err.config?.url);
+          console.error('Full Request Config:', err.config);
+          toast.error(`Không thể kết nối đến server để lấy thống kê. API: ${apiUrl}`);
+        } else {
+          console.error('Stats Error:', err.message);
+          toast.error('Lỗi khi tải thống kê: ' + err.message);
         }
         // Set default stats if fetch fails
         setStats({ 

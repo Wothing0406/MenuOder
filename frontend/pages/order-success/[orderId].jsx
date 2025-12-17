@@ -226,7 +226,8 @@ export default function OrderSuccess() {
                       if ((!method || method === 'cash') && hasPaymentAccount) return 'Chuyển khoản';
 
                       if (method === 'cash') return 'Tiền mặt';
-                      if (method === 'bank_transfer') return 'Chuyển khoản ';
+                      if (method === 'bank_transfer') return 'Chuyển khoản';
+                      if (method === 'bank_transfer_qr') return 'Chuyển khoản QR';
                       if (method === 'zalopay_qr') return 'ZaloPay QR';
   
                       // Fallback: nếu có giá trị nhưng không khớp, hiển thị giá trị đó
