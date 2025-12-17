@@ -721,18 +721,33 @@ exports.getOrderStats = async (req, res) => {
       where: { storeId: store.id, status: 'completed' }
     });
 
+    // Detect database dialect for proper SQL syntax
+    const dbDialect = sequelize.getDialect();
+    const isPostgres = dbDialect === 'postgres';
+    
+    // PostgreSQL: Sequelize uses camelCase column names with quotes
+    // MySQL: Uses backticks
+    // For PostgreSQL, we need to use the exact column name as defined in model
+    // Sequelize by default uses camelCase, so "paymentMethod" in PostgreSQL
+    const quote = isPostgres ? '"' : '`';
+    // In PostgreSQL, Sequelize creates columns with camelCase names (e.g., "paymentMethod")
+    // We need to use the exact name from the model definition
+    const paymentMethodCol = isPostgres ? '"paymentMethod"' : '`paymentMethod`';
+    const totalAmountCol = isPostgres ? '"totalAmount"' : '`totalAmount`';
+    
     // Calculate total revenue (all completed orders - paid) + breakdown theo phương thức
+    // Use COALESCE to handle NULL results from SUM
     const totalRevenueResult = await Order.findAll({
       attributes: [
-        [Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
-          WHEN paymentMethod = 'cash' THEN totalAmount ELSE 0 END`)), 'cashTotal'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
-          WHEN paymentMethod = 'bank_transfer' OR paymentMethod = 'bank_transfer_qr' THEN totalAmount ELSE 0 END`)), 'bankTotal'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
-          WHEN paymentMethod = 'zalopay_qr' THEN totalAmount ELSE 0 END`)), 'zaloTotal'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE 
-          WHEN paymentMethod NOT IN ('cash', 'bank_transfer', 'bank_transfer_qr', 'zalopay_qr') OR paymentMethod IS NULL THEN totalAmount ELSE 0 END`)), 'otherTotal']
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('totalAmount')), 0), 'total'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN ${paymentMethodCol} = 'cash' THEN ${totalAmountCol} ELSE 0 END`)), 0), 'cashTotal'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN ${paymentMethodCol} = 'bank_transfer' OR ${paymentMethodCol} = 'bank_transfer_qr' THEN ${totalAmountCol} ELSE 0 END`)), 0), 'bankTotal'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN ${paymentMethodCol} = 'zalopay_qr' THEN ${totalAmountCol} ELSE 0 END`)), 0), 'zaloTotal'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(`CASE 
+          WHEN ${paymentMethodCol} NOT IN ('cash', 'bank_transfer', 'bank_transfer_qr', 'zalopay_qr') OR ${paymentMethodCol} IS NULL THEN ${totalAmountCol} ELSE 0 END`)), 0), 'otherTotal']
       ],
       where: { 
         storeId: store.id, 
@@ -743,7 +758,7 @@ exports.getOrderStats = async (req, res) => {
 
     // Calculate today's revenue (completed orders today only)
     const todayRevenueResult = await Order.findAll({
-      attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
+      attributes: [[Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('totalAmount')), 0), 'total']],
       where: { 
         storeId: store.id, 
         status: 'completed',
@@ -756,7 +771,7 @@ exports.getOrderStats = async (req, res) => {
 
     // Calculate monthly revenue (completed orders this month)
     const monthlyRevenueResult = await Order.findAll({
-      attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
+      attributes: [[Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('totalAmount')), 0), 'total']],
       where: { 
         storeId: store.id, 
         status: 'completed',
@@ -769,7 +784,7 @@ exports.getOrderStats = async (req, res) => {
 
     // Calculate yearly revenue (completed orders this year)
     const yearlyRevenueResult = await Order.findAll({
-      attributes: [[Sequelize.fn('SUM', Sequelize.col('totalAmount')), 'total']],
+      attributes: [[Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('totalAmount')), 0), 'total']],
       where: { 
         storeId: store.id, 
         status: 'completed',
@@ -814,10 +829,20 @@ exports.getOrderStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Get order stats error:', error);
+    console.error('Error stack:', error.stack);
+    if (error.original) {
+      console.error('Original database error:', error.original.message);
+      console.error('Original error code:', error.original.code);
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to get statistics',
-      error: error.message
+      error: error.message,
+      // Include more details in development
+      ...(process.env.NODE_ENV === 'development' && {
+        details: error.original?.message || error.message,
+        stack: error.stack
+      })
     });
   }
 };
