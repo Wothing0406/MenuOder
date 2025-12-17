@@ -587,7 +587,7 @@ exports.getOrderDetail = async (req, res) => {
         { association: 'voucher', required: false },
         { 
           association: 'store',
-          attributes: ['id', 'storeName', 'storeAddress', 'storePhone']
+          attributes: ['id', 'storeName', 'storeAddress', 'storeDetailedAddress', 'storePhone']
         },
         {
           association: 'paymentAccount',
@@ -656,7 +656,7 @@ exports.trackOrder = async (req, res) => {
         { association: 'items' },
         { 
           association: 'store',
-          attributes: ['id', 'storeName', 'storeAddress', 'storePhone']
+          attributes: ['id', 'storeName', 'storeAddress', 'storeDetailedAddress', 'storePhone']
         }
       ],
       order: [['createdAt', 'DESC']],
