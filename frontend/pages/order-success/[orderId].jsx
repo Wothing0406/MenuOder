@@ -20,6 +20,7 @@ export default function OrderSuccess() {
   const router = useRouter();
   const { orderId, store } = router.query;
   const [order, setOrder] = useState(null);
+  const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const { clearCart } = useCart();
 
@@ -66,6 +67,27 @@ export default function OrderSuccess() {
     fetchOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  // Fallback: lấy store info theo slug (để luôn có storeDetailedAddress từ dashboard)
+  useEffect(() => {
+    if (!store) return;
+
+    const fetchStoreInfo = async () => {
+      try {
+        const res = await api.get(`/stores/slug/${store}`);
+        if (res.data.success) {
+          setStoreInfo(res.data.data.store || null);
+        }
+      } catch (error) {
+        // silent fail, fallback to order.store
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to fetch store info for bill:', error);
+        }
+      }
+    };
+
+    fetchStoreInfo();
+  }, [store]);
 
   const copyOrderCode = () => {
     if (order?.orderCode) {
@@ -117,9 +139,15 @@ export default function OrderSuccess() {
               {order.store && (
                 <div className="bg-white p-4 md:p-6 rounded-xl mb-4 text-center border-2 border-gray-200">
                   <h2 className="text-xl md:text-2xl font-bold mb-2">{order.store.storeName}</h2>
-                  {(order.store.storeDetailedAddress || order.store.storeAddress) && (
+                  {(storeInfo?.storeDetailedAddress ||
+                    storeInfo?.storeAddress ||
+                    order.store.storeDetailedAddress ||
+                    order.store.storeAddress) && (
                     <p className="text-sm text-gray-600 mb-1">
-                      {order.store.storeDetailedAddress || order.store.storeAddress}
+                      {storeInfo?.storeDetailedAddress ||
+                        storeInfo?.storeAddress ||
+                        order.store.storeDetailedAddress ||
+                        order.store.storeAddress}
                     </p>
                   )}
                   {order.store.storePhone && (
