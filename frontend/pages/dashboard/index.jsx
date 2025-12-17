@@ -1224,16 +1224,16 @@ export default function Dashboard() {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="card">
-            <h2 className="text-2xl font-bold mb-6">Cài đặt Cửa hàng</h2>
+          <div className="card px-3 sm:px-4 md:px-6">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Cài đặt Cửa hàng</h2>
             
             {/* Logo Upload Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4">Logo cửa hàng</h3>
-              <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Logo cửa hàng</h3>
+              <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                 {/* Logo Preview */}
-                <div className="flex-shrink-0">
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 shadow-lg">
+                <div className="flex-shrink-0 mx-auto sm:mx-0">
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-gray-200 shadow-lg">
                     {logoPreview ? (
                       <img 
                         src={logoPreview}
@@ -1284,68 +1284,70 @@ export default function Dashboard() {
                 </div>
                 
                 {/* Upload Button */}
-                <div className="flex-1">
-                  <p className="text-gray-600 mb-3">
+                <div className="flex-1 w-full sm:w-auto">
+                  <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
                     Logo sẽ hiển thị ở header trang menu của cửa hàng bạn.
                   </p>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
                     Định dạng: JPG, PNG, GIF (Tối đa 5MB)
                   </p>
-                  <label className="inline-block">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      disabled={uploadingLogo}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <span className={`btn ${uploadingLogo ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block`}>
-                      {uploadingLogo ? 'Đang upload...' : 'Chọn ảnh logo'}
-                    </span>
-                  </label>
-                  {(storeData?.storeLogo || store?.storeLogo) && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          // Gửi request xóa logo - update store với storeLogo = null
-                          // Backend cần hỗ trợ xóa logo bằng cách set storeLogo = null
-                          // Tạm thời: Gọi API update với storeLogo empty
-                          await api.put('/stores/my-store', {
-                            storeName: storeData?.storeName || store?.storeName,
-                            // Không gửi storeLogo để giữ nguyên (cần backend hỗ trợ xóa)
-                          });
-                          // Fetch lại store data
-                          const storeRes = await api.get('/stores/my-store');
-                          if (storeRes.data.success) {
-                            useStore.setState({ store: storeRes.data.data });
-                            setStoreData(storeRes.data.data);
-                            setLogoPreview(null);
-                            toast.success('Đã xóa logo!');
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <label className="inline-block w-full sm:w-auto">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <span className={`btn ${uploadingLogo ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block w-full sm:w-auto text-center`}>
+                        {uploadingLogo ? 'Đang upload...' : 'Chọn ảnh logo'}
+                      </span>
+                    </label>
+                    {(storeData?.storeLogo || store?.storeLogo) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Gửi request xóa logo - update store với storeLogo = null
+                            // Backend cần hỗ trợ xóa logo bằng cách set storeLogo = null
+                            // Tạm thời: Gọi API update với storeLogo empty
+                            await api.put('/stores/my-store', {
+                              storeName: storeData?.storeName || store?.storeName,
+                              // Không gửi storeLogo để giữ nguyên (cần backend hỗ trợ xóa)
+                            });
+                            // Fetch lại store data
+                            const storeRes = await api.get('/stores/my-store');
+                            if (storeRes.data.success) {
+                              useStore.setState({ store: storeRes.data.data });
+                              setStoreData(storeRes.data.data);
+                              setLogoPreview(null);
+                              toast.success('Đã xóa logo!');
+                            }
+                          } catch (error) {
+                            if (process.env.NODE_ENV === 'development') {
+                              console.error('Delete logo error:', error);
+                            }
+                            toast.error('Xóa logo thất bại!');
                           }
-                        } catch (error) {
-                          if (process.env.NODE_ENV === 'development') {
-                            console.error('Delete logo error:', error);
-                          }
-                          toast.error('Xóa logo thất bại!');
-                        }
-                      }}
-                      className="btn btn-secondary ml-3"
-                    >
-                      Xóa logo
-                    </button>
-                  )}
+                        }}
+                        className="btn btn-secondary w-full sm:w-auto"
+                      >
+                        Xóa logo
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Store Image (Banner) Upload Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4">Hình ảnh quán (Banner)</h3>
-              <div className="flex flex-col gap-6">
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Hình ảnh quán (Banner)</h3>
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Image Preview */}
                 <div className="w-full">
-                  <div className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg bg-gray-100">
+                  <div className="relative w-full h-40 sm:h-48 md:h-64 rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg bg-gray-100">
                     {storeImagePreview ? (
                       <img 
                         src={storeImagePreview}
@@ -1388,58 +1390,60 @@ export default function Dashboard() {
                 
                 {/* Upload Button */}
                 <div>
-                  <p className="text-gray-600 mb-3">
+                  <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
                     Hình ảnh này sẽ hiển thị ở đầu trang menu của cửa hàng bạn, giúp khách hàng dễ nhận biết.
                   </p>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
                     Định dạng: JPG, PNG, GIF (Tối đa 5MB). Khuyến nghị: 1200x400px hoặc tỷ lệ tương tự.
                   </p>
-                  <label className="inline-block">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleStoreImageUpload}
-                      disabled={uploadingStoreImage}
-                      className="hidden"
-                      id="store-image-upload"
-                    />
-                    <span className={`btn ${uploadingStoreImage ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block`}>
-                      {uploadingStoreImage ? 'Đang upload...' : 'Chọn hình ảnh quán'}
-                    </span>
-                  </label>
-                  {(storeData?.storeImage || store?.storeImage) && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          await api.put('/stores/my-store', {
-                            storeName: storeData?.storeName || store?.storeName,
-                            storeImage: '', // Gửi empty string để xóa
-                          });
-                          const storeRes = await api.get('/stores/my-store');
-                          if (storeRes.data.success) {
-                            useStore.setState({ store: storeRes.data.data });
-                            setStoreData(storeRes.data.data);
-                            setStoreImagePreview(null);
-                            toast.success('Đã xóa hình ảnh quán!');
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <label className="inline-block w-full sm:w-auto">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleStoreImageUpload}
+                        disabled={uploadingStoreImage}
+                        className="hidden"
+                        id="store-image-upload"
+                      />
+                      <span className={`btn ${uploadingStoreImage ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary btn-ripple scale-on-hover'} cursor-pointer inline-block w-full sm:w-auto text-center`}>
+                        {uploadingStoreImage ? 'Đang upload...' : 'Chọn hình ảnh quán'}
+                      </span>
+                    </label>
+                    {(storeData?.storeImage || store?.storeImage) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.put('/stores/my-store', {
+                              storeName: storeData?.storeName || store?.storeName,
+                              storeImage: '', // Gửi empty string để xóa
+                            });
+                            const storeRes = await api.get('/stores/my-store');
+                            if (storeRes.data.success) {
+                              useStore.setState({ store: storeRes.data.data });
+                              setStoreData(storeRes.data.data);
+                              setStoreImagePreview(null);
+                              toast.success('Đã xóa hình ảnh quán!');
+                            }
+                          } catch (error) {
+                            console.error('Delete store image error:', error);
+                            toast.error('Xóa hình ảnh thất bại!');
                           }
-                        } catch (error) {
-                          console.error('Delete store image error:', error);
-                          toast.error('Xóa hình ảnh thất bại!');
-                        }
-                      }}
-                      className="btn btn-secondary ml-3"
-                    >
-                      Xóa hình ảnh
-                    </button>
-                  )}
+                        }}
+                        className="btn btn-secondary w-full sm:w-auto"
+                      >
+                        Xóa hình ảnh
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Store Information Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4">Thông tin cửa hàng</h3>
-              <div className="space-y-4">
+            <div className="mb-6 sm:mb-8">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Thông tin cửa hàng</h3>
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Tên cửa hàng</label>
                   <input
@@ -1533,11 +1537,11 @@ export default function Dashboard() {
             </div>
 
             {/* Payment Accounts Management - Using new PaymentAccountManager component */}
-            <div className="border-t border-gray-200 pt-6 mt-6">
+            <div className="border-t border-gray-200 pt-4 sm:pt-6 mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
               {store?.id ? (
                 <PaymentAccountManager storeId={store.id} />
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
                   Đang tải thông tin cửa hàng...
                 </div>
               )}

@@ -293,9 +293,9 @@ export default function PaymentAccountManager({ storeId }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold">Tài khoản thanh toán</h3>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h3 className="text-base sm:text-lg font-bold">Tài khoản thanh toán</h3>
         <button
           onClick={() => {
             setShowAddForm(true);
@@ -318,24 +318,24 @@ export default function PaymentAccountManager({ storeId }) {
               zaloPayMerchantId: ''
             });
           }}
-          className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+          className="group relative inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm sm:text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 overflow-hidden w-full sm:w-auto"
         >
           <span className="absolute inset-0 bg-gradient-to-r from-purple-700 to-purple-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-          <PlusCircleIcon className="w-5 h-5 relative z-10 transform group-hover:rotate-90 transition-transform duration-300" />
+          <PlusCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 relative z-10 transform group-hover:rotate-90 transition-transform duration-300" />
           <span className="relative z-10">Thêm tài khoản</span>
-          <SparklesIcon className="w-4 h-4 relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <SparklesIcon className="w-3 h-3 sm:w-4 sm:h-4 relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </button>
       </div>
 
       {/* Account List */}
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {/* Statistics - Always show if has accounts */}
         {accounts.length > 0 && (
-          <div className="text-sm text-gray-600 mb-2 p-2 bg-gray-50 rounded">
+          <div className="text-xs sm:text-sm text-gray-600 mb-2 p-2 sm:p-3 bg-gray-50 rounded">
             <strong>Tổng số tài khoản đã liên kết:</strong> {accounts.length} 
             ({accounts.filter(acc => acc.accountType === 'bank_transfer').length} ngân hàng, {accounts.filter(acc => acc.accountType === 'zalopay').length} ZaloPay)
-            <br />
-            <span className="text-xs">
+            <br className="hidden sm:block" />
+            <span className="text-xs block sm:inline mt-1 sm:mt-0">
               - Active: {accounts.filter(acc => acc.isActive).length} | 
               - Inactive: {accounts.filter(acc => !acc.isActive).length} | 
               - Verified: {accounts.filter(acc => acc.isVerified).length} | 
@@ -355,85 +355,87 @@ export default function PaymentAccountManager({ storeId }) {
           }
           return bankAccounts.length > 0;
         })() && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-5 mb-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-lg">
-                <TargetIcon className="w-6 h-6 text-white" />
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-3 sm:p-5 mb-4 sm:mb-6 shadow-lg">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-3">
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-lg flex-shrink-0">
+                <TargetIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-lg text-blue-900">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm sm:text-lg text-blue-900">
                   Chọn tài khoản ngân hàng để hiển thị QR code
                 </h3>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-xs sm:text-sm text-blue-700 mt-1">
                   Tài khoản được chọn sẽ được dùng để tạo QR code khi khách hàng đặt hàng. <strong>Chỉ có thể chọn 1 tài khoản.</strong>
                 </p>
               </div>
             </div>
-            <div className="space-y-2 mt-4">
+            <div className="space-y-2 sm:space-y-2 mt-3 sm:mt-4">
               {accounts
                 .filter(acc => acc.accountType === 'bank_transfer')
                 .map(acc => (
                   <div 
                     key={acc.id} 
-                    className={`flex items-center gap-3 p-3 bg-white rounded-lg border-2 transition-all ${
+                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg border-2 transition-all ${
                       acc.isDefault 
                         ? 'border-green-400 bg-green-50 shadow-md' 
                         : 'border-blue-200 hover:border-blue-400 hover:shadow'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="defaultBankAccountForQR"
-                      id={`defaultQR_${acc.id}`}
-                      checked={acc.isDefault}
-                      onChange={async () => {
-                        try {
-                          // Update this account to be default
-                          const res = await api.put(`/payment-accounts/${acc.id}`, {
-                            isDefault: true
-                          });
-                          if (res.data.success) {
-                            toast.success(`Đã chọn "${acc.accountName}" làm tài khoản mặc định cho QR code`);
-                            await fetchAccounts(); // Refresh list
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                      <input
+                        type="radio"
+                        name="defaultBankAccountForQR"
+                        id={`defaultQR_${acc.id}`}
+                        checked={acc.isDefault}
+                        onChange={async () => {
+                          try {
+                            // Update this account to be default
+                            const res = await api.put(`/payment-accounts/${acc.id}`, {
+                              isDefault: true
+                            });
+                            if (res.data.success) {
+                              toast.success(`Đã chọn "${acc.accountName}" làm tài khoản mặc định cho QR code`);
+                              await fetchAccounts(); // Refresh list
+                            }
+                          } catch (error) {
+                            console.error('Error setting default account:', error);
+                            toast.error('Không thể cập nhật tài khoản mặc định');
                           }
-                        } catch (error) {
-                          console.error('Error setting default account:', error);
-                          toast.error('Không thể cập nhật tài khoản mặc định');
-                        }
-                      }}
-                      className="cursor-pointer w-5 h-5"
-                    />
-                    <label htmlFor={`defaultQR_${acc.id}`} className="flex-1 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-900">{acc.accountName}</span>
-                          <span className="text-sm text-gray-600">({acc.bankName})</span>
-                          {!acc.isVerified && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded font-semibold">
-                              <AlertCircleIcon className="w-3 h-3" />
-                              Chưa xác thực
+                        }}
+                        className="cursor-pointer w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
+                      />
+                      <label htmlFor={`defaultQR_${acc.id}`} className="flex-1 cursor-pointer min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <span className="font-bold text-sm sm:text-base text-gray-900">{acc.accountName}</span>
+                            <span className="text-xs sm:text-sm text-gray-600">({acc.bankName})</span>
+                            {!acc.isVerified && (
+                              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded font-semibold whitespace-nowrap">
+                                <AlertCircleIcon className="w-3 h-3" />
+                                Chưa xác thực
+                              </span>
+                            )}
+                            {!acc.isActive && (
+                              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded font-semibold whitespace-nowrap">
+                                <EyeOffIcon className="w-3 h-3" />
+                                Đã ẩn
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded break-all sm:break-normal">
+                              STK: {acc.bankAccountNumber}
                             </span>
-                          )}
-                          {!acc.isActive && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded font-semibold">
-                              <EyeOffIcon className="w-3 h-3" />
-                              Đã ẩn
-                            </span>
-                          )}
+                            {acc.isDefault && (
+                              <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-md whitespace-nowrap">
+                                <CheckCircleIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                                ĐANG DÙNG
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded">
-                            STK: {acc.bankAccountNumber}
-                          </span>
-                          {acc.isDefault && (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold text-sm shadow-md">
-                              <CheckCircleIcon className="w-4 h-4" />
-                              ĐANG DÙNG
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </label>
+                      </label>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -447,12 +449,12 @@ export default function PaymentAccountManager({ storeId }) {
           }
           console.log(`  [${index + 1}] Rendering account:`, account.id, account.accountName);
           return (
-            <div key={account.id} className="bg-white rounded-lg border p-4">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="font-semibold">{account.accountName}</h4>
-                  <span className={`px-2 py-1 rounded text-xs ${
+            <div key={account.id} className="bg-white rounded-lg border p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+                  <h4 className="font-semibold text-sm sm:text-base">{account.accountName}</h4>
+                  <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs ${
                     account.accountType === 'bank_transfer' 
                       ? 'bg-blue-100 text-blue-700' 
                       : 'bg-purple-100 text-purple-700'
@@ -460,19 +462,19 @@ export default function PaymentAccountManager({ storeId }) {
                     {account.accountType === 'bank_transfer' ? 'Ngân hàng' : 'ZaloPay'}
                   </span>
                   {account.isDefault && account.accountType === 'bank_transfer' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold">
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold whitespace-nowrap">
                       <CheckCircleIcon className="w-3 h-3" />
                       Tài khoản QR mặc định
                     </span>
                   )}
-                  <span className={`px-2 py-1 rounded text-xs ${
+                  <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs whitespace-nowrap ${
                     account.isVerified 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-red-100 text-red-700'
                   }`}>
                     {account.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
                   </span>
-                  <span className={`px-2 py-1 rounded text-xs ${
+                  <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs whitespace-nowrap ${
                     account.isActive 
                       ? 'bg-blue-100 text-blue-700' 
                       : 'bg-gray-100 text-gray-700'
@@ -482,13 +484,13 @@ export default function PaymentAccountManager({ storeId }) {
                 </div>
                 
                 {account.accountType === 'bank_transfer' ? (
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                     <p><strong>Ngân hàng:</strong> {account.bankName}</p>
-                    <p><strong>STK:</strong> {account.bankAccountNumber}</p>
+                    <p><strong>STK:</strong> <span className="font-mono">{account.bankAccountNumber}</span></p>
                     <p><strong>Chủ TK:</strong> {account.bankAccountName}</p>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                     <p><strong>App ID:</strong> {account.zaloPayAppId}</p>
                     <p><strong>Merchant ID:</strong> {account.zaloPayMerchantId || 'Không có'}</p>
                     <p><strong>Key 1:</strong> {account.hasKey1 ? 'Đã cấu hình' : 'Chưa cấu hình'}</p>
@@ -496,13 +498,13 @@ export default function PaymentAccountManager({ storeId }) {
                 )}
                 
                 {account.verificationError && (
-                  <p className="text-sm text-red-600 mt-2">
+                  <p className="text-xs sm:text-sm text-red-600 mt-2 break-words">
                     <strong>Lỗi xác thực:</strong> {account.verificationError}
                   </p>
                 )}
               </div>
               
-              <div className="flex gap-2 items-center flex-wrap">
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center sm:flex-wrap w-full sm:w-auto">
                 {/* Button to set as default for bank_transfer accounts - Allow even if not verified */}
                 {account.accountType === 'bank_transfer' && !account.isDefault && (
                   <button
@@ -526,16 +528,16 @@ export default function PaymentAccountManager({ storeId }) {
                         toast.error(error.response?.data?.message || 'Không thể cập nhật tài khoản mặc định');
                       }
                     }}
-                    className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                    className="group relative inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-blue-700 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
-                    <TargetIcon className="w-4 h-4 relative z-10" />
-                    <span className="relative z-10">Đặt làm QR mặc định</span>
+                    <TargetIcon className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
+                    <span className="relative z-10 whitespace-nowrap">Đặt làm QR mặc định</span>
                   </button>
                 )}
                 {/* Only show active toggle for verified accounts */}
                 {account.isVerified && (
-                  <label className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2 text-xs sm:text-sm px-2 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                     <input
                       type="checkbox"
                       checked={account.isActive}
@@ -555,32 +557,32 @@ export default function PaymentAccountManager({ storeId }) {
                       }}
                       className="w-4 h-4"
                     />
-                    <span className="text-xs text-gray-600">Hiển thị cho khách</span>
+                    <span className="text-xs text-gray-600 whitespace-nowrap">Hiển thị cho khách</span>
                   </label>
                 )}
                 {!account.isVerified && (
                   <button
                     onClick={() => handleVerify(account.id)}
                     disabled={verifying[account.id]}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold"
                   >
                     {verifying[account.id] ? 'Đang xác thực...' : 'Xác thực'}
                   </button>
                 )}
                 <button
                   onClick={() => handleEdit(account)}
-                  className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  className="group relative inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-gray-700 to-gray-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
-                  <EditIcon className="w-4 h-4 relative z-10" />
+                  <EditIcon className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
                   <span className="relative z-10">Sửa</span>
                 </button>
                 <button
                   onClick={() => handleDelete(account.id)}
-                  className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  className="group relative inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
-                  <DeleteIcon className="w-4 h-4 relative z-10" />
+                  <DeleteIcon className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
                   <span className="relative z-10">Xóa</span>
                 </button>
               </div>
@@ -590,7 +592,7 @@ export default function PaymentAccountManager({ storeId }) {
         })}
         
         {accounts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base px-4">
             Chưa có tài khoản thanh toán nào. Thêm tài khoản để khách hàng có thể thanh toán online.
           </div>
         )}
@@ -638,14 +640,14 @@ export default function PaymentAccountManager({ storeId }) {
             </div>
 
             {/* Form Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Loại tài khoản</label>
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">Loại tài khoản</label>
                 <select
                   value={formData.accountType}
                   onChange={(e) => setFormData(prev => ({ ...prev, accountType: e.target.value }))}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none bg-white"
                   disabled={editingAccount}
                 >
                   <option value="bank_transfer">Chuyển khoản ngân hàng</option>
@@ -654,14 +656,14 @@ export default function PaymentAccountManager({ storeId }) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                   Tên hiển thị <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.accountName}
                   onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
                   placeholder="VD: Tài khoản chính, TK dự phòng..."
                   required
                 />
@@ -670,8 +672,8 @@ export default function PaymentAccountManager({ storeId }) {
               <div className="space-y-4">
                 {/* For bank_transfer: Only allow 1 default account (radio button) */}
                 {formData.accountType === 'bank_transfer' ? (
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
-                    <label className="block text-sm font-bold mb-3 text-blue-900">
+                  <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                    <label className="block text-xs sm:text-sm font-bold mb-2 sm:mb-3 text-blue-900">
                       Chọn tài khoản mặc định để hiển thị QR
                     </label>
                     <div className="space-y-2">
@@ -774,12 +776,12 @@ export default function PaymentAccountManager({ storeId }) {
               {formData.accountType === 'bank_transfer' ? (
                 <>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                       Ngân hàng <span className="text-red-500">*</span>
                     </label>
                     <div className="relative" ref={bankDropdownRef}>
                       <div className="relative">
-                        <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <SearchIcon className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                         <input
                           ref={bankInputRef}
                           type="text"
@@ -821,8 +823,8 @@ export default function PaymentAccountManager({ storeId }) {
                               setShowBankDropdown(true);
                             }
                           }}
-                          className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
-                          placeholder="Tìm kiếm ngân hàng (VD: Vietcombank, Techcombank, ACB, MB Bank...)"
+                          className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                          placeholder="Tìm kiếm ngân hàng..."
                           required
                         />
                       </div>
@@ -867,7 +869,7 @@ export default function PaymentAccountManager({ storeId }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                       Số tài khoản <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -882,17 +884,17 @@ export default function PaymentAccountManager({ storeId }) {
                           setFormData(prev => ({ ...prev, bankAccountNumber: value }));
                         }
                       }}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono text-lg"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono text-base sm:text-lg"
                       placeholder="Nhập số tài khoản (chỉ số, tối đa 19 chữ số)"
                       maxLength={19}
                       required
                     />
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                       <p className="text-xs text-gray-500">
                         Đã nhập: <span className="font-semibold">{formData.bankAccountNumber.length}/19</span> chữ số
                       </p>
                       {formData.bankAccountNumber && (
-                        <p className="text-xs font-mono text-green-600 font-semibold">
+                        <p className="text-xs font-mono text-green-600 font-semibold break-all sm:break-normal">
                           {formData.bankAccountNumber}
                         </p>
                       )}
@@ -900,14 +902,14 @@ export default function PaymentAccountManager({ storeId }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                       Tên chủ tài khoản <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.bankAccountName}
                       onChange={(e) => setFormData(prev => ({ ...prev, bankAccountName: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none uppercase"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none uppercase"
                       placeholder="Tên chủ tài khoản (viết hoa, không dấu)"
                       required
                     />
@@ -916,28 +918,28 @@ export default function PaymentAccountManager({ storeId }) {
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                       ZaloPay App ID <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.zaloPayAppId}
                       onChange={(e) => setFormData(prev => ({ ...prev, zaloPayAppId: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
                       placeholder="Nhập ZaloPay App ID"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                       ZaloPay Key 1 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
                       value={formData.zaloPayKey1}
                       onChange={(e) => setFormData(prev => ({ ...prev, zaloPayKey1: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
                       placeholder="Nhập ZaloPay Key 1"
                       required={!editingAccount}
                     />
@@ -949,23 +951,23 @@ export default function PaymentAccountManager({ storeId }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">ZaloPay Key 2 (Tùy chọn)</label>
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">ZaloPay Key 2 (Tùy chọn)</label>
                     <input
                       type="password"
                       value={formData.zaloPayKey2}
                       onChange={(e) => setFormData(prev => ({ ...prev, zaloPayKey2: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none font-mono"
                       placeholder="Nhập ZaloPay Key 2"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Merchant ID (Tùy chọn)</label>
+                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">Merchant ID (Tùy chọn)</label>
                     <input
                       type="text"
                       value={formData.zaloPayMerchantId}
                       onChange={(e) => setFormData(prev => ({ ...prev, zaloPayMerchantId: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
                       placeholder="Nhập Merchant ID"
                     />
                   </div>
@@ -975,8 +977,8 @@ export default function PaymentAccountManager({ storeId }) {
             </div>
 
             {/* Footer with buttons */}
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
-              <div className="flex gap-3">
+            <div className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 bg-gray-50">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -986,7 +988,7 @@ export default function PaymentAccountManager({ storeId }) {
                     setBankSearchResults([]);
                     setShowBankDropdown(false);
                   }}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-all"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 text-sm sm:text-base font-semibold rounded-xl hover:bg-gray-100 transition-all"
                 >
                   Hủy
                 </button>
@@ -994,16 +996,16 @@ export default function PaymentAccountManager({ storeId }) {
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm sm:text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <RefreshIcon className="w-5 h-5 animate-spin" />
+                      <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                       Đang lưu...
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      <CheckCircleIcon className="w-5 h-5" />
+                      <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       {editingAccount ? 'Cập nhật' : 'Thêm tài khoản'}
                     </span>
                   )}
