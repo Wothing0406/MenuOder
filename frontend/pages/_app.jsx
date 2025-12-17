@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useStore } from '../lib/store';
 import api from '../lib/api';
+import toast from 'react-hot-toast';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -77,6 +78,89 @@ function MyApp({ Component, pageProps }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!token || !user) return;
+    if (user.role === 'admin') return;
+
+    // Chỉ chạy notifier cho khu vực dashboard (mọi tab)
+    if (!router.pathname.startsWith('/dashboard')) return;
+
+    let isMounted = true;
+    let timer = null;
+
+    const makeBeep = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880;
+        g.gain.value = 0.06;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        setTimeout(() => {
+          o.stop();
+          ctx.close();
+        }, 220);
+      } catch {
+        // ignore
+      }
+    };
+
+    const notifyOrders = (newOrders) => {
+      if (!newOrders || newOrders.length === 0) return;
+      const dineIn = newOrders.filter(o => o.orderType === 'dine_in').length;
+      const delivery = newOrders.filter(o => o.orderType === 'delivery').length;
+      const msg =
+        `Có ${newOrders.length} đơn hàng mới` +
+        (delivery ? ` (${delivery} giao hàng)` : '') +
+        (dineIn ? ` (${dineIn} tại bàn)` : '');
+
+      toast.success(msg, { duration: 5000 });
+      makeBeep();
+    };
+
+    const poll = async () => {
+      try {
+        const res = await api.get('/orders/my-store/list?limit=50');
+        if (!isMounted) return;
+        if (res.data.success) {
+          const list = res.data.data.orders || [];
+          const prev = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
+          const newOnes = list.filter(o => !prev.has(o.id));
+
+          // Lần đầu vào dashboard: chỉ lưu, không spam thông báo
+          const hasInit = localStorage.getItem('ordersNotifierInit') === '1';
+          if (hasInit) {
+            notifyOrders(newOnes);
+          } else {
+            localStorage.setItem('ordersNotifierInit', '1');
+          }
+
+          // Update seen IDs (keep last 200)
+          const next = Array.from(new Set([...list.map(o => o.id), ...Array.from(prev)]));
+          localStorage.setItem('seenOrderIds', JSON.stringify(next.slice(0, 200)));
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (isMounted) {
+          timer = setTimeout(poll, 8000);
+        }
+      }
+    };
+
+    poll();
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [token, user, router.pathname]);
 
   return (
     <>

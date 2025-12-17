@@ -953,8 +953,8 @@ export default function MenuManagement() {
 
       {/* Modal - Item Size / Options */}
       {optionModal.open && optionModal.item && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-white rounded-t-3xl md:rounded-xl p-4 md:p-6 w-full md:max-w-lg max-h-[92vh] md:max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">Kích cỡ & giá cộng thêm</h2>
               <button onClick={() => setOptionModal((prev) => ({ ...prev, open: false, item: null }))} className="text-gray-500 hover:text-gray-700">×</button>
@@ -1005,8 +1005,8 @@ export default function MenuManagement() {
                   </button>
                 </div>
                 {(Array.isArray(optionModal.optionValues) ? optionModal.optionValues : []).map((opt, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-7">
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <div className="sm:col-span-7">
                       <input
                         type="text"
                         value={opt.name || ''}
@@ -1015,7 +1015,7 @@ export default function MenuManagement() {
                         placeholder="Tên size (vd: Size M, 500ml...)"
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="sm:col-span-4">
                       <input
                         type="number"
                         value={opt.price ?? 0}
@@ -1026,7 +1026,7 @@ export default function MenuManagement() {
                         min="0"
                       />
                     </div>
-                    <div className="col-span-1 flex justify-end">
+                    <div className="sm:col-span-1 flex justify-end">
                       <button
                         type="button"
                         onClick={() => removeOptionValueRow(idx)}
@@ -1039,7 +1039,7 @@ export default function MenuManagement() {
                 ))}
               </div>
             </div>
-            <div className="flex gap-2 mt-5">
+            <div className="flex gap-2 mt-5 sticky bottom-0 bg-white pt-3 pb-2">
               <button
                 type="button"
                 onClick={() => setOptionModal((prev) => ({ ...prev, open: false, item: null }))}
@@ -1062,8 +1062,8 @@ export default function MenuManagement() {
 
       {/* Modal - Accompaniments */}
       {accompanimentModal.open && accompanimentModal.item && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-white rounded-t-3xl md:rounded-xl p-4 md:p-6 w-full md:max-w-2xl max-h-[92vh] md:max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">Món ăn kèm</h2>
               <button onClick={() => setAccompanimentModal({ open: false, item: null, list: [], form: { name: '', price: '', scope: 'item' }, loading: false })} className="text-gray-500 hover:text-gray-700">×</button>
