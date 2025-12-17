@@ -1,7 +1,7 @@
 import '../styles/globals.css';
 import 'react-easy-crop/react-easy-crop.css';
 import { Toaster } from 'react-hot-toast';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useStore } from '../lib/store';
 import api from '../lib/api';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { token, user, store, setToken, setUser, setStore, initDeviceId, logout } = useStore();
+  const notifierStartedRef = useRef(false);
 
   useEffect(() => {
     // Initialize device ID
@@ -87,6 +88,12 @@ function MyApp({ Component, pageProps }) {
     // Chỉ chạy notifier cho khu vực dashboard (mọi tab)
     if (!router.pathname.startsWith('/dashboard')) return;
 
+    // Guard tránh chạy 2 lần trong dev (React StrictMode) + tránh trùng khi route thay đổi
+    if (notifierStartedRef.current) return;
+    if (window.__ordersNotifierRunning) return;
+    notifierStartedRef.current = true;
+    window.__ordersNotifierRunning = true;
+
     let isMounted = true;
     let timer = null;
 
@@ -161,6 +168,8 @@ function MyApp({ Component, pageProps }) {
     return () => {
       isMounted = false;
       if (timer) clearTimeout(timer);
+      notifierStartedRef.current = false;
+      window.__ordersNotifierRunning = false;
     };
   }, [token, user, router.pathname]);
 

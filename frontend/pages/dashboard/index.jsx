@@ -136,27 +136,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleNewOrderNotification = (newOrdersList) => {
-    if (!newOrdersList || newOrdersList.length === 0) return;
-    const dineIn = newOrdersList.filter(o => o.orderType === 'dine_in').length;
-    const delivery = newOrdersList.filter(o => o.orderType === 'delivery').length;
-    const msg =
-      `Bạn có ${newOrdersList.length} đơn hàng mới` +
-      (delivery ? ` (${delivery} giao hàng)` : '') +
-      (dineIn ? ` (${dineIn} tại bàn)` : '');
-    toast.success(msg, { duration: 4000 });
-
-    // Voice: luôn nói "Bạn có một đơn hàng mới" để dễ nghe, kèm loại đơn
-    if (delivery && dineIn) {
-      speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
-    } else if (delivery) {
-      speak('Bạn có một đơn hàng mới. Đơn giao hàng.');
-    } else if (dineIn) {
-      speak('Bạn có một đơn hàng mới. Đơn tại bàn.');
-    } else {
-      speak('Bạn có một đơn hàng mới.');
-    }
-  };
+  // Thông báo đơn mới đã được xử lý global ở `_app.jsx` cho mọi trang trong `/dashboard`
+  // Giữ hàm trống để tránh spam thông báo/voice 2 lần (trước đây dashboard tự thông báo).
+  const handleNewOrderNotification = () => {};
 
   const refreshOrders = async (silent = false) => {
     try {
@@ -164,15 +146,8 @@ export default function Dashboard() {
       if (ordersRes.data.success) {
         const list = ordersRes.data.data.orders || [];
 
-        if (hasInitializedOrdersRef.current) {
-          const newOnes = list.filter(o => !prevOrderIdsRef.current.has(o.id));
-          if (newOnes.length > 0) {
-            handleNewOrderNotification(newOnes);
-          }
-        } else {
-          hasInitializedOrdersRef.current = true;
-        }
-
+        // Chỉ cập nhật state, không phát thông báo ở đây nữa (global notifier đã làm).
+        hasInitializedOrdersRef.current = true;
         prevOrderIdsRef.current = new Set(list.map(o => o.id));
         setOrders(list);
         if (!silent) toast.success('Đã làm mới đơn hàng');
