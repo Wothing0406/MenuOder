@@ -90,23 +90,16 @@ function MyApp({ Component, pageProps }) {
     let isMounted = true;
     let timer = null;
 
-    const makeBeep = () => {
+    const speak = (text) => {
       try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = 880;
-        g.gain.value = 0.06;
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.start();
-        setTimeout(() => {
-          o.stop();
-          ctx.close();
-        }, 220);
+        const synth = window.speechSynthesis;
+        if (!synth) return;
+        // Cancel previous speech to avoid stacking
+        synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'vi-VN';
+        utter.rate = 1;
+        synth.speak(utter);
       } catch {
         // ignore
       }
@@ -122,7 +115,16 @@ function MyApp({ Component, pageProps }) {
         (dineIn ? ` (${dineIn} tại bàn)` : '');
 
       toast.success(msg, { duration: 5000 });
-      makeBeep();
+      // Voice (giống cơ chế trước đây)
+      if (delivery && dineIn) {
+        speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
+      } else if (delivery) {
+        speak('Bạn có một đơn hàng mới. Đơn giao hàng.');
+      } else if (dineIn) {
+        speak('Bạn có một đơn hàng mới. Đơn tại bàn.');
+      } else {
+        speak('Bạn có một đơn hàng mới.');
+      }
     };
 
     const poll = async () => {
