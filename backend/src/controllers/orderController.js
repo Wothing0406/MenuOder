@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Store = require('../models/Store');
 const Item = require('../models/Item');
+const ItemOption = require('../models/ItemOption');
 const Voucher = require('../models/Voucher');
 const { sequelize, Sequelize } = require('../config/database');
 const Op = Sequelize.Op;
@@ -256,6 +257,47 @@ exports.createOrder = async (req, res) => {
     let itemsSubtotal = 0;
     const orderItems = [];
 
+    // Helper: chuẩn hoá optionValues từ DB
+    const normalizeOptionValues = (values) => {
+      if (!values) return [];
+      let arr = [];
+      if (Array.isArray(values)) {
+        arr = values;
+      } else if (typeof values === 'string') {
+        const trimmed = values.trim();
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+              arr = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+              arr = Object.values(parsed);
+            } else {
+              arr = [values];
+            }
+          } catch {
+            arr = [values];
+          }
+        } else {
+          arr = [values];
+        }
+      } else if (typeof values === 'object') {
+        arr = Object.values(values);
+      } else if (typeof values === 'number') {
+        arr = [values];
+      }
+
+      return arr.map(v => {
+        if (typeof v === 'string' || typeof v === 'number') {
+          return { name: String(v), price: 0 };
+        }
+        return {
+          name: typeof v?.name === 'string' ? v.name : '',
+          price: Number(v?.price) || 0
+        };
+      });
+    };
+
     for (const cartItem of items) {
       const item = await Item.findByPk(cartItem.itemId);
       if (!item) {
@@ -265,12 +307,39 @@ exports.createOrder = async (req, res) => {
         });
       }
       let price = parseFloat(item.itemPrice || 0);
-      
-      // Add accompaniments price
+
+      // Add size/option price based on selectedOptions (map { optionId: valueName })
+      if (cartItem.selectedOptions && typeof cartItem.selectedOptions === 'object') {
+        for (const [optionId, selectedValue] of Object.entries(cartItem.selectedOptions)) {
+          const numericId = parseInt(optionId, 10);
+          if (!numericId || !selectedValue) continue;
+          try {
+            const option = await ItemOption.findByPk(numericId);
+            if (option && option.optionValues) {
+              const values = normalizeOptionValues(option.optionValues);
+              const match = values.find(v => v.name === selectedValue);
+              if (match && match.price) {
+                price += parseFloat(match.price);
+              }
+            }
+          } catch (e) {
+            // ignore per-option error, continue with others
+            console.error('Error processing item option for order:', e.message);
+          }
+        }
+      }
+
+      // Add accompaniments price (support quantity for new data, default 1 for old data)
       if (cartItem.selectedAccompaniments && Array.isArray(cartItem.selectedAccompaniments)) {
         cartItem.selectedAccompaniments.forEach(acc => {
-          if (acc.price) {
-            price += parseFloat(acc.price);
+          if (acc && acc.price) {
+            const unitPrice = parseFloat(acc.price);
+            const qtyAcc = acc.quantity !== undefined ? parseInt(acc.quantity, 10) || 0 : 1;
+            if (qtyAcc > 0) {
+              price += unitPrice * qtyAcc;
+            } else {
+              price += unitPrice;
+            }
           }
         });
       }

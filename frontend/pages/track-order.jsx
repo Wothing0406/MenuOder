@@ -335,13 +335,80 @@ export default function TrackOrder() {
                                 <p className="text-xs text-gray-600 mb-1">
                                   Số lượng: {item.quantity} × {formatVND(item.itemPrice)}
                                 </p>
-                                {item.selectedAccompaniments &&
-                                  Array.isArray(item.selectedAccompaniments) &&
-                                  item.selectedAccompaniments.length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Món kèm: {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
-                                    </p>
-                                  )}
+                                {item.selectedOptions && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Tùy chọn:{' '}
+                                    {(() => {
+                                      const normalizeOptionsText = (opt) => {
+                                        if (!opt) return '';
+                                        if (typeof opt === 'string') {
+                                          try {
+                                            const parsed = JSON.parse(opt);
+                                            return normalizeOptionsText(parsed);
+                                          } catch {
+                                            return opt;
+                                          }
+                                        }
+                                        if (Array.isArray(opt)) {
+                                          return opt
+                                            .map((v) =>
+                                              typeof v === 'string'
+                                                ? v
+                                                : (v && v.name) || ''
+                                            )
+                                            .filter(Boolean)
+                                            .join(', ');
+                                        }
+                                        if (typeof opt === 'object') {
+                                          return Object.values(opt)
+                                            .map((v) =>
+                                              typeof v === 'string'
+                                                ? v
+                                                : (v && v.name) || ''
+                                            )
+                                            .filter(Boolean)
+                                            .join(', ');
+                                        }
+                                        return String(opt);
+                                      };
+
+                                      return normalizeOptionsText(item.selectedOptions);
+                                    })()}
+                                  </p>
+                                )}
+                                {item.selectedAccompaniments && (
+                                  <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                                    <p className="font-medium">Món kèm:</p>
+                                    {(() => {
+                                      const normalizeAcc = (data) => {
+                                        if (!data) return [];
+                                        if (typeof data === 'string') {
+                                          try {
+                                            const parsed = JSON.parse(data);
+                                            return normalizeAcc(parsed);
+                                          } catch {
+                                            return [];
+                                          }
+                                        }
+                                        if (Array.isArray(data)) return data;
+                                        if (typeof data === 'object') return Object.values(data);
+                                        return [];
+                                      };
+
+                                      const list = normalizeAcc(item.selectedAccompaniments);
+                                      return list.length === 0 ? (
+                                        <p>Không có</p>
+                                      ) : (
+                                        list.map((acc, idx) => (
+                                          <p key={idx}>
+                                            {acc.quantity ? `${acc.quantity} × ${acc.name}` : acc.name}
+                                            {acc.price ? ` (+${formatVND(acc.price)} / phần)` : ''}
+                                          </p>
+                                        ))
+                                      );
+                                    })()}
+                                  </div>
+                                )}
                                 {item.notes && (
                                   <p className="text-xs text-gray-500 mt-1 italic">
                                     Ghi chú: {item.notes}

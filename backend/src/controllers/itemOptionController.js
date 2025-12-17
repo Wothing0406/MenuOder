@@ -74,9 +74,28 @@ exports.getItemOptions = async (req, res) => {
       order: [['displayOrder', 'ASC']]
     });
 
+    // Chuẩn hoá optionValues để luôn trả về dạng mảng JSON
+    const normalized = options.map((opt) => {
+      const raw = opt.toJSON();
+      let optionValues = raw.optionValues;
+
+      if (typeof optionValues === 'string') {
+        try {
+          optionValues = JSON.parse(optionValues);
+        } catch {
+          optionValues = [optionValues];
+        }
+      } else if (optionValues && !Array.isArray(optionValues) && typeof optionValues === 'object') {
+        optionValues = Object.values(optionValues);
+      }
+
+      raw.optionValues = optionValues || [];
+      return raw;
+    });
+
     res.json({
       success: true,
-      data: options
+      data: normalized
     });
   } catch (error) {
     console.error('Get item options error:', error);

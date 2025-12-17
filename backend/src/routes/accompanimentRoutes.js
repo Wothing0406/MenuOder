@@ -4,6 +4,7 @@ const accompanimentController = require('../controllers/accompanimentController'
 const authMiddleware = require('../middleware/auth');
 
 // Protected routes - only store owner can manage
+router.post('/accompaniments/bulk', authMiddleware, accompanimentController.bulkCreateAccompaniments);
 router.post('/:itemId/accompaniments', authMiddleware, accompanimentController.createAccompaniment);
 router.get('/:itemId/accompaniments', accompanimentController.getAccompaniments);
 router.put('/accompaniments/:accompanimentId', authMiddleware, accompanimentController.updateAccompaniment);

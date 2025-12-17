@@ -123,10 +123,16 @@ exports.getItemsByCategory = async (req, res) => {
     const items = await Item.findAll({
       where: { categoryId, isAvailable: true },
       order: [['displayOrder', 'ASC']],
-      include: {
-        association: 'options',
-        order: [['displayOrder', 'ASC']]
-      }
+      include: [
+        {
+          association: 'options',
+          order: [['displayOrder', 'ASC']]
+        },
+        {
+          association: 'accompaniments',
+          order: [['displayOrder', 'ASC']]
+        }
+      ]
     });
 
     // Helper function để tạo full URL cho ảnh
@@ -177,10 +183,16 @@ exports.getItemDetail = async (req, res) => {
     const { itemId } = req.params;
 
     const item = await Item.findByPk(itemId, {
-      include: {
-        association: 'options',
-        order: [['displayOrder', 'ASC']]
-      }
+      include: [
+        {
+          association: 'options',
+          order: [['displayOrder', 'ASC']]
+        },
+        {
+          association: 'accompaniments',
+          order: [['displayOrder', 'ASC']]
+        }
+      ]
     });
 
     if (!item) {

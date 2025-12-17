@@ -42,10 +42,15 @@ export default function TopItemsChart({ data, type = 'quantity' }) {
             tickFormatter={(value) => type === 'quantity' ? value : `${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip 
-            formatter={(value, name) => {
-              if (name === 'quantity') {
-                return [value, 'Số lượng'];
+            formatter={(value, _name, props) => {
+              const dataKey = props?.dataKey;
+              const isQuantity = type === 'quantity' || dataKey === 'quantity';
+
+              if (isQuantity) {
+                const numericValue = Number(value);
+                return [Number.isFinite(numericValue) ? numericValue : value, 'Số lượng đã bán'];
               }
+
               return [formatVND(value), 'Doanh thu'];
             }}
             labelFormatter={(label, payload) => {

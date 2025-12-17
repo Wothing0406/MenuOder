@@ -24,6 +24,7 @@ export default function StorePage() {
   const [showItemDetail, setShowItemDetail] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [quantity, setQuantity] = useState(1);
+  // { [accompanimentId]: quantity }
   const [selectedAccompaniments, setSelectedAccompaniments] = useState({});
   const [itemNote, setItemNote] = useState('');
   const [reviews, setReviews] = useState([]);
@@ -33,6 +34,50 @@ export default function StorePage() {
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewTotalPages, setReviewTotalPages] = useState(1);
   const [showMobileCart, setShowMobileCart] = useState(false);
+
+  // Chuẩn hoá optionValues từ backend (có thể là string JSON, number, object, null...)
+  const normalizeOptionValues = (values) => {
+    if (!values) return [];
+
+    let arr = [];
+    if (Array.isArray(values)) {
+      arr = values;
+    } else if (typeof values === 'string') {
+      // Trường hợp backend lưu dưới dạng chuỗi JSON: "[{...}, {...}]"
+      const trimmed = values.trim();
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            arr = parsed;
+          } else if (parsed && typeof parsed === 'object') {
+            arr = Object.values(parsed);
+          } else {
+            arr = [values];
+          }
+        } catch {
+          arr = [values];
+        }
+      } else {
+        arr = [values];
+      }
+    } else if (typeof values === 'object') {
+      // Trường hợp Sequelize lưu JSON dạng object: { "0": {...}, "1": {...} }
+      arr = Object.values(values);
+    } else if (typeof values === 'number') {
+      arr = [values];
+    }
+
+    return arr.map((v) => {
+      if (typeof v === 'string' || typeof v === 'number') {
+        return { name: String(v), price: 0 };
+      }
+      return {
+        name: typeof v?.name === 'string' ? v.name : '',
+        price: Number(v?.price) || 0,
+      };
+    });
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -54,10 +99,24 @@ export default function StorePage() {
       const res = await api.get(`/stores/slug/${slug}`);
       if (res.data.success) {
         setStore(res.data.data.store);
-        setCategories(res.data.data.categories);
-        if (res.data.data.categories.length > 0) {
-          setSelectedCategory(res.data.data.categories[0].id);
-          setItemsInCategory(res.data.data.categories[0].items);
+
+        // Chuẩn hóa dữ liệu categories/items để luôn có ItemOptions & accompaniments
+        const rawCategories = res.data.data.categories || [];
+        const mappedCategories = rawCategories.map((cat) => ({
+          ...cat,
+          items: (cat.items || []).map((item) => ({
+            ...item,
+            // Đảm bảo front-end luôn dùng ItemOptions
+            ItemOptions: item.ItemOptions || item.options || [],
+            // Đảm bảo accompaniments tồn tại dạng mảng
+            accompaniments: item.accompaniments || item.ItemAccompaniments || item.item_accompaniments || [],
+          })),
+        }));
+
+        setCategories(mappedCategories);
+        if (mappedCategories.length > 0) {
+          setSelectedCategory(mappedCategories[0].id);
+          setItemsInCategory(mappedCategories[0].items);
         }
       }
     } catch (error) {
@@ -118,7 +177,18 @@ export default function StorePage() {
 
   const handleAddToCart = (item) => {
     setShowItemDetail(item);
-    setSelectedOptions({});
+
+    // Khởi tạo sẵn lựa chọn mặc định cho các option bắt buộc (ví dụ Size)
+    const defaultOptions = {};
+    (item.ItemOptions || []).forEach((option) => {
+      const values = normalizeOptionValues(option.optionValues);
+      if (option.optionType === 'select' && option.isRequired && values.length > 0) {
+        // Không set mặc định nếu khách chưa chọn, để bắt buộc chọn rõ ràng
+        // defaultOptions[option.id] = values[0].name;
+      }
+    });
+
+    setSelectedOptions(defaultOptions);
     setQuantity(1);
     setSelectedAccompaniments({});
     setItemNote('');
@@ -128,31 +198,49 @@ export default function StorePage() {
     if (!showItemDetail) return;
     const item = showItemDetail;
     const basePrice = parseFloat(item.itemPrice || 0);
+
+    // Validate required options (ví dụ bắt buộc chọn Size)
+    const missingRequired = (item.ItemOptions || []).filter(
+      (option) =>
+        option.isRequired &&
+        option.optionType === 'select' &&
+        (!selectedOptions[option.id] || selectedOptions[option.id] === '')
+    );
+
+    if (missingRequired.length > 0) {
+      const names = missingRequired.map((o) => o.optionName).join(', ');
+      toast.error(`Vui lòng chọn: ${names}`);
+      return;
+    }
     
     // Calculate additional price from options
     let optionsPrice = 0;
     Object.entries(selectedOptions).forEach(([optionId, selectedValue]) => {
       const option = item.ItemOptions?.find((o) => o.id === parseInt(optionId));
-      if (option?.optionValues && Array.isArray(option.optionValues)) {
-        const value = option.optionValues.find((v) => v.name === selectedValue);
+      if (option) {
+        const values = normalizeOptionValues(option.optionValues);
+        const value = values.find((v) => v.name === selectedValue);
         if (value?.price) {
           optionsPrice += parseFloat(value.price);
         }
       }
     });
 
-    // Calculate additional price from accompaniments
+    // Calculate additional price from accompaniments (toppings with quantity)
     let accompanimentsPrice = 0;
     const selectedAccompanimentsList = [];
-    Object.entries(selectedAccompaniments).forEach(([accompanimentId, isSelected]) => {
-      if (isSelected) {
+    Object.entries(selectedAccompaniments).forEach(([accompanimentId, qtyValue]) => {
+      const qty = Math.max(0, parseInt(qtyValue) || 0);
+      if (qty > 0) {
         const accompaniment = item.accompaniments?.find((a) => a.id === parseInt(accompanimentId));
         if (accompaniment) {
-          accompanimentsPrice += parseFloat(accompaniment.accompanimentPrice || 0);
+          const unitPrice = parseFloat(accompaniment.accompanimentPrice || 0);
+          accompanimentsPrice += unitPrice * qty;
           selectedAccompanimentsList.push({
             id: accompaniment.id,
             name: accompaniment.accompanimentName,
-            price: parseFloat(accompaniment.accompanimentPrice || 0)
+            price: unitPrice,
+            quantity: qty,
           });
         }
       }
@@ -710,37 +798,56 @@ export default function StorePage() {
               </div>
             </div>
 
-            {/* Options */}
+            {/* Options (Size, Đá, ... ) */}
             {showItemDetail.ItemOptions && showItemDetail.ItemOptions.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-2 text-sm">Tùy chọn</h3>
                 <div className="space-y-3">
                   {showItemDetail.ItemOptions.map((option) => (
                     <div key={option.id}>
-                      <label className="block font-semibold mb-1.5 text-xs">
-                        {option.optionName}
-                        {option.isRequired && <span className="text-red-600">*</span>}
-                      </label>
-                      {option.optionType === 'select' && (
-                        <select
-                          value={selectedOptions[option.id] || ''}
-                          onChange={(e) =>
-                            setSelectedOptions((prev) => ({
-                              ...prev,
-                              [option.id]: e.target.value,
-                            }))
-                          }
-                          className="input-field text-sm py-2"
-                        >
-                          <option value="">Chọn tùy chọn</option>
-                          {option.optionValues &&
-                            option.optionValues.map((value) => (
-                              <option key={value.name} value={value.name}>
-                                {value.name}
-                                {value.price ? ` (+${formatVND(value.price)})` : ''}
-                              </option>
-                            ))}
-                        </select>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="font-semibold text-xs text-gray-800">
+                          {option.optionName}{' '}
+                          {option.isRequired && <span className="text-red-600">*</span>}
+                        </p>
+                        <p className="text-[11px] text-gray-500">
+                          {option.isRequired ? 'Chọn 1' : 'Có thể bỏ qua'}
+                        </p>
+                      </div>
+
+                      {option.optionType === 'select' && option.optionValues && normalizeOptionValues(option.optionValues).length > 0 && (
+                        <div className="space-y-1.5">
+                          {normalizeOptionValues(option.optionValues).map((value) => (
+                            <label
+                              key={value.name}
+                              className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name={`option-${option.id}`}
+                                  value={value.name}
+                                  checked={selectedOptions[option.id] === value.name}
+                                  onChange={() =>
+                                    setSelectedOptions((prev) => ({
+                                      ...prev,
+                                      [option.id]: value.name,
+                                    }))
+                                  }
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 focus:ring-2"
+                                />
+                                <span className="text-xs md:text-sm font-medium text-gray-800">
+                                  {value.name}
+                                </span>
+                              </div>
+                              <span className="text-xs md:text-sm font-semibold text-purple-600">
+                                {value.price
+                                  ? `+${formatVND(value.price)}`
+                                  : 'Không thêm tiền'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -748,7 +855,7 @@ export default function StorePage() {
               </div>
             )}
 
-            {/* Accompaniments (Món ăn kèm) */}
+            {/* Accompaniments (Món ăn kèm) với số lượng */}
             {showItemDetail.accompaniments && showItemDetail.accompaniments.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-2 text-sm text-gray-800 flex items-center gap-1.5">
@@ -756,30 +863,60 @@ export default function StorePage() {
                   Món ăn kèm
                 </h3>
                 <div className="space-y-2">
-                  {showItemDetail.accompaniments.map((accompaniment) => (
-                    <label
-                      key={accompaniment.id}
-                      className="flex items-center justify-between p-2.5 md:p-3 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-all group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedAccompaniments[accompaniment.id] || false}
-                          onChange={(e) =>
-                            setSelectedAccompaniments((prev) => ({
-                              ...prev,
-                              [accompaniment.id]: e.target.checked,
-                            }))
-                          }
-                          className="w-4 h-4 md:w-5 md:h-5 text-purple-600 rounded focus:ring-purple-500 focus:ring-2"
-                        />
-                        <span className="font-medium text-sm text-gray-700 group-hover:text-purple-700">{accompaniment.accompanimentName}</span>
+                  {showItemDetail.accompaniments.map((accompaniment) => {
+                    const qty = selectedAccompaniments[accompaniment.id] || 0;
+                    const unitPrice = parseFloat(accompaniment.accompanimentPrice || 0);
+                    return (
+                      <div
+                        key={accompaniment.id}
+                        className={`flex items-center justify-between p-2.5 md:p-3 border rounded-lg transition-all ${
+                          qty > 0
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm text-gray-800">
+                            {accompaniment.accompanimentName}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            +{formatVND(unitPrice)} / 1 phần
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedAccompaniments((prev) => {
+                                const current = prev[accompaniment.id] || 0;
+                                const next = Math.max(0, current - 1);
+                                return { ...prev, [accompaniment.id]: next };
+                              })
+                            }
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-bold text-gray-700 active:scale-95"
+                          >
+                            −
+                          </button>
+                          <span className="min-w-[24px] text-center text-sm font-semibold text-gray-800">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedAccompaniments((prev) => {
+                                const current = prev[accompaniment.id] || 0;
+                                const next = current + 1;
+                                return { ...prev, [accompaniment.id]: next };
+                              })
+                            }
+                            className="w-8 h-8 rounded-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center text-sm font-bold text-white active:scale-95"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-purple-600 font-bold text-sm md:text-base">
-                        +{formatVND(accompaniment.accompanimentPrice || 0)}
-                      </span>
-                    </label>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -808,19 +945,21 @@ export default function StorePage() {
                     parseFloat(showItemDetail.itemPrice) +
                     Object.entries(selectedOptions).reduce((sum, [optionId, selectedValue]) => {
                       const option = showItemDetail.ItemOptions?.find((o) => o.id === parseInt(optionId));
-                      if (option?.optionValues && Array.isArray(option.optionValues)) {
-                        const value = option.optionValues.find((v) => v.name === selectedValue);
+                      if (option) {
+                        const values = normalizeOptionValues(option.optionValues);
+                        const value = values.find((v) => v.name === selectedValue);
                         if (value?.price) {
                           return sum + parseFloat(value.price);
                         }
                       }
                       return sum;
                     }, 0) +
-                    Object.entries(selectedAccompaniments).reduce((sum, [accId, isSelected]) => {
-                      if (isSelected) {
+                    Object.entries(selectedAccompaniments).reduce((sum, [accId, qtyValue]) => {
+                      const qty = Math.max(0, parseInt(qtyValue) || 0);
+                      if (qty > 0) {
                         const acc = showItemDetail.accompaniments?.find((a) => a.id === parseInt(accId));
                         if (acc) {
-                          return sum + parseFloat(acc.accompanimentPrice || 0);
+                          return sum + qty * parseFloat(acc.accompanimentPrice || 0);
                         }
                       }
                       return sum;

@@ -2357,25 +2357,79 @@ export default function Dashboard() {
                               {formatVND(item.subtotal)}
                             </p>
                           </div>
-                          {item.selectedAccompaniments && 
-                           Array.isArray(item.selectedAccompaniments) && 
-                           item.selectedAccompaniments.length > 0 && (
+                          {item.selectedAccompaniments && (
                             <div className="mt-2 pt-2 border-t">
                               <p className="text-sm font-medium text-gray-700 mb-1">Món ăn kèm:</p>
                               <ul className="list-disc list-inside text-sm text-gray-600">
-                                {item.selectedAccompaniments.map((acc, idx) => (
-                                  <li key={idx}>
-                                    {acc.name} (+{formatVND(acc.price || 0)})
-                                  </li>
-                                ))}
+                                {(() => {
+                                  const normalizeAcc = (data) => {
+                                    if (!data) return [];
+                                    if (typeof data === 'string') {
+                                      try {
+                                        const parsed = JSON.parse(data);
+                                        return normalizeAcc(parsed);
+                                      } catch {
+                                        return [];
+                                      }
+                                    }
+                                    if (Array.isArray(data)) return data;
+                                    if (typeof data === 'object') return Object.values(data);
+                                    return [];
+                                  };
+
+                                  const list = normalizeAcc(item.selectedAccompaniments);
+                                  return list.length === 0
+                                    ? [<li key="none">Không có</li>]
+                                    : list.map((acc, idx) => (
+                                        <li key={idx}>
+                                          {acc.quantity ? `${acc.quantity} × ${acc.name}` : acc.name}
+                                          {acc.price ? ` (+${formatVND(acc.price)} / phần)` : ''}
+                                        </li>
+                                      ));
+                                })()}
                               </ul>
                             </div>
                           )}
-                          {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                          {item.selectedOptions && (
                             <div className="mt-2 pt-2 border-t">
                               <p className="text-sm font-medium text-gray-700 mb-1">Tùy chọn:</p>
                               <p className="text-sm text-gray-600">
-                                {Object.entries(item.selectedOptions).map(([key, value]) => value).join(', ')}
+                                {(() => {
+                                  const normalizeOptionsText = (opt) => {
+                                    if (!opt) return '';
+                                    if (typeof opt === 'string') {
+                                      try {
+                                        const parsed = JSON.parse(opt);
+                                        return normalizeOptionsText(parsed);
+                                      } catch {
+                                        return opt;
+                                      }
+                                    }
+                                    if (Array.isArray(opt)) {
+                                      return opt
+                                        .map((v) =>
+                                          typeof v === 'string'
+                                            ? v
+                                            : (v && v.name) || ''
+                                        )
+                                        .filter(Boolean)
+                                        .join(', ');
+                                    }
+                                    if (typeof opt === 'object') {
+                                      return Object.values(opt)
+                                        .map((v) =>
+                                          typeof v === 'string'
+                                            ? v
+                                            : (v && v.name) || ''
+                                        )
+                                        .filter(Boolean)
+                                        .join(', ');
+                                    }
+                                    return String(opt);
+                                  };
+
+                                  return normalizeOptionsText(item.selectedOptions);
+                                })()}
                               </p>
                             </div>
                           )}

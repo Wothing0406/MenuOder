@@ -1105,17 +1105,40 @@ export default function Checkout() {
 
             <div className="space-y-1.5 mb-2 max-h-40 md:max-h-48 overflow-y-auto">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex justify-between items-start gap-2 py-1.5 border-b border-gray-100 last:border-0">
+                <div
+                  key={item.id}
+                  className="flex justify-between items-start gap-2 py-1.5 border-b border-gray-100 last:border-0"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">{item.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-gray-500">SL: {item.quantity}</p>
-                      {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
-                        <p className="text-xs text-gray-400 truncate">
-                          +{item.selectedAccompaniments.length} món kèm
-                        </p>
+                    <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      SL: {item.quantity}
+                    </p>
+                    {/* Size / options */}
+                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                      <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                        Size / tuỳ chọn:{' '}
+                        {Object.values(item.selectedOptions)
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
+                    )}
+                    {/* Toppings */}
+                    {item.selectedAccompaniments &&
+                      item.selectedAccompaniments.length > 0 && (
+                        <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
+                          {item.selectedAccompaniments.map((acc, idx) => (
+                            <p key={idx} className="truncate">
+                              +{acc.quantity ? `${acc.quantity} × ` : ''}{acc.name}{' '}
+                              {acc.price
+                                ? `(${formatVND(acc.price)} / phần)`
+                                : ''}
+                            </p>
+                          ))}
+                        </div>
                       )}
-                    </div>
                   </div>
                   <p className="text-right font-bold text-xs md:text-sm text-purple-600 whitespace-nowrap">
                     {formatVND(item.subtotal)}

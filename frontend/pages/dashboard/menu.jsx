@@ -28,6 +28,53 @@ export default function MenuManagement() {
     itemPrice: '',
     itemDescription: '',
   });
+  const [optionModal, setOptionModal] = useState({
+    open: false,
+    item: null,
+    optionId: null,
+    optionName: 'Size',
+    isRequired: true,
+    optionValues: [
+      { name: 'Size M', price: 0 },
+      { name: 'Size L', price: 0 }
+    ],
+  });
+  const [accompanimentModal, setAccompanimentModal] = useState({
+    open: false,
+    item: null,
+    list: [],
+    form: {
+      name: '',
+      price: '',
+      scope: 'item', // item | category | all
+    },
+    loading: false,
+  });
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const normalizeOptionValues = (values) => {
+    if (!values) return [];
+
+    let arr = [];
+    if (Array.isArray(values)) {
+      arr = values;
+    } else if (typeof values === 'object') {
+      // Trường hợp Sequelize trả JSON dạng object: { "0": {...}, "1": {...} }
+      arr = Object.values(values);
+    } else if (typeof values === 'string' || typeof values === 'number') {
+      arr = [values];
+    }
+
+    return arr.map((v) => {
+      if (typeof v === 'string' || typeof v === 'number') {
+        return { name: String(v), price: 0 };
+      }
+      return {
+        name: typeof v?.name === 'string' ? v.name : '',
+        price: Number(v?.price) || 0,
+      };
+    });
+  };
+
   const [itemImage, setItemImage] = useState(null);
   const [itemImagePreview, setItemImagePreview] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -254,6 +301,220 @@ export default function MenuManagement() {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể xóa ảnh');
+    }
+  };
+
+  const openOptionModal = async (item) => {
+    setOptionsLoading(true);
+    setOptionModal((prev) => ({
+      ...prev,
+      open: true,
+      item,
+      optionId: null,
+      optionName: 'Size',
+      isRequired: true,
+      optionValues: normalizeOptionValues([
+        { name: 'Size M', price: 0 },
+        { name: 'Size L', price: 0 },
+      ]),
+    }));
+
+    try {
+      const res = await api.get(`/item-options/item/${item.id}`);
+      if (res.data.success && res.data.data.length > 0) {
+        // Ưu tiên option tên Size nếu có
+        const existingOption = res.data.data.find(opt => opt.optionName?.toLowerCase().includes('size')) || res.data.data[0];
+        setOptionModal((prev) => ({
+          ...prev,
+          open: true,
+          item,
+          optionId: existingOption.id,
+          optionName: existingOption.optionName || 'Size',
+          isRequired: !!existingOption.isRequired,
+          optionValues: normalizeOptionValues(
+            Array.isArray(existingOption.optionValues) && existingOption.optionValues.length > 0
+              ? existingOption.optionValues
+              : [{ name: 'Size M', price: 0 }]
+          ),
+        }));
+      }
+    } catch (error) {
+      toast.error('Không thể tải tùy chọn kích cỡ');
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  const updateOptionValue = (index, key, value) => {
+    setOptionModal((prev) => {
+      const updated = [...prev.optionValues];
+      updated[index] = { 
+        ...updated[index], 
+        [key]: key === 'price' ? Number(value) || 0 : value 
+      };
+      return { ...prev, optionValues: updated };
+    });
+  };
+
+  const addOptionValueRow = () => {
+    setOptionModal((prev) => ({
+      ...prev,
+      optionValues: Array.isArray(prev.optionValues)
+        ? [...prev.optionValues, { name: '', price: 0 }]
+        : [{ name: '', price: 0 }],
+    }));
+  };
+
+  const addPresetSize = (label) => {
+    setOptionModal((prev) => {
+      // Nếu đã có label thì không thêm trùng
+      const arr = Array.isArray(prev.optionValues) ? prev.optionValues : [];
+      if (arr.some(v => v.name?.trim().toLowerCase() === label.toLowerCase())) return prev;
+      return {
+        ...prev,
+        optionValues: [...arr, { name: label, price: 0 }]
+      };
+    });
+  };
+
+  const removeOptionValueRow = (index) => {
+    setOptionModal((prev) => {
+      if (prev.optionValues.length === 1) return prev;
+      const updated = prev.optionValues.filter((_, idx) => idx !== index);
+      return { ...prev, optionValues: updated };
+    });
+  };
+
+  const handleSaveOption = async () => {
+    if (!optionModal.item) return;
+    const sanitizedValues = normalizeOptionValues(optionModal.optionValues)
+      .filter(v => v.name?.trim());
+
+    if (sanitizedValues.length === 0) {
+      toast.error('Vui lòng nhập ít nhất một kích cỡ');
+      return;
+    }
+
+    try {
+      setOptionsLoading(true);
+      if (optionModal.optionId) {
+        await api.put(`/item-options/${optionModal.optionId}`, {
+          optionName: optionModal.optionName || 'Size',
+          optionType: 'select',
+          isRequired: optionModal.isRequired,
+          optionValues: sanitizedValues,
+        });
+      } else {
+        await api.post('/item-options', {
+          itemId: optionModal.item.id,
+          optionName: optionModal.optionName || 'Size',
+          optionType: 'select',
+          isRequired: optionModal.isRequired,
+          optionValues: sanitizedValues,
+        });
+      }
+      toast.success('Đã lưu kích cỡ & giá cộng thêm');
+      setOptionModal((prev) => ({ ...prev, open: false, item: null }));
+      if (selectedCategory?.id) {
+        await fetchItems(Number(selectedCategory.id));
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể lưu kích cỡ');
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  const openAccompanimentModal = async (item) => {
+    setAccompanimentModal({
+      open: true,
+      item,
+      list: [],
+      form: { name: '', price: '', scope: 'item' },
+      loading: true,
+    });
+
+    try {
+      const res = await api.get(`/items/${item.id}/accompaniments`);
+      if (res.data.success) {
+        setAccompanimentModal((prev) => ({
+          ...prev,
+          list: res.data.data || [],
+          loading: false,
+        }));
+      }
+    } catch (error) {
+      toast.error('Không thể tải món kèm');
+      setAccompanimentModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleCreateAccompaniment = async () => {
+    if (!accompanimentModal.item) return;
+    const { name, price, scope } = accompanimentModal.form;
+    if (!name.trim()) {
+      toast.error('Vui lòng nhập tên món kèm');
+      return;
+    }
+    try {
+      setAccompanimentModal((prev) => ({ ...prev, loading: true }));
+      if (scope === 'item') {
+        await api.post(`/items/${accompanimentModal.item.id}/accompaniments`, {
+          accompanimentName: name.trim(),
+          accompanimentPrice: Number(price) || 0,
+          isOptional: true,
+        });
+      } else {
+        await api.post('/items/accompaniments/bulk', {
+          accompanimentName: name.trim(),
+          accompanimentPrice: Number(price) || 0,
+          isOptional: true,
+          targetType: scope === 'category' ? 'category' : 'all',
+          categoryId: scope === 'category' ? accompanimentModal.item.categoryId : undefined,
+        });
+      }
+      toast.success('Đã lưu món kèm');
+      // Refresh list for the current item
+      const res = await api.get(`/items/${accompanimentModal.item.id}/accompaniments`);
+      setAccompanimentModal((prev) => ({
+        ...prev,
+        list: res.data.data || [],
+        form: { name: '', price: '', scope },
+        loading: false,
+      }));
+      if (selectedCategory?.id) {
+        await fetchItems(Number(selectedCategory.id));
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể thêm món kèm');
+      setAccompanimentModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleUpdateAccompaniment = async (accompaniment) => {
+    try {
+      await api.put(`/items/accompaniments/${accompaniment.id}`, {
+        accompanimentName: accompaniment.accompanimentName,
+        accompanimentPrice: Number(accompaniment.accompanimentPrice) || 0,
+        isOptional: accompaniment.isOptional,
+      });
+      toast.success('Đã cập nhật món kèm');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật');
+    }
+  };
+
+  const handleDeleteAccompaniment = async (id) => {
+    if (!confirm('Xóa món kèm này?')) return;
+    try {
+      await api.delete(`/items/accompaniments/${id}`);
+      setAccompanimentModal((prev) => ({
+        ...prev,
+        list: prev.list.filter((item) => item.id !== id),
+      }));
+      toast.success('Đã xóa món kèm');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể xóa');
     }
   };
 
@@ -642,6 +903,22 @@ export default function MenuManagement() {
                             <p className="text-xs font-bold text-purple-600 mb-2">
                               {formatVND(item.itemPrice)}
                             </p>
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openOptionModal(item)}
+                                  className="px-2 py-1 text-[10px] bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100 transition"
+                                >
+                                  Size + giá
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openAccompanimentModal(item)}
+                                  className="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100 transition"
+                                >
+                                  Món kèm
+                                </button>
+                              </div>
                             <div className="flex gap-1 mt-auto">
                               <button
                                 onClick={() => handleEditItem(item)}
@@ -673,6 +950,199 @@ export default function MenuManagement() {
             )}
           </div>
         )}
+
+      {/* Modal - Item Size / Options */}
+      {optionModal.open && optionModal.item && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Kích cỡ & giá cộng thêm</h2>
+              <button onClick={() => setOptionModal((prev) => ({ ...prev, open: false, item: null }))} className="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Món: <span className="font-semibold text-gray-800">{optionModal.item.itemName}</span>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Tên nhóm</label>
+                <input
+                  type="text"
+                  value={optionModal.optionName}
+                  onChange={(e) => setOptionModal((prev) => ({ ...prev, optionName: e.target.value }))}
+                  className="input-field w-full"
+                  placeholder="Size"
+                />
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={optionModal.isRequired}
+                  onChange={(e) => setOptionModal((prev) => ({ ...prev, isRequired: e.target.checked }))}
+                  className="w-4 h-4 text-purple-600 rounded"
+                />
+                Bắt buộc chọn
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500 mr-1">Thêm nhanh:</span>
+                {['Size M', 'Size L', 'Size XL'].map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => addPresetSize(label)}
+                    className="px-2 py-1 text-[11px] bg-gray-100 text-gray-700 rounded border border-gray-200 hover:bg-gray-200 transition"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">
+                    Danh sách kích cỡ 
+                  </span>
+                  <button type="button" onClick={addOptionValueRow} className="text-sm text-purple-600 hover:underline">
+                    + Thêm dòng
+                  </button>
+                </div>
+                {(Array.isArray(optionModal.optionValues) ? optionModal.optionValues : []).map((opt, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-7">
+                      <input
+                        type="text"
+                        value={opt.name || ''}
+                        onChange={(e) => updateOptionValue(idx, 'name', e.target.value)}
+                        className="input-field w-full"
+                        placeholder="Tên size (vd: Size M, 500ml...)"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <input
+                        type="number"
+                        value={opt.price ?? 0}
+                        onChange={(e) => updateOptionValue(idx, 'price', e.target.value)}
+                        className="input-field w-full"
+                        placeholder="Giá +"
+                        step="1000"
+                        min="0"
+                      />
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeOptionValueRow(idx)}
+                        className="px-2 py-1 text-sm bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setOptionModal((prev) => ({ ...prev, open: false, item: null }))}
+                className="btn btn-secondary flex-1"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveOption}
+                disabled={optionsLoading}
+                className="btn btn-primary flex-1 disabled:opacity-50"
+              >
+                {optionsLoading ? 'Đang lưu...' : 'Lưu kích cỡ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Accompaniments */}
+      {accompanimentModal.open && accompanimentModal.item && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Món ăn kèm</h2>
+              <button onClick={() => setAccompanimentModal({ open: false, item: null, list: [], form: { name: '', price: '', scope: 'item' }, loading: false })} className="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Món: <span className="font-semibold text-gray-800">{accompanimentModal.item.itemName}</span>
+            </p>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+              <h3 className="font-semibold text-sm mb-3">Thêm món kèm</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  value={accompanimentModal.form.name}
+                  onChange={(e) => setAccompanimentModal((prev) => ({ ...prev, form: { ...prev.form, name: e.target.value } }))}
+                  className="input-field"
+                  placeholder="Tên món kèm"
+                />
+                <input
+                  type="number"
+                  value={accompanimentModal.form.price}
+                  onChange={(e) => setAccompanimentModal((prev) => ({ ...prev, form: { ...prev.form, price: e.target.value } }))}
+                  className="input-field"
+                  placeholder="Giá cộng thêm"
+                  step="500"
+                />
+                <select
+                  value={accompanimentModal.form.scope}
+                  onChange={(e) => setAccompanimentModal((prev) => ({ ...prev, form: { ...prev.form, scope: e.target.value } }))}
+                  className="input-field"
+                >
+                  <option value="item">Chỉ món này</option>
+                  <option value="category">Danh mục này</option>
+                  <option value="all">Tất cả món</option>
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                - Chọn "Tất cả món" để biến món kèm này thành mặc định cho toàn bộ quán.{"\n"}
+                - Chọn "Danh mục này" nếu chỉ áp dụng cho một nhóm món.
+              </p>
+              <div className="flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={handleCreateAccompaniment}
+                  className="btn btn-primary px-4"
+                  disabled={accompanimentModal.loading}
+                >
+                  {accompanimentModal.loading ? 'Đang lưu...' : 'Lưu món kèm'}
+                </button>
+              </div>
+            </div>
+
+            <h3 className="font-semibold text-sm mb-2">Danh sách món kèm của món này</h3>
+            {accompanimentModal.loading ? (
+              <p className="text-gray-500 text-sm">Đang tải...</p>
+            ) : accompanimentModal.list.length === 0 ? (
+              <p className="text-gray-500 text-sm">Chưa có món kèm</p>
+            ) : (
+              <div className="space-y-2">
+                {accompanimentModal.list.map((acc) => (
+                  <div key={acc.id} className="flex items-center gap-2 border border-gray-200 rounded-lg p-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-gray-800">{acc.accompanimentName}</p>
+                      <p className="text-xs text-gray-500">+ {formatVND(acc.accompanimentPrice || 0)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAccompaniment(acc.id)}
+                      className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
         {/* Modal - Add Category */}
         {showModal && modalMode === 'category' && (
