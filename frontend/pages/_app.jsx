@@ -85,17 +85,13 @@ function MyApp({ Component, pageProps }) {
     if (!token || !user) return;
     if (user.role === 'admin') return;
 
-    // Chỉ chạy notifier cho khu vực dashboard (mọi tab)
-    if (!router.pathname.startsWith('/dashboard')) return;
-
-    // Guard tránh chạy 2 lần trong dev (React StrictMode) + tránh trùng khi route thay đổi
+    // Guard tránh chạy 2 lần trong dev (React StrictMode)
     if (notifierStartedRef.current) return;
-    if (window.__ordersNotifierRunning) return;
     notifierStartedRef.current = true;
-    window.__ordersNotifierRunning = true;
 
     let isMounted = true;
     let timer = null;
+    let baselineSet = false;
 
     const speak = (text) => {
       try {
@@ -134,8 +130,13 @@ function MyApp({ Component, pageProps }) {
       }
     };
 
+    const isInDashboard = () => window.location.pathname.startsWith('/dashboard');
+
     const poll = async () => {
       try {
+        // Chỉ poll/notify khi đang ở dashboard (mọi tab). Nếu rời dashboard thì pause.
+        if (!isInDashboard()) return;
+
         const res = await api.get('/orders/my-store/list?limit=50');
         if (!isMounted) return;
         if (res.data.success) {
@@ -143,12 +144,11 @@ function MyApp({ Component, pageProps }) {
           const prev = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
           const newOnes = list.filter(o => !prev.has(o.id));
 
-          // Lần đầu vào dashboard: chỉ lưu, không spam thông báo
-          const hasInit = localStorage.getItem('ordersNotifierInit') === '1';
-          if (hasInit) {
+          // Lần đầu bắt đầu notifier trong phiên: chỉ lưu baseline, không spam (tránh notify lại khi vừa chuyển tab/trang trong dashboard)
+          if (baselineSet) {
             notifyOrders(newOnes);
           } else {
-            localStorage.setItem('ordersNotifierInit', '1');
+            baselineSet = true;
           }
 
           // Update seen IDs (keep last 200)
@@ -159,6 +159,7 @@ function MyApp({ Component, pageProps }) {
         // ignore
       } finally {
         if (isMounted) {
+          // Nếu không ở dashboard, vẫn lên lịch lại để khi quay lại dashboard sẽ hoạt động tiếp
           timer = setTimeout(poll, 8000);
         }
       }
@@ -169,9 +170,8 @@ function MyApp({ Component, pageProps }) {
       isMounted = false;
       if (timer) clearTimeout(timer);
       notifierStartedRef.current = false;
-      window.__ordersNotifierRunning = false;
     };
-  }, [token, user, router.pathname]);
+  }, [token, user]);
 
   return (
     <>
