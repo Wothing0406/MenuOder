@@ -14,7 +14,7 @@ const { useCloudinary } = require('../middleware/upload');
 // Create item
 exports.createItem = async (req, res) => {
   try {
-    const { categoryId, itemName, itemDescription, itemPrice } = req.body;
+    const { categoryId, itemName, itemDescription, itemPrice, remainingStock } = req.body;
 
     if (!categoryId || !itemName || !itemPrice) {
       return res.status(400).json({
@@ -67,13 +67,26 @@ exports.createItem = async (req, res) => {
       itemImage = req.file.cloudinary ? req.file.cloudinary.url : ('/uploads/' + req.file.filename);
     }
 
+    // Chuẩn hoá remainingStock:
+    // - undefined hoặc '' => null ()
+    // - số < 0 => 0
+    // - số nguyên >= 0
+    let normalizedStock = null;
+    if (remainingStock !== undefined && remainingStock !== null && remainingStock !== '') {
+      const parsedStock = parseInt(remainingStock, 10);
+      if (!isNaN(parsedStock)) {
+        normalizedStock = Math.max(0, parsedStock);
+      }
+    }
+
     const item = await Item.create({
       categoryId: parsedCategoryId,
       storeId: store.id,
       itemName,
       itemDescription,
       itemPrice: parseFloat(itemPrice),
-      itemImage
+      itemImage,
+      remainingStock: normalizedStock
     });
 
     // Tạo full URL cho ảnh nếu cần
@@ -121,7 +134,8 @@ exports.getItemsByCategory = async (req, res) => {
     const { categoryId } = req.params;
 
     const items = await Item.findAll({
-      where: { categoryId, isAvailable: true },
+      // KHÔNG filter theo isAvailable để món "hết" vẫn hiển thị
+      where: { categoryId },
       order: [['displayOrder', 'ASC']],
       include: [
         {
@@ -244,7 +258,7 @@ exports.getItemDetail = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { itemName, itemDescription, itemPrice, isAvailable, displayOrder } = req.body;
+    const { itemName, itemDescription, itemPrice, isAvailable, displayOrder, remainingStock } = req.body;
     const imageFile = req.file; // File từ multer
 
     const item = await Item.findByPk(itemId);
@@ -330,13 +344,27 @@ exports.updateItem = async (req, res) => {
       }
     }
 
+    // Chuẩn hoá remainingStock nếu được gửi lên
+    let normalizedStock = item.remainingStock;
+    if (remainingStock !== undefined) {
+      if (remainingStock === '' || remainingStock === null) {
+        normalizedStock = null;
+      } else {
+        const parsedStock = parseInt(remainingStock, 10);
+        if (!isNaN(parsedStock)) {
+          normalizedStock = Math.max(0, parsedStock);
+        }
+      }
+    }
+
     await item.update({
       itemName: itemName !== undefined ? itemName : item.itemName,
       itemDescription: itemDescription !== undefined ? itemDescription : item.itemDescription,
       itemPrice: itemPrice !== undefined ? parseFloat(itemPrice) : item.itemPrice,
       isAvailable: isAvailable !== undefined ? isAvailable : item.isAvailable,
       displayOrder: displayOrder !== undefined ? displayOrder : item.displayOrder,
-      itemImage: imagePath
+      itemImage: imagePath,
+      remainingStock: normalizedStock
     });
 
     await item.reload();

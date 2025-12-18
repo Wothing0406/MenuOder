@@ -176,6 +176,15 @@ export default function StorePage() {
   };
 
   const handleAddToCart = (item) => {
+    // Nếu món có giới hạn tồn kho và đã hết -> không cho mở popup chọn món
+    if (item.remainingStock !== null && item.remainingStock !== undefined) {
+      const stock = Number(item.remainingStock);
+      if (!Number.isNaN(stock) && stock <= 0) {
+        toast.error('Món này đã hết, vui lòng chọn món khác.');
+        return;
+      }
+    }
+
     setShowItemDetail(item);
 
     // Khởi tạo sẵn lựa chọn mặc định cho các option bắt buộc (ví dụ Size)
@@ -248,6 +257,15 @@ export default function StorePage() {
 
     const itemPrice = basePrice + optionsPrice + accompanimentsPrice;
     const qty = quantity || 1;
+
+    // Nếu món có giới hạn tồn kho, giới hạn số lượng tối đa ngay ở front để UX rõ ràng
+    if (item.remainingStock !== null && item.remainingStock !== undefined) {
+      const stock = Number(item.remainingStock);
+      if (!Number.isNaN(stock) && qty > stock) {
+        toast.error(`Món "${item.itemName}" chỉ còn ${stock} phần. Vui lòng giảm số lượng.`);
+        return;
+      }
+    }
 
     const cartItem = {
       id: `${item.id}-${Math.random()}`,

@@ -52,7 +52,9 @@ const MIGRATIONS_MYSQL = [
   'migration_add_bank_transfer_qr_code_to_orders.sql',
   'migration_add_payment_accounts.sql',
   'migration_add_payment_account_to_orders.sql',
-  'migration_verify_payment_accounts.sql' // Verify and add missing columns
+  'migration_verify_payment_accounts.sql', // Verify and add missing columns
+  // New: add remainingStock column for stock management
+  'migration_add_item_remaining_stock.sql'
 ];
 
 const MIGRATIONS_POSTGRES = [
@@ -62,7 +64,9 @@ const MIGRATIONS_POSTGRES = [
   'migration_add_reviews_postgresql.sql',
   'migration_add_payment_accounts_postgresql.sql',
   'migration_add_payment_account_to_orders_postgresql.sql',
-  'migration_verify_payment_accounts_postgresql.sql' // Verify and add missing columns
+  'migration_verify_payment_accounts_postgresql.sql', // Verify and add missing columns
+  // New: add remainingStock column for stock management
+  'migration_add_item_remaining_stock_postgresql.sql'
 ];
 
 const SEED_FILE = 'seed.sql';
@@ -253,74 +257,4 @@ main().catch(err => {
   console.error('❌ Migration failed:', err.message);
   process.exit(1);
 });
-
-
-
-    for (const stmt of statements) {
-      const trimmed = stmt.trim();
-      if (trimmed && !trimmed.startsWith('--')) {
-        try {
-          await client.query(trimmed);
-        } catch (err) {
-          // Log the statement that failed for debugging
-          console.error(`Failed statement: ${trimmed.substring(0, 100)}...`);
-          throw err;
-        }
-      }
-    }
-  };
-
-  try {
-    await client.connect();
-    console.log('🔌 Connected to PostgreSQL');
-
-    const files = MIGRATIONS_POSTGRES.filter(fileExists);
-    for (const file of files) {
-      const sqlPath = path.join(DB_DIR, file);
-      const sql = fs.readFileSync(sqlPath, 'utf8');
-      console.log(`🛠  Applying ${file} ...`);
-      try {
-        await execSql(sql);
-        console.log(`✅ Done ${file}`);
-      } catch (err) {
-        const msg = err.message || '';
-        if (
-          msg.includes('already exists') ||
-          msg.includes('duplicate column') ||
-          msg.includes('Duplicate column') ||
-          msg.includes('duplicate key value')
-        ) {
-          console.log(`ℹ️  Skipped (already applied): ${file} -> ${msg}`);
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    if (shouldSeed && fileExists(SEED_FILE)) {
-      const seedSql = fs.readFileSync(path.join(DB_DIR, SEED_FILE), 'utf8');
-      console.log('🌱 Seeding data ...');
-      await execSql(seedSql);
-      console.log('✅ Seed completed');
-    }
-  } finally {
-    await client.end();
-  }
-}
-
-async function main() {
-  console.log(`🚀 Running unified migrations (${DIALECT})`);
-  if (DIALECT === 'postgres') {
-    await runPostgres();
-  } else {
-    await runMySQL();
-  }
-  console.log('✨ All migrations finished');
-}
-
-main().catch(err => {
-  console.error('❌ Migration failed:', err.message);
-  process.exit(1);
-});
-
 

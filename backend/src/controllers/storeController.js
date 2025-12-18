@@ -29,12 +29,13 @@ exports.getStoreBySlug = async (req, res) => {
     }
 
     // Get categories with items
+    // Lưu ý: KHÔNG filter theo isAvailable để "hết món" vẫn hiển thị trong menu cho khách,
+    // trạng thái hiển thị/disable order sẽ dựa trên remainingStock ở frontend.
     const categories = await Category.findAll({
       where: { storeId: store.id },
       order: [['displayOrder', 'ASC']],
       include: {
         association: 'items',
-        where: { isAvailable: true },
         order: [['displayOrder', 'ASC']],
         required: false,
         include: [

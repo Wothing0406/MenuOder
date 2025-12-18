@@ -306,6 +306,28 @@ exports.createOrder = async (req, res) => {
           message: `Item ${cartItem.itemId} not found`
         });
       }
+      // Kiểm tra tồn kho: remainingStock null => không giới hạn, >=0 => số lượng còn lại
+      const requestedQty = parseInt(cartItem.quantity || 1, 10);
+      if (Number.isNaN(requestedQty) || requestedQty < 1) {
+        return res.status(400).json({
+          success: false,
+          message: `Số lượng không hợp lệ cho món ${item.itemName}`
+        });
+      }
+      if (item.remainingStock !== null) {
+        if (item.remainingStock <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Món "${item.itemName}" đã hết. Vui lòng chỉnh lại đơn hàng.`
+          });
+        }
+        if (requestedQty > item.remainingStock) {
+          return res.status(400).json({
+            success: false,
+            message: `Món "${item.itemName}" chỉ còn ${item.remainingStock} phần. Vui lòng giảm số lượng.`
+          });
+        }
+      }
       let price = parseFloat(item.itemPrice || 0);
 
       // Add size/option price based on selectedOptions (map { optionId: valueName })
@@ -344,7 +366,7 @@ exports.createOrder = async (req, res) => {
         });
       }
       
-      const qty = parseInt(cartItem.quantity || 1, 10);
+      const qty = requestedQty;
       const itemSubtotal = parseFloat((price * qty).toFixed(2));
       itemsSubtotal += itemSubtotal;
 
@@ -441,33 +463,51 @@ exports.createOrder = async (req, res) => {
     
     console.log('Creating order with data:', orderData);
     
-    const order = await Order.create(orderData);
+    // Dùng transaction để đảm bảo trừ kho & tạo đơn đồng bộ
+    const result = await sequelize.transaction(async (t) => {
+      const order = await Order.create(orderData, { transaction: t });
 
-    // Create order items
-    try {
       for (const orderItem of orderItems) {
-        await OrderItem.create({
-          orderId: order.id,
-          itemId: orderItem.itemId,
-          itemName: orderItem.itemName,
-          itemPrice: orderItem.itemPrice,
-          quantity: orderItem.quantity,
-          selectedOptions: orderItem.selectedOptions || null,
-          selectedAccompaniments: orderItem.selectedAccompaniments || null,
-          notes: orderItem.notes || null,
-          subtotal: orderItem.subtotal
-        });
+        // Trừ kho nếu có giới hạn
+        const dbItem = await Item.findByPk(orderItem.itemId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!dbItem) {
+          throw new Error(`Item ${orderItem.itemId} not found when updating stock`);
+        }
+        if (dbItem.remainingStock !== null) {
+          if (dbItem.remainingStock < orderItem.quantity) {
+            throw new Error(`Món "${dbItem.itemName}" chỉ còn ${dbItem.remainingStock} phần. Vui lòng thử lại.`);
+          }
+          const newStock = dbItem.remainingStock - orderItem.quantity;
+          await dbItem.update(
+            {
+              remainingStock: newStock,
+              // Khi hết (0) thì coi như isAvailable = false để ẩn khỏi menu nếu cần
+              isAvailable: newStock === 0 ? false : dbItem.isAvailable
+            },
+            { transaction: t }
+          );
+        }
+
+        await OrderItem.create(
+          {
+            orderId: order.id,
+            itemId: orderItem.itemId,
+            itemName: orderItem.itemName,
+            itemPrice: orderItem.itemPrice,
+            quantity: orderItem.quantity,
+            selectedOptions: orderItem.selectedOptions || null,
+            selectedAccompaniments: orderItem.selectedAccompaniments || null,
+            notes: orderItem.notes || null,
+            subtotal: orderItem.subtotal
+          },
+          { transaction: t }
+        );
       }
-    } catch (itemError) {
-      console.error('Error creating order items:', itemError);
-      // Rollback order if items creation fails
-      await order.destroy();
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create order items',
-        error: itemError.message
-      });
-    }
+
+      return order;
+    });
+
+    const order = result;
 
     if (appliedVoucher) {
       try {

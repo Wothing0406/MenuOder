@@ -173,3 +173,4 @@ node -e "const {sequelize} = require('./src/config/database'); sequelize.query(\
 
 
 
+

@@ -36,36 +36,9 @@ CREATE TABLE IF NOT EXISTS payment_accounts (
   INDEX idx_storeId_active (storeId, isActive)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add unique constraint for default account (only if it doesn't exist)
--- Note: This constraint allows NULL values for isDefault=false, but only one true per store+type
-SET @constraint_exists = (
-  SELECT COUNT(*) 
-  FROM information_schema.table_constraints 
-  WHERE constraint_schema = DATABASE()
-    AND table_name = 'payment_accounts'
-    AND constraint_name = 'unique_default_per_store_type'
-);
-
-SET @sql = IF(@constraint_exists = 0,
-  'ALTER TABLE payment_accounts ADD CONSTRAINT unique_default_per_store_type UNIQUE (storeId, accountType, isDefault)',
-  'SELECT "Constraint already exists" AS message'
-);
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-  SELECT COUNT(*) 
-  FROM information_schema.table_constraints 
-  WHERE constraint_schema = DATABASE()
-    AND table_name = 'payment_accounts'
-    AND constraint_name = 'unique_default_per_store_type'
-);
-
-SET @sql = IF(@constraint_exists = 0,
-  'ALTER TABLE payment_accounts ADD CONSTRAINT unique_default_per_store_type UNIQUE (storeId, accountType, isDefault)',
-  'SELECT "Constraint already exists" AS message'
-);
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+-- Add unique constraint for default account.
+-- This may fail with "Duplicate key / constraint exists" on some databases if already present;
+-- the JS migration runner is configured to ignore such errors to keep migrations idempotent.
+ALTER TABLE payment_accounts
+  ADD CONSTRAINT unique_default_per_store_type
+  UNIQUE (storeId, accountType, isDefault);

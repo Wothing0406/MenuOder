@@ -34,6 +34,14 @@ const Item = sequelize.define('Item', {
     type: Sequelize.DECIMAL(10, 2),
     allowNull: false
   },
+  // null  => không giới hạn, coi như còn hàng
+  // 0     => hết hàng
+  // > 0   => còn X phần (số lượng tối đa có thể bán thêm)
+  remainingStock: {
+    type: Sequelize.INTEGER,
+    allowNull: true,
+    defaultValue: null
+  },
   itemImage: {
     type: Sequelize.STRING,
     allowNull: true

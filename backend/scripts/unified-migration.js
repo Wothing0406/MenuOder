@@ -44,6 +44,9 @@ const MIGRATION_FILES = [
   // Items
   'migration_fix_item_deletion_postgresql.sql',
   'migration_fix_item_deletion.sql',
+  // Stock / tồn kho món
+  'migration_add_item_remaining_stock_postgresql.sql',
+  'migration_add_item_remaining_stock.sql',
   
   // Reviews
   'migration_add_reviews_postgresql.sql',
@@ -212,6 +215,7 @@ if (require.main === module) {
 }
 
 module.exports = { runMigrations };
+
 
 
 
