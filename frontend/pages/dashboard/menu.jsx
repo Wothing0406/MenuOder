@@ -1055,10 +1055,10 @@ export default function MenuManagement() {
                                   onClick={async () => {
                                     try {
                                       await api.put(`/items/${item.id}`, {
-                                        remainingStock: null, // null = còn món (không giới hạn)
+                                        remainingStock: null, // null = "Còn món"
                                         isAvailable: true,
                                       });
-                                      toast.success('Đã đặt món về trạng thái không giới hạn');
+                                      toast.success('Đã đặt món về trạng thái còn món');
                                       if (selectedCategory?.id) {
                                         await fetchItems(Number(selectedCategory.id));
                                       }
