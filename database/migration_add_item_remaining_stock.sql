@@ -5,3 +5,4 @@ ALTER TABLE `items`
   ADD COLUMN `remainingStock` INT NULL DEFAULT NULL AFTER `itemPrice`;
 
 
+
