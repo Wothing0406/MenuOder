@@ -132,6 +132,4 @@ Nền tảng đáp ứng mục tiêu: quét QR → xem menu → đặt món nhan
 ---
 
 ## Tài liệu tham khảo
-- `docs/CLOUDINARY_SETUP.md` – Hướng dẫn tích hợp Cloudinary.  
-- `docs/RENDER_DATABASE_RESET.md` – Reset & cập nhật DB trên Render.  
-- `database/schema.sql` + `database/README.md` – Sơ đồ & hướng dẫn DB.
+
