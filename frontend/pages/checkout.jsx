@@ -1116,15 +1116,16 @@ export default function Checkout() {
                     <p className="text-xs text-gray-500 mt-0.5">
                       SL: {item.quantity}
                     </p>
-                    {/* Size / options */}
-                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                    {/* Size / options (prefer human-readable display if available) */}
+                    {item.selectedOptionsDisplay && Object.keys(item.selectedOptionsDisplay).length > 0 ? (
                       <p className="text-[11px] text-gray-500 mt-0.5 truncate">
-                        Size / tuỳ chọn:{' '}
-                        {Object.values(item.selectedOptions)
-                          .filter(Boolean)
-                          .join(', ')}
+                        {Object.entries(item.selectedOptionsDisplay).map(([k, v]) => `${k}: ${v}`).join(', ')}
                       </p>
-                    )}
+                    ) : item.selectedOptions && Object.keys(item.selectedOptions).length > 0 ? (
+                      <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                        Size / tuỳ chọn: {Object.values(item.selectedOptions).filter(Boolean).join(', ')}
+                      </p>
+                    ) : null}
                     {/* Toppings */}
                     {item.selectedAccompaniments &&
                       item.selectedAccompaniments.length > 0 && (

@@ -959,6 +959,27 @@ html {
   animation: scaleIn 0.3s ease-out;
 }
 
+/* Mobile cart drawer tweaks */
+.cart-drawer .text-xs {
+  font-size: 12px;
+}
+.cart-drawer .font-bold {
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .cart-drawer .btn {
+    min-height: 48px;
+  }
+  .cart-drawer .rounded-lg {
+    padding: 0.75rem;
+  }
+  .cart-drawer .truncate {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
 /* Animation utilities */
 @keyframes fadeIn {
   from {

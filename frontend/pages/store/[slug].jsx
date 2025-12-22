@@ -267,6 +267,16 @@ export default function StorePage() {
       }
     }
 
+    // Build human-readable option labels for display (keep numeric-keyed selectedOptions for backend)
+    const selectedOptionsDisplay = {};
+    Object.entries(selectedOptions).forEach(([optionId, selectedValue]) => {
+      const option = item.ItemOptions?.find((o) => o.id === parseInt(optionId));
+      const optionName = option?.optionName || `Option ${optionId}`;
+      if (selectedValue) {
+        selectedOptionsDisplay[optionName] = selectedValue;
+      }
+    });
+
     const cartItem = {
       id: `${item.id}-${Math.random()}`,
       itemId: item.id,
@@ -275,6 +285,7 @@ export default function StorePage() {
       quantity: qty,
       subtotal: itemPrice * qty,
       selectedOptions: selectedOptions,
+      selectedOptionsDisplay,
       selectedAccompaniments: selectedAccompanimentsList,
       notes: itemNote || '',
       itemImage: item.itemImage,
@@ -519,6 +530,27 @@ export default function StorePage() {
                                 ×
                               </button>
                             </div>
+                            {item.selectedOptionsDisplay && Object.keys(item.selectedOptionsDisplay).length > 0 ? (
+                              <p className="text-xs text-gray-500 truncate mt-0.5">
+                                {Object.entries(item.selectedOptionsDisplay).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                              </p>
+                            ) : item.selectedOptions && Object.keys(item.selectedOptions).length > 0 ? (
+                              <p className="text-xs text-gray-500 truncate mt-0.5">
+                                Size / tuỳ chọn: {Object.values(item.selectedOptions).filter(Boolean).join(', ')}
+                              </p>
+                            ) : null}
+                            {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
+                              <p className="text-xs text-gray-500 truncate">
+                                {item.selectedAccompaniments
+                                  .map((acc) => `${acc.quantity && acc.quantity > 0 ? `${acc.quantity} × ` : ''}${acc.name}${acc.price ? ` (${formatVND(acc.price)} / phần)` : ''}`)
+                                  .join(', ')}
+                              </p>
+                            )}
+                            {item.notes && (
+                              <p className="text-xs text-blue-600 italic truncate">
+                                {item.notes}
+                              </p>
+                            )}
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs text-gray-600">SL:</span>
                               <div className="flex items-center gap-1">
@@ -544,16 +576,6 @@ export default function StorePage() {
                                 </button>
                               </div>
                             </div>
-                            {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
-                              <p className="text-xs text-gray-500 truncate">
-                                + {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
-                              </p>
-                            )}
-                            {item.notes && (
-                              <p className="text-xs text-blue-600 italic truncate">
-                                {item.notes}
-                              </p>
-                            )}
                           </div>
                           <p className="font-bold text-sm whitespace-nowrap ml-2">
                             {formatVND(item.subtotal)}
@@ -642,7 +664,7 @@ export default function StorePage() {
           {/* Mobile Cart Drawer */}
           {showMobileCart && (
             <div className="md:hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 animate-fadeIn">
-              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slideUp">
+              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slideUp cart-drawer">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                   <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -676,6 +698,27 @@ export default function StorePage() {
                             </button>
                           </div>
                           
+                          {item.selectedOptionsDisplay && Object.keys(item.selectedOptionsDisplay).length > 0 ? (
+                            <p className="text-xs text-gray-500 mb-1">
+                              {Object.entries(item.selectedOptionsDisplay).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                            </p>
+                          ) : item.selectedOptions && Object.keys(item.selectedOptions).length > 0 ? (
+                            <p className="text-xs text-gray-500 mb-1">
+                              Size / tuỳ chọn: {Object.values(item.selectedOptions).filter(Boolean).join(', ')}
+                            </p>
+                          ) : null}
+                          {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
+                            <p className="text-xs text-gray-500 mb-1">
+                              {item.selectedAccompaniments
+                                .map((acc) => `${acc.quantity && acc.quantity > 0 ? `${acc.quantity} × ` : ''}${acc.name}${acc.price ? ` (${formatVND(acc.price)} / phần)` : ''}`)
+                                .join(', ')}
+                            </p>
+                          )}
+                          {item.notes && (
+                            <p className="text-xs text-blue-600 italic mb-2">
+                              {item.notes}
+                            </p>
+                          )}
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-gray-600">Số lượng:</span>
                             <div className="flex items-center gap-2">
@@ -701,17 +744,6 @@ export default function StorePage() {
                               </button>
                             </div>
                           </div>
-
-                          {item.selectedAccompaniments && item.selectedAccompaniments.length > 0 && (
-                            <p className="text-xs text-gray-500 mb-1">
-                              + {item.selectedAccompaniments.map(acc => acc.name).join(', ')}
-                            </p>
-                          )}
-                          {item.notes && (
-                            <p className="text-xs text-blue-600 italic mb-2">
-                              {item.notes}
-                            </p>
-                          )}
                           
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
                             <span className="text-xs text-gray-600">Thành tiền:</span>

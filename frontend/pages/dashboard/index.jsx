@@ -1039,10 +1039,11 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold">Đơn hàng gần đây</h2>
               <button
                 onClick={() => refreshOrders()}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="flex items-center gap-2 px-2 py-1 text-sm sm:px-3 sm:py-2 sm:text-base bg-blue-600 text-white rounded-md sm:rounded-lg hover:bg-blue-700 transition min-h-0"
+                aria-label="Làm mới đơn"
               >
                 <RefreshIcon className="w-4 h-4" />
-                Làm mới đơn
+                <span className="hidden sm:inline">Làm mới đơn</span>
               </button>
             </div>
             {orders.length === 0 ? (
@@ -1102,7 +1103,7 @@ export default function Dashboard() {
                         </td>
                         <td className="px-4 py-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold sm:px-3 sm:py-1 sm:text-sm whitespace-nowrap ${
                               order.status === 'pending'
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : order.status === 'confirmed'
