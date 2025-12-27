@@ -108,6 +108,36 @@ function MyApp({ Component, pageProps }) {
       }
     };
 
+    // Request Notification permission and helper to show system notifications
+    const requestNotificationPermission = async () => {
+      try {
+        if (typeof Notification === 'undefined' || !('requestPermission' in Notification)) return;
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const showSystemNotification = (title, body) => {
+      try {
+        if (typeof Notification === 'undefined') return;
+        if (Notification.permission === 'granted') {
+          const n = new Notification(title, { body });
+          n.onclick = () => {
+            try {
+              window.focus();
+            } catch {}
+          };
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    // (No beep fallback — prefer SpeechSynthesis voice chat on desktop & mobile)
+
     const notifyOrders = (newOrders) => {
       if (!newOrders || newOrders.length === 0) return;
       const dineIn = newOrders.filter(o => o.orderType === 'dine_in').length;
@@ -118,15 +148,24 @@ function MyApp({ Component, pageProps }) {
         (dineIn ? ` (${dineIn} tại bàn)` : '');
 
       toast.success(msg, { duration: 5000 });
-      // Voice (giống cơ chế trước đây)
-      if (delivery && dineIn) {
-        speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
-      } else if (delivery) {
-        speak('Bạn có một đơn hàng mới. Đơn giao hàng.');
-      } else if (dineIn) {
-        speak('Bạn có một đơn hàng mới. Đơn tại bàn.');
-      } else {
-        speak('Bạn có một đơn hàng mới.');
+      // Show system notification
+      try {
+        showSystemNotification('Đơn hàng mới', msg);
+      } catch {}
+
+      // Use SpeechSynthesis (voice chat) like before. If not available, we keep visual/system notification only.
+      try {
+        if (delivery && dineIn) {
+          speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
+        } else if (delivery) {
+          speak('Bạn có một đơn hàng mới. Đơn giao hàng.');
+        } else if (dineIn) {
+          speak('Bạn có một đơn hàng mới. Đơn tại bàn.');
+        } else {
+          speak('Bạn có một đơn hàng mới.');
+        }
+      } catch {
+        // If speech fails (e.g. not supported or blocked), silently continue — system notification is still shown.
       }
     };
 
@@ -134,8 +173,8 @@ function MyApp({ Component, pageProps }) {
 
     const poll = async () => {
       try {
-        // Chỉ poll/notify khi đang ở dashboard (mọi tab). Nếu rời dashboard thì pause.
-        if (!isInDashboard()) return;
+        // Poll for new orders on all pages so notifications + sound work on mobile & desktop
+        // (we still keep baseline logic to avoid spamming when toggling pages)
 
         const res = await api.get('/orders/my-store/list?limit=50');
         if (!isMounted) return;
@@ -165,6 +204,8 @@ function MyApp({ Component, pageProps }) {
       }
     };
 
+    // Ask for notification permission once (best-effort)
+    requestNotificationPermission();
     poll();
     return () => {
       isMounted = false;
