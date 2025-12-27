@@ -1048,7 +1048,8 @@ export default function Dashboard() {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="card">
+          <>
+            <div className="card">
             <h2 className="text-2xl font-bold mb-6">Cài đặt Cửa hàng</h2>
             
             {/* Logo Upload Section */}
@@ -1813,8 +1814,10 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+            </div>
+          </>
         )}
-      </div>
+    </div>
 
       {/* Order Detail Modal */}
       {selectedOrder && (
