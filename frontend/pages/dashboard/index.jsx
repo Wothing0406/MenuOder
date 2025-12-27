@@ -12,7 +12,7 @@ import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIc
 
 export default function Dashboard() {
   const router = useRouter();
-  const { token, user, store } = useStore();
+  const { token, user, store, setToken } = useStore();
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,12 @@ export default function Dashboard() {
     zaloPayMerchantId: '',
     zaloPayIsActive: false,
     zaloPayLink: ''
+  });
+  const [bankTransferConfig, setBankTransferConfig] = useState({
+    bankAccountNumber: '',
+    bankAccountName: '',
+    bankName: '',
+    bankTransferQRIsActive: false
   });
   const [savingZaloPay, setSavingZaloPay] = useState(false);
   const [verifyingZaloPay, setVerifyingZaloPay] = useState(false);
@@ -71,8 +77,6 @@ export default function Dashboard() {
   const [deletingByCode, setDeletingByCode] = useState(false);
 
   useEffect(() => {
-    if (!hydrated) return;
-
     // Nếu token chưa có, thử lấy từ localStorage trước khi redirect
     if (!token) {
       if (typeof window !== 'undefined') {
@@ -93,7 +97,7 @@ export default function Dashboard() {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, token, user]);
+  }, [token, user]);
 
   const fetchData = async () => {
     try {
