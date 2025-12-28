@@ -65,6 +65,11 @@ coverage/
 # Testing
 .jest/
 
+# Database backups (security)
+backup.sql
+backups/
+*.sql
+
 # Misc
 *.pem
 *.key

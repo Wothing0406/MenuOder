@@ -13,7 +13,7 @@ import OrderTypePieChart from '../../components/OrderTypePieChart';
 
 export default function Analytics() {
   const router = useRouter();
-  const { token, user } = useStore();
+  const { token, user, isHydrated } = useStore();
   const [loading, setLoading] = useState(true);
   const [revenueChartData, setRevenueChartData] = useState([]);
   const [topItems, setTopItems] = useState([]);
@@ -22,6 +22,9 @@ export default function Analytics() {
   const [chartType, setChartType] = useState('quantity');
 
   useEffect(() => {
+    // Wait for store hydration before checking authentication
+    if (!isHydrated) return;
+
     if (!token) {
       router.push('/login');
       return;
@@ -34,7 +37,7 @@ export default function Analytics() {
 
     fetchAnalyticsData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user, selectedPeriod]);
+  }, [token, user, isHydrated, selectedPeriod]);
 
   const fetchAnalyticsData = async () => {
     try {

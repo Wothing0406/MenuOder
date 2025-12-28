@@ -1,14 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
+
+  // Experimental features để tăng tốc build
+  experimental: {
+    optimizeCss: true,
+    scrollRestoration: true,
+  },
+
   // Tối ưu hóa output cho production
   // Lưu ý: Vercel không cần 'standalone' mode, nó tự động optimize
   // Chỉ dùng standalone cho các platform khác như Render, Railway
-  ...(process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1' ? { 
+  ...(process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1' ? {
     output: 'standalone',
   } : {}),
-  
+
   // Tối ưu hóa bundle size (Vercel tự động làm, nhưng giữ lại để tương thích)
   swcMinify: true,
   compress: true,

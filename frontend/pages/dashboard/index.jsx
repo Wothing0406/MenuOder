@@ -8,12 +8,12 @@ import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../lib/utils';
-import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon, ArrowRightIcon, PlusCircleIcon, EditIcon, DeleteIcon, WalletIcon, BankIcon, PowerIcon, PowerOffIcon, CheckCircleIcon, SparklesIcon, CloseIcon, RefreshIcon, SaveIcon, AlertCircleIcon, CreditCardIcon } from '../../components/Icons';
+import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon, ArrowRightIcon, PlusCircleIcon, EditIcon, DeleteIcon, WalletIcon, BankIcon, CheckCircleIcon, CloseIcon, RefreshIcon, SaveIcon, AlertCircleIcon, CreditCardIcon } from '../../components/Icons';
 import PaymentAccountManager from '../../components/PaymentAccountManager';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { token, user, store, setToken } = useStore();
+  const { token, user, store, setToken, isHydrated } = useStore();
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,6 @@ export default function Dashboard() {
   const [uploadingStoreImage, setUploadingStoreImage] = useState(false);
   const [storeImagePreview, setStoreImagePreview] = useState(null);
   const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
-  const [hydrated, setHydrated] = useState(false);
   const prevOrderIdsRef = useRef(new Set());
   const hasInitializedOrdersRef = useRef(false);
   const [bankTransferConfig, setBankTransferConfig] = useState({
@@ -94,11 +93,7 @@ export default function Dashboard() {
 
   // Đánh dấu đã hydrate để tránh redirect sớm khi F5
   useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
+    if (!isHydrated) return;
 
     // Nếu token chưa có, thử lấy từ localStorage trước khi redirect
     if (!token) {
@@ -120,7 +115,7 @@ export default function Dashboard() {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, token, user]);
+  }, [isHydrated, token, user]);
 
   const speak = (text) => {
     try {

@@ -63,31 +63,12 @@ export default function Checkout() {
           try {
             const paymentRes = await api.get(`/payment/store/${store.id}/active`);
             if (paymentRes.data.success) {
-              console.log('Fetched active payment accounts:', paymentRes.data.data);
-              // Log bank account numbers to verify they are complete
-              if (paymentRes.data.data.bank_transfer) {
-                paymentRes.data.data.bank_transfer.forEach(acc => {
-                  console.log(`Bank account ${acc.id}:`, {
-                    accountName: acc.accountName,
-                    bankAccountNumber: acc.bankAccountNumber,
-                    bankAccountNumberLength: acc.bankAccountNumber?.length,
-                    bankName: acc.bankName,
-                    isDefault: acc.isDefault
-                  });
-                });
-              }
+ run              // Ensure data structure is correct
               // Ensure data structure is correct
               const paymentData = paymentRes.data.data || {};
               setPaymentAccounts({
                 bank_transfer: paymentData.bank_transfer || [],
                 zalopay: paymentData.zalopay || []
-              });
-              
-              console.log('📊 Payment accounts set:', {
-                bank_transfer: paymentData.bank_transfer?.length || 0,
-                zalopay: paymentData.zalopay?.length || 0,
-                bankAccounts: paymentData.bank_transfer,
-                zaloPayAccounts: paymentData.zalopay
               });
               
               // Auto-select default accounts

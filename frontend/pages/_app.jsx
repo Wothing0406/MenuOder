@@ -9,12 +9,15 @@ import toast from 'react-hot-toast';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const { token, user, store, setToken, setUser, setStore, initDeviceId, logout } = useStore();
+  const { token, user, store, setToken, setUser, setStore, initDeviceId, logout, isHydrated } = useStore();
   const notifierStartedRef = useRef(false);
 
   useEffect(() => {
     // Initialize device ID
     initDeviceId();
+
+    // Only restore auth after store has been hydrated from localStorage
+    if (!isHydrated) return;
 
     // Restore authentication from localStorage on app load
     const restoreAuth = async () => {
@@ -22,7 +25,7 @@ function MyApp({ Component, pageProps }) {
 
       // Get token from localStorage (backup check)
       const storedToken = localStorage.getItem('token');
-      
+
       // If we have token in localStorage but not in store, sync it
       if (storedToken && !token) {
         setToken(storedToken);
@@ -78,7 +81,7 @@ function MyApp({ Component, pageProps }) {
       window.removeEventListener('auth:logout', handleLogout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [isHydrated]); // Run when hydrated state changes
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

@@ -12,7 +12,7 @@ import { PlusIcon, DeleteIcon, EditIcon, ArrowUpIcon, ArrowDownIcon, FolderIcon,
 
 export default function MenuManagement() {
   const router = useRouter();
-  const { token, user, store } = useStore();
+  const { token, user, store, isHydrated } = useStore();
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -82,6 +82,9 @@ export default function MenuManagement() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    // Wait for store hydration before checking authentication
+    if (!isHydrated) return;
+
     if (!token) {
       router.push('/login');
       return;
@@ -89,7 +92,7 @@ export default function MenuManagement() {
     fetchData();
     fetchQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, isHydrated]);
 
   const fetchData = async () => {
     try {

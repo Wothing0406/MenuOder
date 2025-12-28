@@ -8,6 +8,7 @@ export const useStore = create(
       user: null,
       store: null,
       deviceId: null, // Device identifier for session management
+      isHydrated: false, // Track if store has been hydrated from localStorage
 
       setToken: (token) => {
         set({ token });
@@ -22,7 +23,10 @@ export const useStore = create(
       },
       setUser: (user) => set({ user }),
       setStore: (store) => set({ store }),
-      
+
+      // Mark store as hydrated after persistence loads
+      setHydrated: () => set({ isHydrated: true }),
+
       // Initialize device ID if not exists
       initDeviceId: () => {
         const { deviceId } = get();
@@ -57,6 +61,12 @@ export const useStore = create(
         store: state.store,
         deviceId: state.deviceId,
       }),
+      // Set hydrated flag after rehydration
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setHydrated();
+        }
+      },
     }
   )
 );

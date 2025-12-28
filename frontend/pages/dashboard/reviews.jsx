@@ -11,7 +11,7 @@ import StarRating from '../../components/StarRating';
 
 export default function ReviewsManagement() {
   const router = useRouter();
-  const { token, user } = useStore();
+  const { token, user, isHydrated } = useStore();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
@@ -29,6 +29,9 @@ export default function ReviewsManagement() {
   });
 
   useEffect(() => {
+    // Wait for store hydration before checking authentication
+    if (!isHydrated) return;
+
     if (!token) {
       router.push('/login');
       return;
@@ -42,7 +45,7 @@ export default function ReviewsManagement() {
     fetchReviews();
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user, filter]);
+  }, [token, user, isHydrated, filter]);
 
   const fetchReviews = async () => {
     try {

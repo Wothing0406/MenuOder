@@ -35,7 +35,6 @@ export default function PaymentAccountManager({ storeId }) {
 
   useEffect(() => {
     if (storeId) {
-      console.log(`🔄 useEffect triggered with storeId: ${storeId}`);
       fetchAccounts();
     } else {
       console.error('❌ No storeId in useEffect');
@@ -44,7 +43,6 @@ export default function PaymentAccountManager({ storeId }) {
 
   // Debug: Log accounts state changes
   useEffect(() => {
-    console.log(`📊 Accounts state changed: ${accounts.length} accounts`, accounts.map(acc => ({ id: acc.id, name: acc.accountName })));
   }, [accounts]);
 
   // Handle click outside to close bank dropdown
@@ -76,14 +74,8 @@ export default function PaymentAccountManager({ storeId }) {
     
     try {
       setLoading(true);
-      console.log(`🔍 Fetching payment accounts for storeId: ${storeId}`);
       const res = await api.get(`/payment-accounts/store/${storeId}`);
       
-      console.log('📦 Response from backend:', {
-        success: res.data.success,
-        dataLength: res.data.data?.length,
-        data: res.data.data
-      });
       
       if (res.data.success && res.data.data) {
         const fetchedAccounts = Array.isArray(res.data.data) ? res.data.data : [];
