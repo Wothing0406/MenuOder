@@ -63,12 +63,32 @@ export default function Checkout() {
           try {
             const paymentRes = await api.get(`/payment/store/${store.id}/active`);
             if (paymentRes.data.success) {
- run              // Ensure data structure is correct
+              // Log bank account numbers to verify they are complete
+              if (paymentRes.data.data.bank_transfer) {
+                paymentRes.data.data.bank_transfer.forEach(acc => {
+                  console.log(`Bank account ${acc.id}:`, {
+                    accountName: acc.accountName,
+                    bankAccountNumber: acc.bankAccountNumber,
+                    bankAccountNumberLength: acc.bankAccountNumber?.length,
+                    bankName: acc.bankName,
+                    isDefault: acc.isDefault
+                  });
+                });
+              }
+
               // Ensure data structure is correct
               const paymentData = paymentRes.data.data || {};
               setPaymentAccounts({
                 bank_transfer: paymentData.bank_transfer || [],
                 zalopay: paymentData.zalopay || []
+              });
+
+              // Log summary
+              console.log('📊 Payment accounts set:', {
+                bank_transfer: paymentData.bank_transfer?.length || 0,
+                zalopay: paymentData.zalopay?.length || 0,
+                bankAccounts: paymentData.bank_transfer,
+                zaloPayAccounts: paymentData.zalopay
               });
               
               // Auto-select default accounts
@@ -1429,11 +1449,8 @@ export default function Checkout() {
                 >
                   <option value="cash">Tiền mặt</option>
                   {paymentAccounts?.bank_transfer && Array.isArray(paymentAccounts.bank_transfer) && paymentAccounts.bank_transfer.length > 0 && (
-                    <option value="bank_transfer_qr">Chuyển khoản QR</option>
-                  )}
-                  {paymentAccounts?.zalopay && Array.isArray(paymentAccounts.zalopay) && paymentAccounts.zalopay.length > 0 && (
-                    <option value="zalopay_qr">ZaloPay QR</option>
-                  )}
+                    <option value="bank_transfer_qr">Chuyển khoản</option>
+                )}
                 </select>
                 
                 {/* Show message if no bank account available */}
@@ -1446,15 +1463,10 @@ export default function Checkout() {
                 {/* Debug info in development */}
                 {process.env.NODE_ENV === 'development' && (
                   <div className="mt-1 text-xs text-gray-400">
-                    Debug: Bank: {paymentAccounts?.bank_transfer?.length || 0}, ZaloPay: {paymentAccounts?.zalopay?.length || 0}
+                    Debug: Bank: {paymentAccounts?.bank_transfer?.length || 0}
                     {paymentAccounts?.bank_transfer && paymentAccounts.bank_transfer.length > 0 && (
                       <span className="ml-2">
-                        Bank Accounts: {paymentAccounts.bank_transfer.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
-                      </span>
-                    )}
-                    {paymentAccounts?.zalopay && paymentAccounts.zalopay.length > 0 && (
-                      <span className="ml-2">
-                        ZaloPay Accounts: {paymentAccounts.zalopay.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
+                        Accounts: {paymentAccounts.bank_transfer.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
                       </span>
                     )}
           </div>
