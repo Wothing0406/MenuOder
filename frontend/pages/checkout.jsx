@@ -1429,8 +1429,11 @@ export default function Checkout() {
                 >
                   <option value="cash">Tiền mặt</option>
                   {paymentAccounts?.bank_transfer && Array.isArray(paymentAccounts.bank_transfer) && paymentAccounts.bank_transfer.length > 0 && (
-                    <option value="bank_transfer_qr">Chuyển khoản</option>
-                )}
+                    <option value="bank_transfer_qr">Chuyển khoản QR</option>
+                  )}
+                  {paymentAccounts?.zalopay && Array.isArray(paymentAccounts.zalopay) && paymentAccounts.zalopay.length > 0 && (
+                    <option value="zalopay_qr">ZaloPay QR</option>
+                  )}
                 </select>
                 
                 {/* Show message if no bank account available */}
@@ -1443,10 +1446,15 @@ export default function Checkout() {
                 {/* Debug info in development */}
                 {process.env.NODE_ENV === 'development' && (
                   <div className="mt-1 text-xs text-gray-400">
-                    Debug: Bank: {paymentAccounts?.bank_transfer?.length || 0}
+                    Debug: Bank: {paymentAccounts?.bank_transfer?.length || 0}, ZaloPay: {paymentAccounts?.zalopay?.length || 0}
                     {paymentAccounts?.bank_transfer && paymentAccounts.bank_transfer.length > 0 && (
                       <span className="ml-2">
-                        Accounts: {paymentAccounts.bank_transfer.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
+                        Bank Accounts: {paymentAccounts.bank_transfer.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
+                      </span>
+                    )}
+                    {paymentAccounts?.zalopay && paymentAccounts.zalopay.length > 0 && (
+                      <span className="ml-2">
+                        ZaloPay Accounts: {paymentAccounts.zalopay.map(acc => `${acc.accountName} (${acc.isDefault ? 'default' : 'not default'})`).join(', ')}
                       </span>
                     )}
           </div>
