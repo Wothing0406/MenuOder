@@ -22,6 +22,7 @@ export default function ItemCard({ item, onAddToCart }) {
             src={getImageUrl(item.itemImage)}
             alt={item.itemName}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            loading="lazy"
             onError={(e) => {
               e.target.style.display = 'none';
             }}

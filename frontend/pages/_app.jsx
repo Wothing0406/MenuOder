@@ -19,53 +19,40 @@ function MyApp({ Component, pageProps }) {
     // Only restore auth after store has been hydrated from localStorage
     if (!isHydrated) return;
 
-    // Restore authentication from localStorage on app load
+    // Restore authentication - ALWAYS verify token when app restarts
     const restoreAuth = async () => {
       if (typeof window === 'undefined') return;
 
-      // Get token from localStorage (backup check)
-      const storedToken = localStorage.getItem('token');
+      // Get token from store (already hydrated from localStorage)
+      const currentToken = token;
 
-      // If we have token in localStorage but not in store, sync it
-      if (storedToken && !token) {
-        setToken(storedToken);
-      }
+      console.log('🔄 Restoring authentication...', { hasToken: !!currentToken, hasUser: !!user, hasStore: !!store });
 
-      // If we have token, verify it and restore user data
-      const currentToken = token || storedToken;
       if (currentToken) {
-        // If user data is missing, fetch it
-        if (!user || !store) {
-          try {
-            // Verify token by getting profile
-            const res = await api.get('/auth/profile');
-            if (res.data.success) {
-              setUser(res.data.data.user);
-              setStore(res.data.data.store);
-              // Ensure token is synced
-              if (!token) {
-                setToken(currentToken);
-              }
-            } else {
-              // Token invalid, clear auth
-              logout();
-            }
-          } catch (error) {
-            // Token expired or invalid
-            if (error.response?.status === 401) {
-              logout();
-            }
+        try {
+          // ALWAYS verify token and fetch fresh user data when app restarts
+          console.log('🔍 Verifying token with server...');
+          const res = await api.get('/auth/profile');
+
+          if (res.data.success) {
+            console.log('✅ Token valid, restoring user data');
+            setUser(res.data.data.user);
+            setStore(res.data.data.store);
+            // Ensure token is still set (in case it was cleared)
+            setToken(currentToken);
+          } else {
+            console.log('❌ Token invalid, clearing auth');
+            logout();
           }
-        } else {
-          // User data exists, verify token is still valid (silent check)
-          try {
-            await api.get('/auth/profile');
-          } catch (error) {
-            if (error.response?.status === 401) {
-              logout();
-            }
+        } catch (error) {
+          console.log('❌ Token verification failed:', error.response?.status);
+          // Token expired or invalid - clear auth
+          if (error.response?.status === 401) {
+            logout();
           }
         }
+      } else {
+        console.log('ℹ️ No token found, user needs to login');
       }
     };
 
@@ -81,7 +68,7 @@ function MyApp({ Component, pageProps }) {
       window.removeEventListener('auth:logout', handleLogout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHydrated]); // Run when hydrated state changes
+  }, [isHydrated]); // Only run once when hydrated
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -121,7 +108,6 @@ function MyApp({ Component, pageProps }) {
         (dineIn ? ` (${dineIn} tại bàn)` : '');
 
       toast.success(msg, { duration: 5000 });
-      // Voice (giống cơ chế trước đây)
       if (delivery && dineIn) {
         speak('Bạn có một đơn hàng mới. Có đơn giao hàng và đơn tại bàn.');
       } else if (delivery) {

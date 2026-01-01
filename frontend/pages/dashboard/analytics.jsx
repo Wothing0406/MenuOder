@@ -7,9 +7,10 @@ import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../lib/utils';
-import RevenueChart from '../../components/RevenueChart';
-import TopItemsChart from '../../components/TopItemsChart';
-import OrderTypePieChart from '../../components/OrderTypePieChart';
+import dynamic from 'next/dynamic';
+const RevenueChart = dynamic(() => import('../../components/RevenueChart'), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center">Đang tải biểu đồ...</div> });
+const TopItemsChart = dynamic(() => import('../../components/TopItemsChart'), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center">Đang tải biểu đồ...</div> });
+const OrderTypePieChart = dynamic(() => import('../../components/OrderTypePieChart'), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center">Đang tải biểu đồ...</div> });
 
 export default function Analytics() {
   const router = useRouter();
@@ -25,16 +26,26 @@ export default function Analytics() {
     // Wait for store hydration before checking authentication
     if (!isHydrated) return;
 
-    if (!token) {
-      router.push('/login');
+    // Wait for authentication to be fully restored (token + user data)
+    if (!token || !user) {
+      // If we have no token at all, redirect to login
+      if (!token) {
+        console.log('🔐 No token found, redirecting to login');
+        router.push('/login');
+        return;
+      }
+      // If we have token but no user data yet, wait for _app.jsx to restore it
+      console.log('⏳ Waiting for authentication restoration...');
       return;
     }
 
+    // Check user role
     if (user?.role === 'admin') {
       router.replace('/admin');
       return;
     }
 
+    console.log('✅ Authentication restored, loading analytics data');
     fetchAnalyticsData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user, isHydrated, selectedPeriod]);

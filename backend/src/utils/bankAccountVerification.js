@@ -143,8 +143,8 @@ async function verifyBankAccount(accountNumber, bankCode, accountName) {
         return {
           success: true,
           verified: false,
-          error: 'Gói Free Plan của VietQR đã hết hạn. Bạn vẫn có thể tạo tài khoản nhưng sẽ được đánh dấu là chưa xác thực. Để xác thực tự động, vui lòng nâng cấp gói VietQR hoặc nhập thông tin tài khoản thủ công.',
-          warning: 'Tài khoản chưa được xác thực tự động do Free Plan đã hết hạn.'
+          error: 'Tính năng xác thực hiện đang bảo trì. Nếu bạn đã thêm tài khoản ngâng hàng thì vẫn sử dụng được',
+          warning: 'Vui Lòng đợi admin sửa tính năng này'
         };
       }
       
@@ -225,8 +225,8 @@ async function verifyBankAccount(accountNumber, bankCode, accountName) {
         return {
           success: true,
           verified: false,
-          error: 'Gói Free Plan của VietQR đã hết hạn. Bạn vẫn có thể tạo tài khoản nhưng sẽ được đánh dấu là chưa xác thực. Để xác thực tự động, vui lòng nâng cấp gói VietQR hoặc nhập thông tin tài khoản thủ công.',
-          warning: 'Tài khoản chưa được xác thực tự động do Free Plan đã hết hạn.'
+          error: 'Tính năng xác thực hiện đang bảo trì. Nếu bạn đã thêm tài khoản ngâng hàng thì vẫn sử dụng được',
+          warning: 'Vui Lòng đợi admin sửa tính năng này'
         };
       }
       

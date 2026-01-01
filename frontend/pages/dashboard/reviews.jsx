@@ -32,16 +32,26 @@ export default function ReviewsManagement() {
     // Wait for store hydration before checking authentication
     if (!isHydrated) return;
 
-    if (!token) {
-      router.push('/login');
+    // Wait for authentication to be fully restored (token + user data)
+    if (!token || !user) {
+      // If we have no token at all, redirect to login
+      if (!token) {
+        console.log('🔐 No token found, redirecting to login');
+        router.push('/login');
+        return;
+      }
+      // If we have token but no user data yet, wait for _app.jsx to restore it
+      console.log('⏳ Waiting for authentication restoration...');
       return;
     }
 
+    // Check user role
     if (user?.role === 'admin') {
       router.replace('/admin');
       return;
     }
 
+    console.log('✅ Authentication restored, loading reviews data');
     fetchReviews();
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps

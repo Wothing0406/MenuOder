@@ -8,7 +8,7 @@ import Layout from '../../components/Layout';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND } from '../../lib/utils';
-import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon, ArrowRightIcon, PlusCircleIcon, EditIcon, DeleteIcon, WalletIcon, BankIcon, CheckCircleIcon, CloseIcon, RefreshIcon, SaveIcon, AlertCircleIcon, CreditCardIcon } from '../../components/Icons';
+import { CartIcon, QRIcon, SettingsIcon, CategoryIcon, FoodIcon, DeliveryTruckIcon, TableIcon, BarChartIcon, StarIcon, ArrowRightIcon, PlusCircleIcon, EditIcon, DeleteIcon, WalletIcon, BankIcon, CheckCircleIcon, CloseIcon, RefreshIcon, SaveIcon, AlertCircleIcon, CreditCardIcon, ClockIcon, MoneyIcon } from '../../components/Icons';
 import PaymentAccountManager from '../../components/PaymentAccountManager';
 
 export default function Dashboard() {
@@ -93,26 +93,29 @@ export default function Dashboard() {
 
   // Đánh dấu đã hydrate để tránh redirect sớm khi F5
   useEffect(() => {
+    // Wait for store hydration before checking authentication
     if (!isHydrated) return;
 
-    // Nếu token chưa có, thử lấy từ localStorage trước khi redirect
-    if (!token) {
-      if (typeof window !== 'undefined') {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-          setToken(storedToken);
-          return;
-        }
+    // Wait for authentication to be fully restored (token + user data)
+    if (!token || !user) {
+      // If we have no token at all, redirect to login
+      if (!token) {
+        console.log('🔐 No token found, redirecting to login');
+        router.push('/login');
+        return;
       }
-      router.push('/login');
+      // If we have token but no user data yet, wait for _app.jsx to restore it
+      console.log('⏳ Waiting for authentication restoration...');
       return;
     }
 
+    // Check user role
     if (user?.role === 'admin') {
       router.replace('/admin');
       return;
     }
 
+    console.log('✅ Authentication restored, loading dashboard data');
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated, token, user]);
@@ -785,14 +788,19 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="relative overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0">
+      {/* Tabs - full width bar (outside header container) */}
+      <div className="w-full">
+        <div className="relative overflow-x-auto px-3 md:px-6">
+          <div className="container-custom">
+          {/* Tabs */}
+          <div className="relative overflow-x-auto px-0">
           {/* gradient edges as swipe hint */}
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent hidden sm:block" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent hidden sm:block" />
 
-          <div className="flex gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm min-w-max snap-x snap-mandatory overflow-x-auto scroll-smooth">
+          <div className="flex gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
@@ -889,9 +897,13 @@ export default function Dashboard() {
             Vuốt để xem thêm
             <ArrowRightIcon className="w-4 h-4 animate-pulse" />
           </div>
+          </div>
+          </div>
         </div>
+      </div>
 
-        {/* Overview Tab */}
+      {/* Overview Tab */}
+      <div className="container-custom px-3 md:px-6 py-8">
         {activeTab === 'overview' && stats && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
@@ -913,9 +925,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Đơn chờ xử lý</h3>
                     <div className="icon-wrapper text-yellow-600 transform group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <ClockIcon className="w-6 h-6" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-400 bg-clip-text text-transparent count-up">{stats.pendingOrders}</p>
@@ -927,9 +937,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Đơn hoàn thành</h3>
                     <div className="icon-wrapper text-green-600 transform group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <CheckCircleIcon className="w-6 h-6" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent count-up">{stats.completedOrders}</p>
@@ -944,9 +952,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-600 font-semibold">Doanh thu hôm nay</h3>
                     <div className="icon-wrapper text-purple-600 transform group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <MoneyIcon className="w-6 h-6" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
@@ -969,9 +975,7 @@ export default function Dashboard() {
                         Biểu đồ doanh thu, món bán chạy, và phân tích đơn hàng
                       </p>
                     </div>
-                    <svg className="w-12 h-12 text-purple-600 opacity-80 transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+                    <BarChartIcon className="w-12 h-12 text-purple-600 opacity-80 transform group-hover:scale-110 transition-transform" />
                   </div>
                 </div>
               </Link>
@@ -988,9 +992,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-700 font-bold text-lg">Doanh thu tháng này</h3>
                     <div className="icon-wrapper text-green-600">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                      <WalletIcon className="w-6 h-6" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-green-700 to-green-500 bg-clip-text text-transparent mb-2">
@@ -1010,9 +1012,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-gray-700 font-bold text-lg">Doanh thu năm nay</h3>
                     <div className="icon-wrapper text-blue-600">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
+                      <WalletIcon className="w-6 h-6" />
                     </div>
                   </div>
                   <p className="text-4xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent mb-2">

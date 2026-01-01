@@ -6,7 +6,7 @@ import { useCart } from '../lib/store';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 import { formatVND } from '../lib/utils';
-import { CartIcon, DeliveryTruckIcon } from '../components/Icons';
+import { CartIcon, DeliveryTruckIcon, NoteIcon, UserIcon, TableIcon } from '../components/Icons';
 
 export default function Checkout() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function Checkout() {
                 bank_transfer: paymentData.bank_transfer || [],
                 zalopay: paymentData.zalopay || []
               });
-
+              
               // Log summary
               console.log('📊 Payment accounts set:', {
                 bank_transfer: paymentData.bank_transfer?.length || 0,
@@ -96,7 +96,7 @@ export default function Checkout() {
               const defaultZaloPay = paymentData.zalopay?.find(acc => acc.isDefault);
               
               if (defaultBank) {
-                console.log('✅ Auto-selected default bank account:', defaultBank.id);
+                console.log(' Auto-selected default bank account:', defaultBank.id);
                 setSelectedPaymentAccount(prev => ({ ...prev, bank_transfer: defaultBank.id }));
               } else if (paymentData.bank_transfer?.length > 0) {
                 // If no default, use first account
@@ -1097,9 +1097,7 @@ export default function Checkout() {
           <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-purple-100 card-glow">
             <h2 className="text-base md:text-lg font-bold mb-2 text-gray-800 flex items-center gap-1.5">
               <div className="icon-wrapper text-purple-600">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+                <NoteIcon className="w-5 h-5" />
               </div>
               Tóm tắt đơn
             </h2>
@@ -1224,9 +1222,7 @@ export default function Checkout() {
           <div className="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 card-glow">
             <h2 className="text-base md:text-lg font-bold mb-3 text-gray-800 flex items-center gap-1.5">
               <div className="icon-wrapper text-purple-600">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+                <UserIcon className="w-5 h-5" />
               </div>
               Thông tin đơn hàng
             </h2>
@@ -1247,9 +1243,7 @@ export default function Checkout() {
                   }`}
                 >
                   <div className="mb-1">
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
+                    <TableIcon className="w-6 h-6 md:w-8 md:h-8" />
                   </div>
                   <div className="font-semibold text-xs md:text-sm">Đặt tại quán</div>
                 </button>

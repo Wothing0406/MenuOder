@@ -3,14 +3,15 @@ import Image from 'next/image';
 import { useStore } from '../lib/store';
 import { useState } from 'react';
 import { MenuIcon, CloseIcon as XIcon, LogOutIcon, UserIcon } from './Icons';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
-  const { user, token, logout } = useStore();
+  const { user, token, logout, isHydrated } = useStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <nav className="gradient-teal text-white shadow-xl sticky top-0 z-50 backdrop-blur-sm bg-opacity-95">
-      <div className="container-custom py-4 flex justify-between items-center">
+      <div className="container-custom py-3 md:py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition group">
           <div className="relative">
             <Image 
@@ -28,7 +29,8 @@ export default function Navbar() {
           <Link href="/track-order" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
             Theo dõi đơn hàng
           </Link>
-          {token && user ? (
+          {/* Wait for store hydration to decide which auth buttons to show */}
+          {isHydrated && token && user ? (
             <>
               {user?.role === 'admin' && (
                 <Link href="/admin" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
@@ -50,7 +52,7 @@ export default function Navbar() {
                 Đăng xuất
               </button>
             </>
-          ) : (
+          ) : isHydrated ? (
             <>
               <Link href="/login" className="hover:text-purple-100 transition px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20">
                 Đăng nhập
@@ -59,6 +61,9 @@ export default function Navbar() {
                 Đăng ký
               </Link>
             </>
+          ) : (
+            // While not hydrated, avoid showing wrong auth buttons (prevents flash)
+            <div className="px-3 py-2 rounded-lg opacity-0" aria-hidden="true" />
           )}
         </div>
 
@@ -75,8 +80,20 @@ export default function Navbar() {
         </button>
       </div>
 
-      {isMenuOpen && (
-        <div className="md:hidden bg-purple-700 p-4 space-y-2 animate-fadeIn">
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            className="md:hidden bg-purple-700 p-4 space-y-2 overflow-hidden"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              duration: 0.3,
+              ease: 'easeInOut',
+              height: { duration: 0.3 },
+              opacity: { duration: 0.2 }
+            }}
+          >
           <Link 
             href="/track-order" 
             className="block px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition font-medium"
@@ -84,7 +101,7 @@ export default function Navbar() {
           >
             Theo dõi đơn hàng
           </Link>
-          {token && user ? (
+          {isHydrated && token && user ? (
             <>
               {user?.role === 'admin' && (
                 <Link 
@@ -114,7 +131,7 @@ export default function Navbar() {
                 Đăng xuất
               </button>
             </>
-          ) : (
+          ) : isHydrated ? (
             <>
               <Link 
                 href="/login" 
@@ -131,9 +148,12 @@ export default function Navbar() {
                 Đăng ký
               </Link>
             </>
+          ) : (
+            <div className="p-3 opacity-0" aria-hidden="true" />
           )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

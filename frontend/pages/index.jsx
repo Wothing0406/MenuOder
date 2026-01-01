@@ -17,6 +17,7 @@ import {
   MapPinIcon,
   PackageIcon,
   WalletIcon
+  ,PhoneIcon, LockIcon, UserIcon
 } from '../components/Icons';
 import ScrollReveal from '../components/ScrollReveal';
 
@@ -115,9 +116,7 @@ export default function Home() {
               <div className="relative z-10">
                 <div className="flex justify-center mb-4">
                   <div className="icon-wrapper text-blue-600">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+                    <PhoneIcon className="w-8 h-8" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-800">Thân thiện với Mobile</h3>
@@ -151,9 +150,7 @@ export default function Home() {
               <div className="relative z-10">
                 <div className="flex justify-center mb-4">
                   <div className="icon-wrapper text-green-600">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
+                    <LockIcon className="w-8 h-8" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-800">Bảo mật</h3>
@@ -318,9 +315,7 @@ export default function Home() {
               <div className="text-center group">
                 <div className="gradient-teal text-white rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition-transform relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/20"></div>
-                  <svg className="w-10 h-10 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
+                  <UserIcon className="w-10 h-10 relative z-10" />
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>
                 </div>
                 <h3 className="font-bold mb-3 text-xl text-gray-800">Đăng ký</h3>
