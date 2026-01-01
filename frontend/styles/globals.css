@@ -59,15 +59,29 @@ p {
 }
 
 .container-custom {
-  max-width: 1200px;
+  /* Increased max-width for large monitors (e.g. 24" displays) */
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 640px) {
   .container-custom {
     padding: 0 0.75rem;
   }
+}
+
+/* Dashboard tabs: ensure touch scrolling and prevent items from shrinking on small screens */
+.dashboard-tabs {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
+.dashboard-tabs > button,
+.dashboard-tabs > a {
+  flex-shrink: 0;
 }
 
 .btn {

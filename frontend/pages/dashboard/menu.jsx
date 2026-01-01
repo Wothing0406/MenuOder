@@ -219,7 +219,7 @@ export default function MenuManagement() {
       });
       
       if (res.data.success) {
-        toast.success('🎉 Đã tạo món thành công!');
+        toast.success('Đã tạo món thành công!');
         setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
         setItemImage(null);
         setItemImagePreview(null);
@@ -268,7 +268,7 @@ export default function MenuManagement() {
       }
       
       if (res.data.success) {
-        toast.success('🎉 Đã cập nhật món thành công!');
+        toast.success('Đã cập nhật món thành công!');
         setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
         setItemImage(null);
         setItemImagePreview(null);

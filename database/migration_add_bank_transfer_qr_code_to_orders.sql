@@ -62,3 +62,4 @@ SELECT 'Migration: Added bankTransferQRCode to orders table' AS result;
 
 
 
+
