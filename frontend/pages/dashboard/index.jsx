@@ -800,10 +800,10 @@ export default function Dashboard() {
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent hidden sm:block" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent hidden sm:block" />
 
-          <div className="flex flex-nowrap gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm overflow-x-auto dashboard-tabs">
+          <div className="flex gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'overview'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'
@@ -814,7 +814,7 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'orders'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'
@@ -825,7 +825,7 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'menu'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'
@@ -836,7 +836,7 @@ export default function Dashboard() {
           </button>
           <Link
             href="/dashboard/reviews"
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               router.pathname === '/dashboard/reviews'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'
@@ -847,7 +847,7 @@ export default function Dashboard() {
           </Link>
           <button
             onClick={() => setActiveTab('qr')}
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'qr'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'
@@ -881,7 +881,7 @@ export default function Dashboard() {
                 }
               }
             }}
-            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap flex-shrink-0 rounded-lg ${
+            className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
               activeTab === 'settings'
                 ? 'bg-purple-100 text-purple-700 shadow-inner'
                 : 'text-gray-800 hover:bg-gray-100'

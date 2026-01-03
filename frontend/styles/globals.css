@@ -73,17 +73,6 @@ p {
   }
 }
 
-/* Dashboard tabs: ensure touch scrolling and prevent items from shrinking on small screens */
-.dashboard-tabs {
-  -webkit-overflow-scrolling: touch;
-  overflow-x: auto;
-  -ms-overflow-style: -ms-autohiding-scrollbar;
-}
-.dashboard-tabs > button,
-.dashboard-tabs > a {
-  flex-shrink: 0;
-}
-
 .btn {
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -252,6 +241,28 @@ html {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* QR Code styles */
+.qr-code-image {
+  width: 200px;
+  border: 2px solid #ddd;
+  padding: 8px;
+}
+
+/* Text truncation */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Item card button */
+.item-card-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
 }
 
 /* Mobile optimizations */

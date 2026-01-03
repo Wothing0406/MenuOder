@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useStore } from '../../lib/store';
 import Navbar from '../../components/Navbar';
@@ -53,23 +53,32 @@ export default function Analytics() {
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch revenue chart data
-      const revenueRes = await api.get(`/orders/my-store/revenue-chart?period=${selectedPeriod}`);
-      if (revenueRes.data.success) {
-        setRevenueChartData(revenueRes.data.data);
+
+      // Fetch all analytics endpoints in parallel to reduce wait time
+      const urls = [
+        `/orders/my-store/revenue-chart?period=${selectedPeriod}`,
+        `/orders/my-store/top-items?period=${selectedPeriod}&limit=10`,
+        `/orders/my-store/order-type-stats?period=${selectedPeriod}`,
+      ];
+
+      const [revenueRes, topItemsRes, orderTypeRes] = await Promise.all(urls.map((u) => api.get(u)));
+
+      if (revenueRes?.data?.success) {
+        setRevenueChartData(revenueRes.data.data || []);
+      } else {
+        setRevenueChartData([]);
       }
 
-      // Fetch top selling items
-      const topItemsRes = await api.get(`/orders/my-store/top-items?period=${selectedPeriod}&limit=10`);
-      if (topItemsRes.data.success) {
-        setTopItems(topItemsRes.data.data);
+      if (topItemsRes?.data?.success) {
+        setTopItems(topItemsRes.data.data || []);
+      } else {
+        setTopItems([]);
       }
 
-      // Fetch order type stats
-      const orderTypeRes = await api.get(`/orders/my-store/order-type-stats?period=${selectedPeriod}`);
-      if (orderTypeRes.data.success) {
-        setOrderTypeStats(orderTypeRes.data.data);
+      if (orderTypeRes?.data?.success) {
+        setOrderTypeStats(orderTypeRes.data.data || null);
+      } else {
+        setOrderTypeStats(null);
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -99,6 +108,19 @@ export default function Analytics() {
       setLoading(false);
     }
   };
+
+  // Memoize computed totals to avoid recalculating on each render
+  const totalRevenue = useMemo(() => {
+    return revenueChartData.reduce((sum, item) => sum + (Number(item.revenue) || 0), 0);
+  }, [revenueChartData]);
+
+  const totalOrders = useMemo(() => {
+    return revenueChartData.reduce((sum, item) => sum + (Number(item.orderCount) || 0), 0);
+  }, [revenueChartData]);
+
+  const averageOrderValue = useMemo(() => {
+    return totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+  }, [totalRevenue, totalOrders]);
 
   if (loading) {
     return (
@@ -196,9 +218,7 @@ export default function Analytics() {
           <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
             <h3 className="text-lg font-bold text-gray-700 mb-2">Tổng Doanh Thu</h3>
             <p className="text-3xl font-bold text-green-700">
-              {formatVND(
-                revenueChartData.reduce((sum, item) => sum + item.revenue, 0)
-              )}
+              {formatVND(totalRevenue)}
             </p>
             <p className="text-sm text-gray-600 mt-2">
               {revenueChartData.length} ngày có đơn hàng
@@ -208,7 +228,7 @@ export default function Analytics() {
           <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
             <h3 className="text-lg font-bold text-gray-700 mb-2">Tổng Số Đơn</h3>
             <p className="text-3xl font-bold text-blue-700">
-              {revenueChartData.reduce((sum, item) => sum + item.orderCount, 0)}
+              {totalOrders}
             </p>
             <p className="text-sm text-gray-600 mt-2">
               Đơn hàng đã hoàn tất
@@ -218,12 +238,7 @@ export default function Analytics() {
           <div className="card bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
             <h3 className="text-lg font-bold text-gray-700 mb-2">Đơn Trung Bình</h3>
             <p className="text-3xl font-bold text-purple-700">
-              {formatVND(
-                revenueChartData.length > 0
-                  ? revenueChartData.reduce((sum, item) => sum + item.revenue, 0) /
-                    revenueChartData.reduce((sum, item) => sum + item.orderCount, 0) || 0
-                  : 0
-              )}
+              {formatVND(averageOrderValue)}
             </p>
             <p className="text-sm text-gray-600 mt-2">
               Giá trị đơn hàng trung bình

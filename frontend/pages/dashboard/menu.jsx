@@ -1,14 +1,35 @@
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import { useStore } from '../../lib/store';
 import Navbar from '../../components/Navbar';
 import Layout from '../../components/Layout';
-import ImageCrop from '../../components/ImageCrop';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { formatVND, getImageUrl } from '../../lib/utils';
 import { PlusIcon, DeleteIcon, EditIcon, ArrowUpIcon, ArrowDownIcon, FolderIcon, ClipboardIcon, MoneyIcon, NoteIcon, CameraIcon, DishIcon, CheckIcon, CloseIcon } from '../../components/Icons';
+
+// Lazy load heavy components
+const ImageCrop = dynamic(() => import('../../components/ImageCrop'), {
+  suspense: true,
+});
+
+const CategoryManagement = dynamic(() => import('../../components/menu/CategoryManagement'), {
+  suspense: true,
+});
+
+const ItemsManagement = dynamic(() => import('../../components/menu/ItemsManagement'), {
+  suspense: true,
+});
+
+const StockManagement = dynamic(() => import('../../components/menu/StockManagement'), {
+  suspense: true,
+});
+
+const CategoryModal = dynamic(() => import('../../components/menu/modals/CategoryModal'), {
+  suspense: true,
+});
 
 export default function MenuManagement() {
   const router = useRouter();
@@ -34,6 +55,7 @@ export default function MenuManagement() {
     optionId: null,
     optionName: 'Size',
     isRequired: true,
+    noOptions: false,
     optionValues: [
       { name: 'Size M', price: 0 },
       { name: 'Size L', price: 0 }
@@ -409,6 +431,29 @@ export default function MenuManagement() {
     const sanitizedValues = normalizeOptionValues(optionModal.optionValues)
       .filter(v => v.name?.trim());
 
+    // If user marked "noOptions", delete existing option if present (no values required)
+    if (optionModal.noOptions) {
+      try {
+        setOptionsLoading(true);
+        if (optionModal.optionId) {
+          await api.delete(`/item-options/${optionModal.optionId}`);
+          toast.success('Đã loại bỏ tuỳ chọn kích cỡ cho món này');
+        } else {
+          // nothing to delete, just acknowledge
+          toast.success('Món sẽ không có tuỳ chọn kích cỡ');
+        }
+        setOptionModal((prev) => ({ ...prev, open: false, item: null }));
+        if (selectedCategory?.id) {
+          await fetchItems(Number(selectedCategory.id));
+        }
+      } catch (error) {
+        toast.error('Xoá tuỳ chọn thất bại');
+      } finally {
+        setOptionsLoading(false);
+      }
+      return;
+    }
+
     if (sanitizedValues.length === 0) {
       toast.error('Vui lòng nhập ít nhất một kích cỡ');
       return;
@@ -724,7 +769,7 @@ export default function MenuManagement() {
         {qrData && (
           <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg flex flex-col items-center">
             <h2 className="text-xl font-bold mb-4">Mã QR cho khách hàng đặt hàng</h2>
-            <img src={qrData.qrCode} alt="Mã QR cửa hàng" className="mb-4" style={{ width: 200, border: '2px solid #ddd', padding: '8px' }} />
+            <img src={qrData.qrCode} alt="Mã QR cửa hàng" className="mb-4 qr-code-image" />
             <a href={qrData.storeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline mb-4 text-center">
               {qrData.storeUrl}
             </a>
@@ -778,400 +823,73 @@ export default function MenuManagement() {
 
         {/* Categories Tab */}
         {activeTab === 'categories' && (
-          <div>
-            <button
-              onClick={() => {
+          <Suspense fallback={<div className="text-center py-8">Đang tải...</div>}>
+            <CategoryManagement
+              categories={categories}
+              onAddCategory={() => {
                 setModalMode('category');
                 setFormData({ categoryName: '' });
                 setShowModal(true);
               }}
-              className="btn btn-primary mb-6 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover flex items-center gap-2"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Thêm danh mục mới
-            </button>
-
-            <div className="space-y-3">
-              {categories.map((category, index) => (
-                <div key={category.id} className="card hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 hover-lift animate-fadeIn">
-                  <div className="flex items-center gap-3">
-                    {/* Order Controls */}
-                    <div className="flex flex-col gap-1">
-                      <button
-                        onClick={() => handleMoveCategory(category.id, 'up')}
-                        disabled={index === 0}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition transform hover:scale-110 ${
-                          index === 0
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200 active:scale-95'
-                        }`}
-                        title="Di chuyển lên"
-                      >
-                        <ArrowUpIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveCategory(category.id, 'down')}
-                        disabled={index === categories.length - 1}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition transform hover:scale-110 ${
-                          index === categories.length - 1
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-purple-100 text-purple-600 hover:bg-purple-200 active:scale-95'
-                        }`}
-                        title="Di chuyển xuống"
-                      >
-                        <ArrowDownIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Category Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                          {index + 1}
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-800">{category.categoryName}</h3>
-                      </div>
-                      {category.categoryDescription && (
-                        <p className="text-gray-600 mb-3 text-sm line-clamp-2">{category.categoryDescription}</p>
-                      )}
-                    </div>
-
-                    {/* Delete Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteCategory(category.id, e)}
-                      className="btn btn-danger text-sm hover:bg-red-600 transition px-4 py-2 flex items-center gap-2"
-                      title="Xóa danh mục"
-                    >
-                      <DeleteIcon className="w-4 h-4" />
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {categories.length === 0 && (
-              <p className="text-gray-600">Chưa có danh mục nào</p>
-            )}
-          </div>
+              onMoveCategory={handleMoveCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          </Suspense>
         )}
 
         {/* Items Tab */}
         {activeTab === 'items' && (
-          <div>
-            {categories.length === 0 ? (
-              <p className="text-gray-600">Vui lòng tạo danh mục trước khi thêm món.</p>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <label className="font-bold mr-2">Chọn danh mục:</label>
-                  <select
-                    value={selectedCategory?.id || ''}
-                    onChange={e => {
-                      const selectedId = e.target.value ? Number(e.target.value) : null;
-                      const cat = selectedId ? categories.find(c => Number(c.id) === selectedId) : null;
-                      setSelectedCategory(cat);
-                      if (cat) {
-                        fetchItems(Number(cat.id));
-                      } else {
-                        setItems([]);
-                      }
-                    }}
-                    className="input-field"
-                  >
-                    <option value="">-- Chọn --</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedCategory && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setModalMode('item');
-                        setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
-                        setItemImage(null);
-                        setItemImagePreview(null);
-                        setShowModal(true);
-                      }}
-                      className="btn btn-primary mb-4 hover:bg-purple-700 transition shadow-lg hover:shadow-xl btn-ripple scale-on-hover flex items-center gap-2"
-                    >
-                      <PlusIcon className="w-5 h-5" />
-                      Thêm món mới
-                    </button>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                      {items.map(item => (
-                <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col hover-lift animate-fadeIn">
-                          {/* Image Square */}
-                          {item.itemImage ? (
-                            <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
-                              <img
-                                src={getImageUrl(item.itemImage)}
-                                alt={item.itemName}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-full aspect-square bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                              <DishIcon className="w-12 h-12 md:w-16 md:h-16 text-purple-400" />
-                            </div>
-                          )}
-                          
-                  {/* Content - Compact */}
-                  <div className="p-2 flex flex-col flex-1">
-                    <h3 className="text-xs md:text-sm font-bold mb-1 text-gray-800 line-clamp-2 min-h-[2rem] leading-tight">
-                      {item.itemName}
-                    </h3>
-
-                    <p className="text-[11px] font-semibold text-purple-600 mb-1">
-                      {formatVND(item.itemPrice)}
-                    </p>
-
-                    <div className="flex flex-wrap gap-1 mb-2">
-                                <button
-                                  type="button"
-                                  onClick={() => openOptionModal(item)}
-                                  className="px-2 py-1 text-[10px] bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100 transition"
-                                >
-                                  Size + giá
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openAccompanimentModal(item)}
-                                  className="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100 transition"
-                                >
-                                  Món kèm
-                                </button>
-                              </div>
-                            <div className="flex gap-1 mt-auto">
-                              <button
-                                onClick={() => handleEditItem(item)}
-                                className="flex-1 px-2 py-1.5 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-600 hover:text-white transition font-medium flex items-center justify-center gap-1 transform hover:scale-105 active:scale-95"
-                                title="Sửa"
-                              >
-                                <EditIcon className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteItem(item.id, e)}
-                                className="flex-1 px-2 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-600 hover:text-white transition font-medium flex items-center justify-center gap-1 transform hover:scale-105 active:scale-95"
-                                title="Xóa"
-                              >
-                                <DeleteIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {items.length === 0 && (
-                      <p className="text-gray-600">Chưa có món nào trong danh mục {selectedCategory.categoryName}</p>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          <Suspense fallback={<div className="text-center py-8">Đang tải...</div>}>
+            <ItemsManagement
+              categories={categories}
+              items={items}
+              selectedCategory={selectedCategory}
+              onCategoryChange={(e) => {
+                const selectedId = e.target.value ? Number(e.target.value) : null;
+                const cat = selectedId ? categories.find(c => Number(c.id) === selectedId) : null;
+                setSelectedCategory(cat);
+                if (cat) {
+                  fetchItems(Number(cat.id));
+                } else {
+                  setItems([]);
+                }
+              }}
+              onAddItem={() => {
+                setModalMode('item');
+                setFormData({ itemName: '', itemPrice: '', itemDescription: '' });
+                setItemImage(null);
+                setItemImagePreview(null);
+                setShowModal(true);
+              }}
+              onEditItem={handleEditItem}
+              onDeleteItem={handleDeleteItem}
+              onOpenOptionModal={openOptionModal}
+              onOpenAccompanimentModal={openAccompanimentModal}
+            />
+          </Suspense>
         )}
 
         {/* Stock Tab - Báo món riêng */}
         {activeTab === 'stock' && (
-          <div>
-            {categories.length === 0 ? (
-              <p className="text-gray-600">
-                Vui lòng tạo danh mục và món trước, sau đó bạn có thể báo món tại đây.
-              </p>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">Báo món nhanh</h2>
-                      <p className="text-xs text-gray-500">
-                        Chọn danh mục để xem và cập nhật nhanh trạng thái Còn hàng / Hết món / Số lượng còn lại.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="font-bold text-sm">Danh mục:</label>
-                      <select
-                        value={selectedCategory?.id || ''}
-                        onChange={(e) => {
-                          const selectedId = e.target.value ? Number(e.target.value) : null;
-                          const cat = selectedId
-                            ? categories.find((c) => Number(c.id) === selectedId)
-                            : null;
-                          setSelectedCategory(cat);
-                          if (cat) {
-                            fetchItems(Number(cat.id));
-                          } else {
-                            setItems([]);
-                          }
-                        }}
-                        className="input-field text-sm"
-                      >
-                        <option value="">-- Chọn --</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.categoryName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedCategory ? (
-                  <>
-                    {items.length === 0 ? (
-                      <p className="text-gray-600">
-                        Chưa có món nào trong danh mục {selectedCategory.categoryName}.
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white shadow-sm"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-800 truncate">
-                                {item.itemName}
-                              </p>
-                              <p className="text-xs text-purple-600 font-semibold">
-                                {formatVND(item.itemPrice)}
-                              </p>
-                              <p className="text-[11px] text-gray-500 truncate">
-                                {item.itemDescription || 'Không có mô tả'}
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <div className="mb-1">
-                                {item.remainingStock === null || item.remainingStock === undefined ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    Còn món
-                                  </span>
-                                ) : Number(item.remainingStock) <= 0 ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
-                                    Hết món
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                    Còn {item.remainingStock} phần
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex flex-wrap justify-end gap-1 items-center">
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await api.put(`/items/${item.id}`, {
-                                        remainingStock: null, // null = "Còn món"
-                                        isAvailable: true,
-                                      });
-                                      toast.success('Đã đặt món về trạng thái còn món');
-                                      if (selectedCategory?.id) {
-                                        await fetchItems(Number(selectedCategory.id));
-                                      }
-                                    } catch (error) {
-                                      toast.error('Không thể cập nhật trạng thái món');
-                                    }
-                                  }}
-                                  className="px-2 py-1 text-[10px] rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition"
-                                >
-                                  Còn món
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await api.put(`/items/${item.id}`, {
-                                        remainingStock: 0,
-                                        isAvailable: false,
-                                      });
-                                      toast.success('Đã báo hết món');
-                                      if (selectedCategory?.id) {
-                                        await fetchItems(Number(selectedCategory.id));
-                                      }
-                                    } catch (error) {
-                                      toast.error('Không thể cập nhật trạng thái món');
-                                    }
-                                  }}
-                                  className="px-2 py-1 text-[10px] rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition"
-                                >
-                                  Hết món
-                                </button>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[10px] text-gray-500">SL:</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    defaultValue={
-                                      item.remainingStock === null ||
-                                      item.remainingStock === undefined
-                                        ? ''
-                                        : item.remainingStock
-                                    }
-                                    className="w-16 px-1 py-0.5 border border-amber-200 rounded text-[10px] focus:outline-none focus:ring-1 focus:ring-amber-400"
-                                    placeholder="0"
-                                    onBlur={async (e) => {
-                                      const trimmed = e.target.value.trim();
-                                      const payload =
-                                        trimmed === ''
-                                          ? { remainingStock: null, isAvailable: true }
-                                          : {
-                                              remainingStock: parseInt(trimmed, 10),
-                                              isAvailable: parseInt(trimmed, 10) > 0,
-                                            };
-                                      if (
-                                        payload.remainingStock !== null &&
-                                        (Number.isNaN(payload.remainingStock) ||
-                                          payload.remainingStock < 0)
-                                      ) {
-                                        toast.error('Số lượng phải là số nguyên >= 0');
-                                        return;
-                                      }
-                                      try {
-                                        await api.put(`/items/${item.id}`, payload);
-                                        toast.success('Đã cập nhật số lượng món');
-                                        if (selectedCategory?.id) {
-                                          await fetchItems(Number(selectedCategory.id));
-                                        }
-                                      } catch (error) {
-                                        toast.error('Không thể cập nhật số lượng món');
-                                      }
-                                    }}
-                                    onKeyDown={async (e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        e.target.blur();
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-gray-600 text-sm">
-                    Vui lòng chọn một danh mục ở trên để bắt đầu báo món.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+          <Suspense fallback={<div className="text-center py-8">Đang tải...</div>}>
+            <StockManagement
+              categories={categories}
+              items={items}
+              selectedCategory={selectedCategory}
+              onCategoryChange={(e) => {
+                const selectedId = e.target.value ? Number(e.target.value) : null;
+                const cat = selectedId
+                  ? categories.find((c) => Number(c.id) === selectedId)
+                  : null;
+                setSelectedCategory(cat);
+                if (cat) {
+                  fetchItems(Number(cat.id));
+                } else {
+                  setItems([]);
+                }
+              }}
+            />
+          </Suspense>
         )}
 
       {/* Modal - Item Size / Options */}
@@ -1205,9 +923,26 @@ export default function MenuManagement() {
                 />
                 Bắt buộc chọn
               </label>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={optionModal.noOptions}
+                  onChange={(e) =>
+                    setOptionModal((prev) => ({
+                      ...prev,
+                      noOptions: e.target.checked,
+                      // if choosing noOptions, ensure it's not required and clear values for UX (will delete on save)
+                      isRequired: e.target.checked ? false : prev.isRequired,
+                    }))
+                  }
+                  className="w-4 h-4 text-purple-600 rounded"
+                />
+                Không có tuỳ chọn 
+              </label>
               <div className="flex flex-wrap gap-2">
                 <span className="text-xs text-gray-500 mr-1">Thêm nhanh:</span>
-                {['Size M', 'Size L', 'Size XL'].map((label) => (
+                {!optionModal.noOptions &&
+                  ['Size M', 'Size L', 'Size XL'].map((label) => (
                   <button
                     key={label}
                     type="button"
@@ -1227,7 +962,7 @@ export default function MenuManagement() {
                     + Thêm dòng
                   </button>
                 </div>
-                {(Array.isArray(optionModal.optionValues) ? optionModal.optionValues : []).map((opt, idx) => (
+                {!optionModal.noOptions && (Array.isArray(optionModal.optionValues) ? optionModal.optionValues : []).map((opt, idx) => (
                   <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
                     <div className="sm:col-span-7">
                       <input
@@ -1368,56 +1103,16 @@ export default function MenuManagement() {
       )}
 
         {/* Modal - Add Category */}
-        {showModal && modalMode === 'category' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <FolderIcon className="w-6 h-6 text-purple-600" />
-                  Thêm danh mục mới
-                </h2>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-500 hover:text-gray-700 transition-transform hover:rotate-90"
-                >
-                  <CloseIcon className="w-6 h-6" />
-                </button>
-              </div>
-              <form onSubmit={handleAddCategory} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <ClipboardIcon className="w-5 h-5 text-purple-600" />
-                    Tên danh mục <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Đồ uống, Món chính, Tráng miệng..."
-                    value={formData.categoryName}
-                    onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
-                    className="input-field w-full"
-                    required
-                  />
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="btn btn-secondary flex-1 hover:bg-gray-400 transition"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary flex-1 hover:bg-purple-700 transition flex items-center justify-center gap-2"
-                  >
-                    <CheckIcon className="w-5 h-5" />
-                    Tạo danh mục
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <Suspense fallback={null}>
+          <CategoryModal
+            isOpen={showModal && modalMode === 'category'}
+            onClose={() => setShowModal(false)}
+            formData={formData}
+            onFormChange={setFormData}
+            onSubmit={handleAddCategory}
+            isLoading={false}
+          />
+        </Suspense>
 
         {/* Modal - Add Item */}
         {showModal && modalMode === 'item' && (
@@ -1495,7 +1190,7 @@ export default function MenuManagement() {
                   </label>
                   {itemImagePreview && (
                     <div className="relative mb-3 group">
-                      <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
+                      <div className="w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
                         <img
                           src={itemImagePreview}
                           alt="Preview ảnh đã crop"
@@ -1658,7 +1353,7 @@ export default function MenuManagement() {
                   </label>
                   {itemImagePreview && (
                     <div className="relative mb-3 group">
-                      <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
+                      <div className="w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden border-2 border-purple-300 shadow-lg">
                         <img
                           src={itemImagePreview}
                           alt="Preview ảnh"
