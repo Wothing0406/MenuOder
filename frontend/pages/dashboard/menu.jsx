@@ -354,6 +354,7 @@ export default function MenuManagement() {
       optionId: null,
       optionName: 'Size',
       isRequired: true,
+      noOptions: false,
       optionValues: normalizeOptionValues([
         { name: 'Size M', price: 0 },
         { name: 'Size L', price: 0 },
@@ -372,11 +373,24 @@ export default function MenuManagement() {
           optionId: existingOption.id,
           optionName: existingOption.optionName || 'Size',
           isRequired: !!existingOption.isRequired,
+          noOptions: false,
           optionValues: normalizeOptionValues(
             Array.isArray(existingOption.optionValues) && existingOption.optionValues.length > 0
               ? existingOption.optionValues
               : [{ name: 'Size M', price: 0 }]
           ),
+        }));
+      } else {
+        // No existing options for this item
+        setOptionModal((prev) => ({
+          ...prev,
+          open: true,
+          item,
+          optionId: null,
+          optionName: 'Size',
+          isRequired: false,
+          noOptions: true,
+          optionValues: [],
         }));
       }
     } catch (error) {
@@ -933,6 +947,7 @@ export default function MenuManagement() {
                       noOptions: e.target.checked,
                       // if choosing noOptions, ensure it's not required and clear values for UX (will delete on save)
                       isRequired: e.target.checked ? false : prev.isRequired,
+                      optionValues: e.target.checked ? [] : (prev.optionValues && prev.optionValues.length ? prev.optionValues : [{ name: 'Size M', price: 0 }]),
                     }))
                   }
                   className="w-4 h-4 text-purple-600 rounded"
@@ -958,9 +973,11 @@ export default function MenuManagement() {
                   <span className="font-semibold text-sm">
                     Danh sách kích cỡ 
                   </span>
-                  <button type="button" onClick={addOptionValueRow} className="text-sm text-purple-600 hover:underline">
-                    + Thêm dòng
-                  </button>
+                  {!optionModal.noOptions && (
+                    <button type="button" onClick={addOptionValueRow} className="text-sm text-purple-600 hover:underline">
+                      + Thêm dòng
+                    </button>
+                  )}
                 </div>
                 {!optionModal.noOptions && (Array.isArray(optionModal.optionValues) ? optionModal.optionValues : []).map((opt, idx) => (
                   <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
