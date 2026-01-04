@@ -29,6 +29,31 @@ export default function Dashboard() {
   const [storeData, setStoreData] = useState(null); // Store data riêng cho settings tab
   const prevOrderIdsRef = useRef(new Set());
   const hasInitializedOrdersRef = useRef(false);
+  // Tabs scroll controls
+  const tabsRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const updateTabArrows = () => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setShowLeftArrow(el.scrollLeft > 5);
+    setShowRightArrow(el.scrollWidth - el.clientWidth - el.scrollLeft > 5);
+  };
+
+  const scrollTabs = (direction) => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const amount = Math.max(el.clientWidth * 0.6, 120);
+    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    updateTabArrows();
+    const onResize = () => updateTabArrows();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [bankTransferConfig, setBankTransferConfig] = useState({
     bankAccountNumber: '',
     bankAccountName: '',
@@ -800,7 +825,11 @@ export default function Dashboard() {
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent hidden sm:block" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent hidden sm:block" />
 
-          <div className="flex gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm overflow-x-auto">
+          <div
+            ref={tabsRef}
+            onScroll={updateTabArrows}
+            className="flex tabs-scroll gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-6 border border-gray-200 bg-white/80 backdrop-blur rounded-xl px-2 py-2 shadow-sm overflow-x-auto"
+          >
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-3 md:px-4 py-2 text-xs sm:text-sm md:text-base font-semibold transition flex items-center gap-2 whitespace-nowrap rounded-lg ${
@@ -892,11 +921,29 @@ export default function Dashboard() {
           </button>
           </div>
 
+          {/* Left / Right arrows for small screens when tabs overflow */}
+          {showLeftArrow && (
+            <button
+              aria-label="scroll left"
+              onClick={() => scrollTabs('left')}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center md:hidden"
+            >
+              <ArrowRightIcon className="w-4 h-4 transform -rotate-180 text-gray-600" />
+            </button>
+          )}
+
+          {showRightArrow && (
+            <button
+              aria-label="scroll right"
+              onClick={() => scrollTabs('right')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center md:hidden"
+            >
+              <ArrowRightIcon className="w-4 h-4 text-gray-600" />
+            </button>
+          )}
+
           {/* swipe hint for small screens */}
-          <div className="flex items-center gap-1 text-xs text-gray-500 md:hidden px-1 pb-2">
-            Vuốt để xem thêm
-            <ArrowRightIcon className="w-4 h-4 animate-pulse" />
-          </div>
+         
           </div>
           </div>
         </div>

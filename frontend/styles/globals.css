@@ -316,6 +316,34 @@ html {
     align-items: baseline;
     gap: 0.25rem;
   }
+
+  /* Tabs scroll improvements (mobile) */
+  /* Use this utility on the tabs wrapper: add class `tabs-scroll` to the tabs container */
+  .tabs-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding: 0.25rem 0.25rem;
+  }
+
+  .tabs-scroll > button,
+  .tabs-scroll > a {
+    flex: 0 0 auto; /* prevent shrinking */
+    scroll-snap-align: start;
+    min-width: max-content; /* allow natural width, avoid forced wrapping */
+  }
+
+  /* Reduce inner padding slightly on very small viewports to avoid overflow */
+  @media (max-width: 380px) {
+    .tabs-scroll > button,
+    .tabs-scroll > a {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      font-size: 0.85rem;
+    }
+  }
 }
 
 /* Utility class for price display */
