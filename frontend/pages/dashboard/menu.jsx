@@ -126,7 +126,7 @@ export default function MenuManagement() {
       return;
     }
 
-    console.log('✅ Authentication restored, loading menu data');
+    console.log('Authentication restored, loading menu data');
     fetchData();
     fetchQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -637,10 +637,10 @@ export default function MenuManagement() {
       setItemImage(file);
       setItemImagePreview(croppedImageDataUrl);
       
-      toast.success('✅ Đã điều chỉnh ảnh thành công! Bạn có thể xem preview ở trên.');
+      toast.success('Đã điều chỉnh ảnh thành công! Bạn có thể xem preview ở trên.');
     } catch (error) {
       console.error('Error converting cropped image:', error);
-      toast.error('❌ Không thể xử lý ảnh đã crop. Vui lòng thử lại.');
+      toast.error('Không thể xử lý ảnh đã crop. Vui lòng thử lại.');
     }
   };
 
@@ -749,7 +749,7 @@ export default function MenuManagement() {
 
       const res = await api.post('/categories/reorder', { categoryOrders });
       if (res.data.success) {
-        toast.success('✅ Đã sắp xếp lại danh mục!');
+        toast.success('Đã sắp xếp lại danh mục!');
         fetchData(); // Refresh to get updated order
       }
     } catch (error) {
