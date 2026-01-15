@@ -59,12 +59,14 @@ const MIGRATIONS_MYSQL = [
 
 const MIGRATIONS_POSTGRES = [
   'migration_add_new_features_postgresql.sql',
+  'migration_add_store_is_open_postgresql.sql', // Add is_open column to stores table
   'migration_add_completed_status_postgresql.sql',
   'migration_fix_item_deletion_postgresql.sql',
   'migration_add_reviews_postgresql.sql',
   'migration_add_payment_accounts_postgresql.sql',
   'migration_add_payment_account_to_orders_postgresql.sql',
   'migration_verify_payment_accounts_postgresql.sql', // Verify and add missing columns
+  'migration_add_anti_spam_system_postgresql.sql', // Add anti-spam system columns and tables
   // New: add remainingStock column for stock management
   'migration_add_item_remaining_stock_postgresql.sql'
 ];

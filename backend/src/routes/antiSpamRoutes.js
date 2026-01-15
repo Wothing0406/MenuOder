@@ -194,9 +194,23 @@ router.post('/unblock-device', async (req, res) => {
       });
     }
 
-    const success = await autoBlockService.unblockDevice(deviceId);
+    const normalizedDeviceId = String(deviceId).trim();
+    const success = await autoBlockService.unblockDevice(normalizedDeviceId);
 
     if (success) {
+      // Log unblock action for audit
+      try {
+        await SpamLog.create({
+          deviceId: normalizedDeviceId,
+          action: 'device_unblocked',
+          details: {
+            adminUserId: req.user?.id || null,
+            message: `Device unblocked by admin ${req.user?.id || 'unknown'}`
+          }
+        });
+      } catch (logErr) {
+        console.error('Failed to write device_unblocked log:', logErr);
+      }
       res.json({
         success: true,
         message: `Device ${deviceId} has been unblocked`

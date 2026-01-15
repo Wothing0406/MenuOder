@@ -1569,50 +1569,52 @@ export default function Dashboard() {
             <div className="mb-6 sm:mb-8">
               <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Trạng thái cửa hàng</h3>
               <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900 mb-1">Trạng thái mở/đóng quán</h4>
                     <p className="text-sm text-gray-600">
                       {storeData?.is_open ? 'Quán đang mở - có thể nhận đơn hàng' : 'Quán đang đóng - tạm ngừng nhận đơn'}
                     </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={storeData?.is_open || false}
-                      onChange={async (e) => {
-                        const isOpen = e.target.checked;
-                        try {
-                          setLoading(true);
-                          const response = await api.patch(`/stores/${store?.id}/status`, {
-                            is_open: isOpen
-                          });
-                          if (response.data.success) {
-                            setStoreData(prev => ({
-                              ...prev,
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={storeData?.is_open || false}
+                        onChange={async (e) => {
+                          const isOpen = e.target.checked;
+                          try {
+                            setLoading(true);
+                            const response = await api.patch(`/stores/${store?.id}/status`, {
                               is_open: isOpen
-                            }));
-                            useStore.setState(state => ({
-                              store: { ...state.store, is_open: isOpen }
-                            }));
-                            toast.success(response.data.message);
+                            });
+                            if (response.data.success) {
+                              setStoreData(prev => ({
+                                ...prev,
+                                is_open: isOpen
+                              }));
+                              useStore.setState(state => ({
+                                store: { ...state.store, is_open: isOpen }
+                              }));
+                              toast.success(response.data.message);
+                            }
+                          } catch (error) {
+                            console.error('Update store status error:', error);
+                            toast.error(error.response?.data?.message || 'Không thể cập nhật trạng thái quán');
+                            e.target.checked = !isOpen; // Revert checkbox state on error
+                          } finally {
+                            setLoading(false);
                           }
-                        } catch (error) {
-                          console.error('Update store status error:', error);
-                          toast.error(error.response?.data?.message || 'Không thể cập nhật trạng thái quán');
-                          e.target.checked = !isOpen; // Revert checkbox state on error
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      disabled={loading}
-                    />
-                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-green-600"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {storeData?.is_open ? 'ĐANG MỞ' : 'ĐANG ĐÓNG'}
-                    </span>
-                  </label>
+                        }}
+                        disabled={loading}
+                      />
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-500 peer-checked:to-green-600"></div>
+                    </label>
+                    <div className="text-sm font-medium text-gray-900">
+                      {storeData?.is_open ? <span className="text-green-600 font-semibold">ĐANG MỞ</span> : <span className="text-red-600 font-semibold">ĐANG ĐÓNG</span>}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Info Box */}
@@ -3803,6 +3805,7 @@ export default function Dashboard() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lý do</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thời gian chặn</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hết hạn</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hành động</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -3820,6 +3823,30 @@ export default function Dashboard() {
                               ? new Date(device.blockedUntil).toLocaleString('vi-VN')
                               : 'Vĩnh viễn'
                             }
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={async () => {
+                                const ok = window.confirm('Bạn có chắc muốn huỷ chặn thiết bị này?');
+                                if (!ok) return;
+                                try {
+                                  const res = await api.post('/anti-spam/unblock-device', { deviceId: device.deviceId });
+                                  if (res.data?.success) {
+                                    toast.success('Đã huỷ chặn thiết bị');
+                                    // Refresh lists
+                                    await fetchAntiSpamData();
+                                  } else {
+                                    toast.error(res.data?.message || 'Huỷ chặn thất bại');
+                                  }
+                                } catch (err) {
+                                  console.error('Unblock error:', err);
+                                  toast.error(err.response?.data?.message || 'Lỗi khi huỷ chặn');
+                                }
+                              }}
+                              className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-md hover:bg-green-100"
+                            >
+                              Huỷ chặn
+                            </button>
                           </td>
                         </tr>
                       ))}

@@ -829,9 +829,15 @@ exports.getOrderStats = async (req, res) => {
     // Get total orders
     const totalOrders = await Order.count({ where: { storeId: store.id } });
     
-    // Get pending orders
+    // Get pending orders (only today's pending orders for the overview)
     const pendingOrders = await Order.count({
-      where: { storeId: store.id, status: 'pending' }
+      where: {
+        storeId: store.id,
+        status: 'pending',
+        createdAt: {
+          [Op.between]: [startOfToday, endOfToday]
+        }
+      }
     });
     
     // Get completed orders (delivered status)

@@ -13,6 +13,8 @@ import StoreClosedOverlay from '../../components/StoreClosedOverlay';
 import StoreBusyOverlay from '../../components/StoreBusyOverlay';
 import { formatVND, formatVNDNumber } from '../../lib/utils';
 import { DishIcon, MapPinIcon, PhoneIcon } from '../../components/Icons';
+import TrackOrderButton from '../../components/TrackOrderButton';
+import FloatingTrackButton from '../../components/FloatingTrackButton';
 
 export default function StorePage() {
   const router = useRouter();
@@ -474,10 +476,20 @@ export default function StorePage() {
                   </div>
                 )}
               </div>
+              
+              {/* Track order button - desktop */}
+              <div className="ml-auto hidden md:flex items-center">
+                <TrackOrderButton />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Floating track button - mobile (hidden when modals/cart active) */}
+      {!showItemDetail && !showMobileCart && cartItems.length === 0 && (
+        <FloatingTrackButton />
+      )}
 
 
       {/* Mobile: Categories Horizontal Scroll */}

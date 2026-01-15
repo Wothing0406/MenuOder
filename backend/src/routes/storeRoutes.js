@@ -14,6 +14,17 @@ router.get('/', storeController.getAllStores);
 router.get('/admin', adminSecret, storeController.adminGetStores);
 router.patch('/admin/:storeId/status', adminSecret, storeController.adminUpdateStoreStatus);
 
+// Migration route (temporary - remove after migration)
+router.post('/admin/migrate-database', adminSecret, async (req, res) => {
+  try {
+    const { runMigration } = require('../../scripts/migrate-on-render');
+    await runMigration();
+    res.json({ success: true, message: 'Migration completed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Protected routes
 router.get('/my-store', authMiddleware, storeController.getMyStore);
 router.patch('/:storeId/status', authMiddleware, storeController.updateStoreStatus);

@@ -107,3 +107,5 @@ const StoreClosedOverlay = ({ isVisible, storeName }) => {
 };
 
 export default StoreClosedOverlay;
+
+

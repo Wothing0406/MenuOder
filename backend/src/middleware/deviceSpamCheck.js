@@ -61,28 +61,64 @@ const deviceSpamCheck = async (req, res, next) => {
           [require('../config/database').Sequelize.Op.in]: activeStatuses
         }
       },
-      attributes: ['id', 'orderCode', 'status', 'storeId', 'createdAt']
+      attributes: ['id', 'orderCode', 'status', 'storeId', 'createdAt', 'customerPhone', 'orderType', 'tableNumber']
     });
 
     if (activeOrder) {
-      // Log device spam attempt
-      await SpamLog.create({
-        deviceId: deviceId,
-        storeId: req.body.storeId,
-        action: 'device_spam_attempt',
-        details: {
-          existingOrderId: activeOrder.id,
-          existingOrderCode: activeOrder.orderCode,
-          existingOrderStatus: activeOrder.status,
-          existingStoreId: activeOrder.storeId,
-          timeSinceLastOrder: Date.now() - activeOrder.createdAt.getTime()
-        }
-      });
+      // Allow if it's a dine_in request (same table can order multiple times)
+      const incomingOrderType = req.body.orderType || 'dine_in';
+      const incomingPhone = req.body.customerPhone ? String(req.body.customerPhone).trim() : null;
 
-      return res.status(429).json({
-        success: false,
-        message: 'Thiết bị của bạn đã có đơn hàng đang xử lý. Vui lòng hoàn tất đơn hiện tại trước khi đặt đơn mới.'
-      });
+      if (incomingOrderType === 'dine_in') {
+        // Allow creating additional dine-in orders from same device (they likely are same table)
+        // Log an informational entry
+        await SpamLog.create({
+          deviceId: deviceId,
+          storeId: req.body.storeId,
+          action: 'dine_in_add_allowed',
+          details: {
+            existingOrderId: activeOrder.id,
+            existingOrderStatus: activeOrder.status,
+            note: 'Allowed additional dine-in order from same device'
+          }
+        }).catch(() => {});
+        // proceed
+      } else {
+        // For delivery/others: allow if incoming phone differs from existing order phone
+        const existingPhone = activeOrder.customerPhone ? String(activeOrder.customerPhone).trim() : null;
+        if (incomingPhone && existingPhone && incomingPhone !== existingPhone) {
+          // Different phone -> allow (likely different customer)
+          await SpamLog.create({
+            deviceId: deviceId,
+            storeId: req.body.storeId,
+            action: 'different_phone_allowed',
+            details: {
+              existingOrderId: activeOrder.id,
+              existingPhone,
+              incomingPhone
+            }
+          }).catch(() => {});
+        } else {
+          // Block creation: same device + same phone or missing phone
+          await SpamLog.create({
+            deviceId: deviceId,
+            storeId: req.body.storeId,
+            action: 'device_spam_attempt',
+            details: {
+              existingOrderId: activeOrder.id,
+              existingOrderCode: activeOrder.orderCode,
+              existingOrderStatus: activeOrder.status,
+              existingStoreId: activeOrder.storeId,
+              timeSinceLastOrder: Date.now() - activeOrder.createdAt.getTime()
+            }
+          });
+
+          return res.status(429).json({
+            success: false,
+            message: 'Thiết bị của bạn đã có đơn hàng đang xử lý. Vui lòng hoàn tất đơn hiện tại trước khi đặt đơn mới.'
+          });
+        }
+      }
     }
 
     // Attach device info to request for later use

@@ -1,0 +1,22 @@
+=== CAC COT TRONG MODEL STORE ===
+
+Da co trong database:
+- is_open (boolean, default: true)
+- isBusyModeEnabled (boolean, default: false)
+- maxOrdersPerWindow (integer, default: 20)
+- timeWindowMinutes (integer, default: 15)
+- busyModeStartTime (timestamp, nullable)
+- isActive (boolean, default: true)
+
+Tat ca cac cot nay da duoc them thanh cong!
+
+=== CAC BANG DA TAO ===
+- blocked_ips
+- blocked_devices
+- spam_logs
+
+=== COT DA THEM VAO ORDERS ===
+- deviceId (varchar(255), nullable)
+
+Migration hoan thanh 100%!
+
