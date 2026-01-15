@@ -2,9 +2,17 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const authMiddleware = require('../middleware/auth');
+const { createOrderRateLimit } = require('../middleware/rateLimit');
+const { deviceSpamCheck } = require('../middleware/deviceSpamCheck');
+const { busyModeCheck } = require('../middleware/busyModeCheck');
 
 // Public routes
-router.post('/', orderController.createOrder);
+router.post('/',
+  createOrderRateLimit,
+  deviceSpamCheck,
+  busyModeCheck,
+  orderController.createOrder
+);
 router.post('/validate-address', orderController.validateAddress);
 router.post('/calculate-shipping', orderController.calculateShipping);
 router.get('/track', orderController.trackOrder);

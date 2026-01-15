@@ -136,6 +136,11 @@ const Order = sequelize.define('Order', {
     allowNull: false,
     defaultValue: 0
   },
+  deviceId: {
+    type: Sequelize.STRING(255),
+    allowNull: true,
+    comment: 'Device ID for anti-spam tracking'
+  },
   createdAt: {
     type: Sequelize.DATE,
     defaultValue: Sequelize.NOW

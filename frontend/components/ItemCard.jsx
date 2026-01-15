@@ -2,16 +2,17 @@ import { formatVND, getImageUrl } from '../lib/utils';
 import { DishIcon, PlusIcon } from './Icons';
 import LazyImage from './LazyImage';
 
-export default function ItemCard({ item, onAddToCart }) {
+export default function ItemCard({ item, onAddToCart, isStoreClosed = false }) {
   const remainingStock =
     item.remainingStock === null || item.remainingStock === undefined
       ? null
       : Number(item.remainingStock);
 
   const isOutOfStock = remainingStock !== null && remainingStock <= 0;
+  const isDisabled = isOutOfStock || isStoreClosed;
 
   const handleClick = () => {
-    if (isOutOfStock) return;
+    if (isDisabled) return;
     onAddToCart(item);
   };
 
@@ -97,13 +98,19 @@ export default function ItemCard({ item, onAddToCart }) {
           </span>
           <button
             onClick={handleClick}
-            disabled={isOutOfStock}
+            disabled={isDisabled}
             className={`flex-shrink-0 rounded-lg font-semibold transition-all shadow-sm flex items-center justify-center item-card-btn ${
-              isOutOfStock
+              isDisabled
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 hover:shadow-md active:scale-95'
             }`}
-            aria-label={isOutOfStock ? 'Món đã hết' : 'Thêm vào giỏ hàng'}
+            aria-label={
+              isStoreClosed
+                ? 'Quán đang đóng cửa'
+                : isOutOfStock
+                ? 'Món đã hết'
+                : 'Thêm vào giỏ hàng'
+            }
           >
             <PlusIcon className="w-4 h-4" strokeWidth={3} />
           </button>

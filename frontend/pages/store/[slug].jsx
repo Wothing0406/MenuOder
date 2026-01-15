@@ -9,6 +9,8 @@ import ItemCard from '../../components/ItemCard';
 import ReviewCard from '../../components/ReviewCard';
 import ReviewForm from '../../components/ReviewForm';
 import StarRating from '../../components/StarRating';
+import StoreClosedOverlay from '../../components/StoreClosedOverlay';
+import StoreBusyOverlay from '../../components/StoreBusyOverlay';
 import { formatVND, formatVNDNumber } from '../../lib/utils';
 import { DishIcon, MapPinIcon, PhoneIcon } from '../../components/Icons';
 
@@ -34,6 +36,8 @@ export default function StorePage() {
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewTotalPages, setReviewTotalPages] = useState(1);
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [busyModeStatus, setBusyModeStatus] = useState(null);
+  const [isBusyModeLoading, setIsBusyModeLoading] = useState(false);
 
   // Chuẩn hoá optionValues từ backend (có thể là string JSON, number, object, null...)
   const normalizeOptionValues = (values) => {
@@ -89,6 +93,7 @@ export default function StorePage() {
     if (store?.id) {
       fetchReviews();
       fetchReviewStats();
+      checkBusyModeStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store]);
@@ -158,6 +163,24 @@ export default function StorePage() {
       }
     } catch (error) {
       // Ignore
+    }
+  };
+
+  const checkBusyModeStatus = async () => {
+    if (!store?.id) return;
+
+    try {
+      setIsBusyModeLoading(true);
+      const res = await api.get(`/anti-spam/busy-mode-status/${store.id}`);
+
+      if (res.data.success) {
+        setBusyModeStatus(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error checking busy mode status:', error);
+      // Don't show error to user, just continue
+    } finally {
+      setIsBusyModeLoading(false);
     }
   };
 
@@ -324,6 +347,19 @@ export default function StorePage() {
       <Head>
         <title>{store.storeName} - MenuOrder</title>
       </Head>
+
+      {/* Store Closed Overlay */}
+      <StoreClosedOverlay
+        isVisible={store && !store.is_open}
+        storeName={store?.storeName}
+      />
+
+      {/* Store Busy Overlay */}
+      <StoreBusyOverlay
+        isVisible={busyModeStatus && busyModeStatus.isBusy && store?.is_open}
+        storeName={store?.storeName}
+        estimatedWaitMinutes={busyModeStatus?.timeWindowMinutes}
+      />
 
       {/* Store Header with Banner Image - Professional Design */}
       <div className="relative mb-4 md:mb-6 overflow-hidden rounded-b-2xl md:rounded-b-3xl shadow-2xl group">
@@ -590,9 +626,19 @@ export default function StorePage() {
                     </div>
                     <button
                       onClick={() => router.push(`/checkout?store=${slug}`)}
-                      className="btn btn-primary w-full mb-2 btn-ripple scale-on-hover"
+                      disabled={busyModeStatus?.isBusy || !store?.is_open}
+                      className={`btn w-full mb-2 btn-ripple scale-on-hover ${
+                        busyModeStatus?.isBusy || !store?.is_open
+                          ? 'btn-disabled opacity-50 cursor-not-allowed'
+                          : 'btn-primary'
+                      }`}
                     >
-                      Thanh toán
+                      {busyModeStatus?.isBusy
+                        ? 'Quán đang bận'
+                        : !store?.is_open
+                          ? 'Quán đã đóng cửa'
+                          : 'Thanh toán'
+                      }
                     </button>
                     <button
                       onClick={() => clearCart()}
@@ -617,6 +663,7 @@ export default function StorePage() {
                     key={item.id}
                     item={item}
                     onAddToCart={handleAddToCart}
+                    isStoreClosed={store && !store.is_open}
                   />
                 ))}
               </div>
@@ -649,9 +696,19 @@ export default function StorePage() {
                 </button>
                 <button
                   onClick={() => router.push(`/checkout?store=${slug}`)}
-                  className="btn btn-primary px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0 btn-ripple scale-on-hover"
+                  disabled={busyModeStatus?.isBusy || !store?.is_open}
+                  className={`btn px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold flex-shrink-0 btn-ripple scale-on-hover ${
+                    busyModeStatus?.isBusy || !store?.is_open
+                      ? 'btn-disabled opacity-50 cursor-not-allowed'
+                      : 'btn-primary'
+                  }`}
                 >
-                  Thanh toán
+                  {busyModeStatus?.isBusy
+                    ? 'Bận'
+                    : !store?.is_open
+                      ? 'Đóng'
+                      : 'Thanh toán'
+                  }
                 </button>
               </div>
             </div>

@@ -3,12 +3,14 @@ const Category = require('../models/Category');
 const Item = require('../models/Item');
 const ItemOption = require('../models/ItemOption');
 const User = require('../models/User');
+const Order = require('../models/Order');
 const path = require('path');
 const fs = require('fs');
-const { 
-  deleteFromCloudinary, 
+const { Sequelize, Op } = require('../config/database');
+const {
+  deleteFromCloudinary,
   extractPublicIdFromUrl,
-  isCloudinaryConfigured 
+  isCloudinaryConfigured
 } = require('../utils/cloudinary');
 const { useCloudinary } = require('../middleware/upload');
 
@@ -488,6 +490,41 @@ exports.adminGetStores = async (req, res) => {
   }
 };
 
+// Update store open/closed status (for store owner)
+exports.updateStoreStatus = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { is_open } = req.body;
+
+    // Ensure the authenticated user owns this store
+    const store = await Store.findOne({
+      where: { id: storeId, userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found or you do not have permission to update this store'
+      });
+    }
+
+    await store.update({ is_open: Boolean(is_open) });
+
+    res.json({
+      success: true,
+      message: `Store status updated to ${is_open ? 'open' : 'closed'}`,
+      data: store
+    });
+  } catch (error) {
+    console.error('Update store status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update store status',
+      error: error.message
+    });
+  }
+};
+
 // Admin: update store status
 exports.adminUpdateStoreStatus = async (req, res) => {
   try {
@@ -631,6 +668,114 @@ exports.uploadLogo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to upload logo',
+      error: error.message
+    });
+  }
+};
+
+// Get orders for a specific store by date (for store owner)
+exports.getStoreOrdersByDate = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { date, today } = req.query;
+
+    // Verify that the authenticated user owns this store
+    const store = await Store.findOne({
+      where: { id: storeId, userId: req.user.id }
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found or you do not have permission to access this store'
+      });
+    }
+
+    let targetDate;
+
+    // Determine target date
+    if (date) {
+      // Parse the provided date (expected format: YYYY-MM-DD)
+      targetDate = new Date(date);
+      if (isNaN(targetDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format. Use YYYY-MM-DD format'
+        });
+      }
+    } else if (today === 'true') {
+      // Use today's date
+      targetDate = new Date();
+    } else {
+      // Default to today if no date specified
+      targetDate = new Date();
+    }
+
+    // Calculate date range (from start of day to end of day)
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Build where condition
+    const whereCondition = {
+      storeId: storeId,
+      createdAt: {
+        [Op.gte]: startOfDay,
+        [Op.lte]: endOfDay
+      }
+    };
+
+    const orders = await Order.findAll({
+      where: whereCondition,
+      order: [['createdAt', 'ASC']], // Sớm nhất trước
+      include: [
+        {
+          association: 'orderItems',
+          include: [
+            {
+              association: 'item',
+              attributes: ['id', 'itemName', 'itemPrice']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Format orders for response
+    const formattedOrders = orders.map(order => {
+      const orderData = order.toJSON();
+      return {
+        id: orderData.id,
+        orderCode: orderData.orderCode,
+        totalAmount: orderData.totalAmount,
+        status: orderData.status,
+        orderTime: orderData.createdAt, // HH:mm format will be handled by frontend
+        customerName: orderData.customerName,
+        customerPhone: orderData.customerPhone,
+        orderType: orderData.orderType,
+        tableNumber: orderData.tableNumber,
+        deliveryAddress: orderData.deliveryAddress
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        storeId: storeId,
+        storeName: store.storeName,
+        selectedDate: targetDate.toISOString().split('T')[0],
+        isToday: targetDate.toDateString() === new Date().toDateString(),
+        orders: formattedOrders,
+        totalOrders: formattedOrders.length
+      }
+    });
+  } catch (error) {
+    console.error('Get store orders today error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get store orders',
       error: error.message
     });
   }

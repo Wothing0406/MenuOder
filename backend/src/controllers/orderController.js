@@ -179,6 +179,14 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Check if store is open for business
+    if (!store.is_open) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cửa hàng hiện đang đóng cửa, vui lòng quay lại sau'
+      });
+    }
+
     // Calculate distance and shipping fee for delivery orders
     let deliveryDistance = null;
     let shippingFee = 0;
@@ -439,6 +447,7 @@ exports.createOrder = async (req, res) => {
       storeId: parseInt(storeId),
       orderType: orderType,
       tableNumber: tableNum,
+      deviceId: req.deviceInfo?.deviceId || req.headers['x-device-id'] || req.body.deviceId || null,
       deliveryAddress: orderType === 'delivery' ? (typeof deliveryAddress === 'string' ? deliveryAddress.trim() : deliveryAddress) : null,
       deliveryDistance: deliveryDistance,
       shippingFee: parseFloat(shippingFee.toFixed(2)),

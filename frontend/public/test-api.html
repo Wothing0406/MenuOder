@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API Connection Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Health Check (No Auth)</h2>
+        <button onclick="testHealth()">Test Health Check</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Login API</h2>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Protected API (with token)</h2>
+        <button onclick="testProtectedAPI()">Test Anti-Spam Stats</button>
+        <div id="protected-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: CORS Test</h2>
+        <button onclick="testCORS()">Test CORS Headers</button>
+        <div id="cors-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5007/api';
+        let authToken = null;
+
+        function logResult(elementId, result, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre class="${isSuccess ? 'success' : 'error'}">${JSON.stringify(result, null, 2)}</pre>`;
+        }
+
+        async function testHealth() {
+            try {
+                console.log('🔍 Testing health check...');
+                const response = await fetch('http://localhost:5007/health');
+                const data = await response.json();
+
+                console.log('Health response:', data);
+                logResult('health-result', {
+                    status: response.status,
+                    success: response.ok,
+                    data: data
+                }, response.ok);
+            } catch (error) {
+                console.error('Health check failed:', error);
+                logResult('health-result', {
+                    error: error.message,
+                    type: 'network_error'
+                }, false);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                console.log('🔐 Testing login...');
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Device-Id': 'test-device-browser'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: '123456'
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Login response:', data);
+
+                if (data.success && data.data?.token) {
+                    authToken = data.data.token;
+                    console.log('✅ Token received:', authToken);
+                }
+
+                logResult('login-result', {
+                    status: response.status,
+                    success: response.ok,
+                    hasToken: !!data.data?.token,
+                    data: data
+                }, response.ok);
+            } catch (error) {
+                console.error('Login failed:', error);
+                logResult('login-result', {
+                    error: error.message,
+                    type: 'network_error'
+                }, false);
+            }
+        }
+
+        async function testProtectedAPI() {
+            if (!authToken) {
+                logResult('protected-result', {
+                    error: 'No auth token. Please test login first.',
+                    type: 'no_token'
+                }, false);
+                return;
+            }
+
+            try {
+                console.log('📊 Testing protected API...');
+                const response = await fetch(`${API_BASE}/anti-spam/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Device-Id': 'test-device-browser'
+                    }
+                });
+
+                const data = await response.json();
+                console.log('Protected API response:', data);
+
+                logResult('protected-result', {
+                    status: response.status,
+                    success: response.ok,
+                    data: data
+                }, response.ok);
+            } catch (error) {
+                console.error('Protected API failed:', error);
+                logResult('protected-result', {
+                    error: error.message,
+                    type: 'network_error'
+                }, false);
+            }
+        }
+
+        async function testCORS() {
+            try {
+                console.log('🌐 Testing CORS...');
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:3000',
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type,Authorization,X-Device-Id'
+                    }
+                });
+
+                console.log('CORS response headers:', [...response.headers.entries()]);
+
+                logResult('cors-result', {
+                    status: response.status,
+                    corsHeaders: {
+                        'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                        'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                        'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                        'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials')
+                    }
+                }, response.status === 200);
+            } catch (error) {
+                console.error('CORS test failed:', error);
+                logResult('cors-result', {
+                    error: error.message,
+                    type: 'cors_error'
+                }, false);
+            }
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

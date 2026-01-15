@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { getDeviceId } from './deviceManager';
 
 // Lấy API URL từ environment variable
-// Default port 5002 để tránh permission issues trên Windows
-let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
+// Default port 5007 (backend đang chạy trên port này)
+let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007/api';
 
 // Tự động thêm /api nếu chưa có (tránh lỗi khi người dùng quên thêm /api)
 if (API_URL && !API_URL.endsWith('/api') && !API_URL.endsWith('/api/')) {
@@ -31,7 +32,7 @@ if (typeof window !== 'undefined') {
   window.__API_URL__ = API_URL;
 }
 
-// Add token or admin secret to requests
+// Add token, admin secret, and device ID to requests
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
@@ -42,6 +43,11 @@ api.interceptors.request.use(
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+      // Add device ID for anti-spam protection
+      const deviceId = getDeviceId();
+      if (deviceId) {
+        config.headers['X-Device-Id'] = deviceId;
       }
     }
     return config;

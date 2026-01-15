@@ -16,6 +16,8 @@ router.patch('/admin/:storeId/status', adminSecret, storeController.adminUpdateS
 
 // Protected routes
 router.get('/my-store', authMiddleware, storeController.getMyStore);
+router.patch('/:storeId/status', authMiddleware, storeController.updateStoreStatus);
+router.get('/:storeId/orders', authMiddleware, storeController.getStoreOrdersByDate);
 
 // Sử dụng upload middleware phù hợp
 const uploadMiddleware = useCloudinary 

@@ -15,6 +15,7 @@ export default function Checkout() {
   const [storeId, setStoreId] = useState(null);
   const [storeAddress, setStoreAddress] = useState(null);
   const [storeInfo, setStoreInfo] = useState(null); // chứa cấu hình ZaloPay
+  const [isStoreClosed, setIsStoreClosed] = useState(false);
   const [paymentAccounts, setPaymentAccounts] = useState({ bank_transfer: [], zalopay: [] });
   const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
   const [orderType, setOrderType] = useState('dine_in'); // 'dine_in' or 'delivery'
@@ -58,6 +59,7 @@ export default function Checkout() {
           setStoreId(store.id);
           setStoreAddress(store.storeAddress);
           setStoreInfo(store);
+          setIsStoreClosed(!store.is_open);
           
           // Fetch payment accounts
           try {
@@ -1682,10 +1684,10 @@ export default function Checkout() {
                 (formData.paymentMethod === 'bank_transfer_qr' && !bankTransferOrderId)) && (
               <button
                 type="submit"
-                disabled={loading || calculatingShipping || validatingAddress || (orderType === 'delivery' && (!addressConfirmed || !shippingCalculated))}
+                disabled={loading || calculatingShipping || validatingAddress || isStoreClosed || (orderType === 'delivery' && (!addressConfirmed || !shippingCalculated))}
                 className="btn btn-primary w-full mt-3 py-3 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed btn-ripple scale-on-hover"
               >
-                {loading ? 'Đang đặt hàng...' : 'Đặt hàng ngay'}
+                {loading ? 'Đang đặt hàng...' : isStoreClosed ? 'Quán đang đóng cửa' : 'Đặt hàng ngay'}
               </button>
               )}
               {orderType === 'delivery' && (!addressConfirmed || !shippingCalculated) && (

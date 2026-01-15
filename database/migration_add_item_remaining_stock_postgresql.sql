@@ -1,26 +1,9 @@
--- Migration: add remainingStock column to items (PostgreSQL)
--- Idempotent: uses IF NOT EXISTS so it can be run many times safely
+-- Migration: Add remainingStock column to items table (PostgreSQL)
+-- This migration adds the remainingStock column to control item stock levels
 
-ALTER TABLE IF EXISTS "items"
-  ADD COLUMN IF NOT EXISTS "remainingStock" INTEGER NULL DEFAULT NULL;
+-- Add remainingStock column to items table if not exists
+ALTER TABLE items
+ADD COLUMN IF NOT EXISTS "remainingStock" INTEGER NULL;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-- Add comment to the column
+COMMENT ON COLUMN items."remainingStock" IS 'Số lượng tồn kho còn lại - null: không giới hạn, 0: hết hàng, >0: còn X phần';

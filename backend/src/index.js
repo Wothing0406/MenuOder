@@ -7,33 +7,47 @@ const { sequelize } = require('./config/database');
 // Import models to set up associations
 require('./models');
 
+// Import auto-block service
+const autoBlockService = require('./utils/autoBlockService');
+
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
 // Middleware - CORS configuration
-const allowedOrigins = process.env.FRONTEND_URL 
+const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+  : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    // In development, allow all localhost origins
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-    }
-    
+const corsOptions = {
+  origin: true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-Admin-Secret',
+    'x-admin-secret', // Also allow lowercase version
+    'X-Device-Id'
+  ],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+// In production, use more restrictive CORS
+if (process.env.NODE_ENV === 'production') {
+  corsOptions.origin = function (origin, callback) {
+    // Allow requests with no origin (file:// protocol, mobile apps, Postman, etc.)
+    if (!origin || origin === 'null') return callback(null, true);
+
     // Allow all Vercel domains (*.vercel.app)
-    if (origin.includes('.vercel.app')) {
+    if (origin && origin.includes('.vercel.app')) {
       return callback(null, true);
     }
-    
+
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -42,20 +56,35 @@ app.use(cors({
       console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With', 
-    'X-Admin-Secret',
-    'x-admin-secret' // Also allow lowercase version
-  ],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
+  };
+}
+
+app.use(cors(corsOptions));
+console.log('✅ CORS middleware configured with options:', {
+  origin: corsOptions.origin,
+  credentials: corsOptions.credentials,
+  methods: corsOptions.methods,
+  allowedHeaders: corsOptions.allowedHeaders
+});
+
+// Manual CORS headers as fallback
+app.use((req, res, next) => {
+  console.log(`🌐 CORS middleware: ${req.method} ${req.path} from origin: ${req.headers.origin || 'none'}`);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Admin-Secret, x-admin-secret, X-Device-Id');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('✅ Handling OPTIONS preflight request');
+    res.sendStatus(204);
+    return;
+  }
+
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -96,6 +125,7 @@ app.use('/api/zalopay', require('./routes/zaloPayRoutes'));
 app.use('/api/bank-transfer', require('./routes/bankTransferRoutes'));
 app.use('/api/payment-accounts', require('./routes/paymentAccountRoutes'));
 app.use('/api/payment', require('./routes/publicPaymentRoutes'));
+app.use('/api/anti-spam', require('./routes/antiSpamRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -154,6 +184,9 @@ const startServer = async () => {
     // Sync database (don't force in production)
     await sequelize.sync({ alter: false, force: false });
     console.log('✅ Database synchronized');
+
+    // Start auto-block service
+    autoBlockService.start();
 
     if (!isVercel) {
       // Start HTTP server
